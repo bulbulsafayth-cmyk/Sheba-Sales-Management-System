@@ -650,7 +650,7 @@ async function salesPage(editId){
   $('page').innerHTML=`<div class="salesfit"><h1 class="page-title">${editing?'Edit Sales Entry':'Sales Entry'}</h1><div class="sub">${editing?'Change this entry and save.':'Record one DSO sales sheet with as many products as needed.'}</div>
 <div class="totals sticky" id="totals"></div>
 <div class="panel sec secdet"><div class="sec-h"><span class="sec-n">1</span>Retailer, DSO &amp; Brand details</div><div class="form-grid"><div style="grid-column:1/-1"><label style="display:flex;gap:8px;align-items:center;margin:0 0 4px;font-size:13px;color:#182338;cursor:pointer"><input type="checkbox" id="sColl" style="width:auto"> Due collection only (no sale - just money received)</label></div><div><label>Date</label><input type="date" id="sDate"></div><div><label>Brand</label><select id="sBrand"></select></div><div><label>Road</label><select id="sRoad"></select></div><div><label>DSO</label><select id="sDso"></select></div><div><label>Retailer <a href="#" id="newRetLink" style="float:right;font-weight:700;color:#2563eb;text-decoration:none">＋ New retailer</a></label><select id="sRetailer"></select></div><div><label>Notes (optional)</label><input id="sNotes"></div><div id="newRetBox" class="hidden" style="grid-column:1/-1;background:#f8fafd;border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:4px"><div class="form-grid"><div><label style="margin-top:0">New retailer name</label><input id="nrName"></div><div><label style="margin-top:0">Phone (optional)</label><input id="nrPhone"></div><div style="grid-column:1/-1"><label style="margin-top:0">Address (optional)</label><input id="nrAddr"></div></div><p class="muted" style="margin:6px 0 0;font-size:12px">The retailer is added to the road selected above.</p><div class="form-actions"><button id="nrSave">Save retailer</button><button class="secondary" id="nrCancel">Cancel</button></div><div id="nrMsg"></div></div></div></div>
-<div class="panel sec" id="prodBox"><div class="sec-h"><span class="sec-n">2</span>Products<span class="prodtools"><button class="secondary" id="addItem">＋ Add product</button> <button class="secondary" id="quickBtn">☰ Quick entry (all models)</button> <a href="#" id="newModLink" style="font-weight:700;color:#2563eb;text-decoration:none;white-space:nowrap">＋ New model</a></span></div><div class="table-wrap itemscroll"><table class="items"><thead><tr><th>Product</th><th>Qty</th><th>Unit price</th><th>Line total</th><th></th></tr></thead><tbody id="itemRows"></tbody></table></div><div id="quickBox" class="hidden" style="background:#f8fafd;border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px"></div><div id="newModBox" class="hidden" style="background:#f8fafd;border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px"><div class="form-grid"><div><label style="margin-top:0">Product name</label><input id="nmName"></div><div><label style="margin-top:0">Model code (optional)</label><input id="nmModel"></div><div><label style="margin-top:0">Sale price (৳)</label><input id="nmPrice" type="number" min="0" step="0.01"></div></div><p class="muted" style="margin:6px 0 0;font-size:12px">The model is added to the brand selected above and picked in the product list.</p><div class="form-actions"><button id="nmSave">Save model</button><button class="secondary" id="nmCancel">Cancel</button></div><div id="nmMsg"></div></div></div>
+<div class="panel sec" id="prodBox"><div class="sec-h"><span class="sec-n">2</span>Products<span class="prodtools"><button class="secondary" id="addItem">＋ Add product</button> <a href="#" id="newModLink" style="font-weight:700;color:#2563eb;text-decoration:none;white-space:nowrap">＋ New model</a></span></div><div class="table-wrap itemscroll"><table class="items"><thead><tr><th>Product</th><th>Qty</th><th>Unit price</th><th>Line total</th><th></th></tr></thead><tbody id="itemRows"></tbody></table></div><div id="newModBox" class="hidden" style="background:#f8fafd;border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px"><div class="form-grid"><div><label style="margin-top:0">Product name</label><input id="nmName"></div><div><label style="margin-top:0">Model code (optional)</label><input id="nmModel"></div><div><label style="margin-top:0">Sale price (৳)</label><input id="nmPrice" type="number" min="0" step="0.01"></div></div><p class="muted" style="margin:6px 0 0;font-size:12px">The model is added to the brand selected above and picked in the product list.</p><div class="form-actions"><button id="nmSave">Save model</button><button class="secondary" id="nmCancel">Cancel</button></div><div id="nmMsg"></div></div></div>
 <div class="panel sec"><div class="sec-h"><span class="sec-n">3</span>Receiving &amp; Trade promotion</div><div class="form-grid recvgrid"><div><label>Received amount</label><input type="number" min="0" step="0.01" id="sReceived" value="0"></div><div><label>Trade promotion amount</label><input type="number" min="0" step="0.01" id="sTp" value="0"></div><div class="saverow"><button id="saveSale">${editing?'Update sales entry':'Save sales entry'}</button>${editing?'<button class="secondary" id="cancelEdit">Cancel</button>':''}</div></div></div>
 <div id="saleMsg"></div></div>${userMode==='dso'&&!editing?'<div class="panel" id="todayBox" style="margin-top:18px"><h3>Your entries today</h3><p class="muted">Loading…</p></div>':''}`;
   $('sBrand').innerHTML=opts(usable(b),'name');$('sRoad').innerHTML=opts(usable(r),'name');
@@ -686,7 +686,7 @@ async function salesPage(editId){
     const gross=rows.reduce((a,x)=>a+x.quantity*x.unit_price,0),tp=Number($('sTp').value)||0,rec=Number($('sReceived').value)||0;
     $('totals').innerHTML=`<div><span class="muted">Sales quantity</span><b>${sq.toLocaleString('en-US')}</b></div>`+[['Gross sales',gross],['Trade promotion',tp],['Net sales',gross-tp],['Outstanding',gross-tp-rec]].map(x=>`<div><span class="muted">${x[0]}</span><b>${money(x[1]).replace(/\.00$/,'')}</b></div>`).join('');
   };
-  const fitItems=()=>{const el=document.querySelector('.itemscroll'),rc=document.querySelector('.recvgrid');if(!el||!rc||innerWidth<1000)return;const rp=rc.closest('.panel'),t=el.getBoundingClientRect().top;const h=innerHeight-t-rp.offsetHeight-52-($('quickBox')&&!$('quickBox').classList.contains('hidden')?$('quickBox').offsetHeight:0)-($('newModBox')&&!$('newModBox').classList.contains('hidden')?$('newModBox').offsetHeight:0);el.style.maxHeight=Math.max(150,h)+'px'};
+  const fitItems=()=>{const el=document.querySelector('.itemscroll'),rc=document.querySelector('.recvgrid');if(!el||!rc||innerWidth<1000)return;const rp=rc.closest('.panel'),t=el.getBoundingClientRect().top;const h=innerHeight-t-rp.offsetHeight-52-($('newModBox')&&!$('newModBox').classList.contains('hidden')?$('newModBox').offsetHeight:0);el.style.maxHeight=Math.max(150,h)+'px'};
   window.addEventListener('resize',()=>{if($('itemRows'))fitItems()});
   const renderItems=()=>{
     const list=prodList();
@@ -740,35 +740,6 @@ async function salesPage(editId){
     $('nrName').value=$('nrPhone').value=$('nrAddr').value='';$('newRetBox').classList.add('hidden');
     msg($('saleMsg'),'Retailer "'+data.name+'" added and selected.','success');
   };
-  /* quick entry: every model of the brand in one list, type only the quantities */
-  $('quickBtn').onclick=()=>{
-    const box=$('quickBox');
-    if(!box.classList.contains('hidden')){box.classList.add('hidden');return}
-    const list=prodList();
-    if(!list.length){box.classList.remove('hidden');box.innerHTML='<p class="muted" style="margin:0">No models for this brand yet. Use + New model.</p>';return}
-    const cur=Object.fromEntries(rows.filter(x=>x.product_id).map(x=>[x.product_id,x]));
-    box.classList.remove('hidden');
-    box.innerHTML=`<div class="table-wrap"><table class="items"><thead><tr><th>Model</th><th>Price</th><th>Qty</th></tr></thead><tbody>${list.map(p=>`<tr><td>${esc(p.product_name)}${variantOnce(p.product_name,p.model_code)?' ('+esc(variantOnce(p.product_name,p.model_code))+')':''}</td><td><input type="number" min="0" step="0.01" data-qp="${p.id}" value="${cur[p.id]?cur[p.id].unit_price:Number(p.sale_price||0)}"></td><td><input type="number" min="0" step="1" data-qq="${p.id}" placeholder="0" value="${cur[p.id]&&cur[p.id].quantity?cur[p.id].quantity:''}"></td></tr>`).join('')}</tbody></table></div><div class="form-actions"><button id="qApply">Add to sale</button><button class="secondary" id="qCancel">Close</button></div><div id="qMsg"></div>`;
-    $('qCancel').onclick=()=>box.classList.add('hidden');
-    $('qApply').onclick=()=>{
-      const picked=[];
-      for(const p of list){
-        const q=$('quickBox').querySelector('[data-qq="'+p.id+'"]').value,pr2=$('quickBox').querySelector('[data-qp="'+p.id+'"]').value;
-        if(q==='')continue;
-        const n=Number(q),u=Number(pr2);
-        if(n===0)continue;
-        if(!Number.isInteger(n)||n<1||!Number.isFinite(u)||u<0)return msg($('qMsg'),'Check "'+p.product_name+'": quantity must be a whole number and price valid.');
-        picked.push({product_id:p.id,quantity:n,unit_price:u});
-      }
-      if(!picked.length)return msg($('qMsg'),'Type a quantity for at least one model.');
-      const ids=new Set(picked.map(x=>x.product_id));
-      rows=rows.filter(x=>x.product_id&&!ids.has(x.product_id));
-      rows=picked.concat(rows.filter(x=>!ids.has(x.product_id)));
-      renderItems();box.classList.add('hidden');
-      msg($('saleMsg'),picked.length+' model'+(picked.length===1?'':'s')+' added to the sale.','success');
-    };
-  };
-  $('sBrand').addEventListener('change',()=>$('quickBox').classList.add('hidden'));
   /* new model from this page */
   $('newModLink').onclick=e=>{e.preventDefault();$('newModBox').classList.remove('hidden');$('nmMsg').innerHTML='';$('nmName').focus()};
   $('nmCancel').onclick=()=>$('newModBox').classList.add('hidden');
