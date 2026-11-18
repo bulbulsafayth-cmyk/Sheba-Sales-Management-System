@@ -167,6 +167,14 @@ body{background-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/
 .page-title{color:#fff}.sub{color:#b9d4f5}
 .top{background:rgba(255,255,255,.94)}
 @media print{body{background:#fff!important}}
+
+/* outlined tabs */
+.rtypes button,.tabs button{background:#fff;color:#1d4ed8;border:2px solid #2563eb;box-shadow:0 1px 3px #1e35521f}
+.rtypes button:hover,.tabs button:hover{background:#eff6ff}
+.rtypes button.on,.tabs button.on{background:var(--blue);color:#fff;border-color:#1e40af}
+.tabs button span{background:#eff6ff;border:1px solid #bfd3fb}
+.tabs button.on span{background:#ffffff33;border-color:#ffffff66;color:#fff}
+.tabs{border-bottom-color:#d3deef}
 </style></head>
 <body>
 <div id="loginView" class="login-wrap"><div class="login"><h1>Distribution Sales</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
@@ -972,7 +980,7 @@ async function reportsPage(){
   const tok=navToken;
   const p=$('page'),isAdmin=userMode==='admin';
   rep={rows:[],items:{},page:1,type:null,sub:'all',generated:false,prods:rep.prods||{},printAll:false};
-  p.innerHTML=`<h1 class="page-title">Sales Reports</h1><div class="sub">Choose a report, press Generate and the report will appear.</div><div class="panel"><div class="rtypes noprint" id="repTypes"><button data-t="daily">Daily sales report</button>${isAdmin?'<button data-t="dso">DSO-wise report</button>':''}<button data-t="brand">Brand-wise report</button></div><div id="repFilters" class="hidden noprint"><div class="form-grid" style="margin-top:14px"><div><label>From date</label><input type="date" id="rFrom"></div><div><label>To date</label><input type="date" id="rTo"></div><div id="wBrand"><label>Brand</label><select id="rBrand"><option value="">All brands</option></select></div>${isAdmin?'<div id="wDso"><label>DSO</label><select id="rDso"><option value="">All DSOs</option></select></div>':''}<div><label>Retailer</label><select id="rRetailer"><option value="">All retailers</option></select></div></div><div class="form-actions"><button id="runReport">Generate report</button><button class="secondary" id="printReport">Print</button><button class="secondary" id="openSheet">Daily Sales Sheet</button></div></div><div id="reportSummary"></div><div id="repOut" style="margin-top:15px"></div></div>`;
+  p.innerHTML=`<h1 class="page-title">Sales Reports</h1><div class="sub">Choose a report, press Generate and the report will appear.</div><div class="panel"><div class="rtypes noprint" id="repTypes"><button data-t="daily">Daily sales report</button>${isAdmin?'<button data-t="dso">DSO-wise report</button>':''}<button data-t="brand">Brand-wise report</button><button data-t="sheet">Daily Sales Sheet</button></div><div id="repFilters" class="hidden noprint"><div class="form-grid" style="margin-top:14px"><div><label>From date</label><input type="date" id="rFrom"></div><div><label>To date</label><input type="date" id="rTo"></div><div id="wBrand"><label>Brand</label><select id="rBrand"><option value="">All brands</option></select></div>${isAdmin?'<div id="wDso"><label>DSO</label><select id="rDso"><option value="">All DSOs</option></select></div>':''}<div><label>Retailer</label><select id="rRetailer"><option value="">All retailers</option></select></div></div><div class="form-actions"><button id="runReport">Generate report</button><button class="secondary" id="printReport">Print</button><button class="secondary" id="openSheet">Daily Sales Sheet</button></div></div><div id="reportSummary"></div><div id="repOut" style="margin-top:15px"></div></div>`;
   const [b,d,rtl,pl]=await Promise.all([queryAll('brands'),isAdmin?queryAll('dsos'):Promise.resolve([]),queryAll('retailers'),queryAll('products').catch(()=>[])]);
   const bm=isAdmin?await loadDsoBrandMap():{};
   if(tok!==navToken)return;
@@ -994,6 +1002,7 @@ async function reportsPage(){
   /* choosing a report type only shows its filters; nothing is loaded until Generate is pressed */
   $('repTypes').onclick=e=>{
     const t=e.target.closest('button[data-t]');if(!t)return;
+    if(t.dataset.t==='sheet')return go('sheet');
     rep.type=t.dataset.t;rep.generated=false;rep.sub='all';rep.rows=[];rep.items={};rep.page=1;
     document.querySelectorAll('#repTypes button').forEach(x=>x.classList.toggle('on',x===t));
     $('repFilters').classList.remove('hidden');$('reportSummary').innerHTML='';$('repOut').innerHTML='';
