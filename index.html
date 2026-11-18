@@ -980,7 +980,7 @@ async function reportsPage(){
   const tok=navToken;
   const p=$('page'),isAdmin=userMode==='admin';
   rep={rows:[],items:{},page:1,type:null,sub:'all',generated:false,prods:rep.prods||{},printAll:false};
-  p.innerHTML=`<h1 class="page-title">Sales Reports</h1><div class="sub">Choose a report, press Generate and the report will appear.</div><div class="panel"><div class="rtypes noprint" id="repTypes"><button data-t="daily">Daily sales report</button>${isAdmin?'<button data-t="dso">DSO-wise report</button>':''}<button data-t="brand">Brand-wise report</button><button data-t="sheet">Daily Sales Sheet</button></div><div id="repFilters" class="hidden noprint"><div class="form-grid" style="margin-top:14px"><div><label>From date</label><input type="date" id="rFrom"></div><div><label>To date</label><input type="date" id="rTo"></div><div id="wBrand"><label>Brand</label><select id="rBrand"><option value="">All brands</option></select></div>${isAdmin?'<div id="wDso"><label>DSO</label><select id="rDso"><option value="">All DSOs</option></select></div>':''}<div><label>Retailer</label><select id="rRetailer"><option value="">All retailers</option></select></div></div><div class="form-actions"><button id="runReport">Generate report</button><button class="secondary" id="printReport">Print</button><button class="secondary" id="openSheet">Daily Sales Sheet</button></div></div><div id="reportSummary"></div><div id="repOut" style="margin-top:15px"></div></div>`;
+  p.innerHTML=`<h1 class="page-title">Sales Reports</h1><div class="sub">Choose a report, press Generate and the report will appear.</div><div class="panel"><div class="rtypes noprint" id="repTypes"><button data-t="daily">Daily sales report</button>${isAdmin?'<button data-t="dso">DSO-wise report</button>':''}<button data-t="brand">Brand-wise report</button><button data-t="sheet">Daily Sales Sheet</button></div><div id="repFilters" class="hidden noprint"><div class="form-grid" style="margin-top:14px"><div><label>From date</label><input type="date" id="rFrom"></div><div><label>To date</label><input type="date" id="rTo"></div><div id="wBrand"><label>Brand</label><select id="rBrand"><option value="">All brands</option></select></div><div id="wModel" class="hidden"><label>Model</label><select id="rModel"><option value="">All models</option></select></div>${isAdmin?'<div id="wDso"><label>DSO</label><select id="rDso"><option value="">All DSOs</option></select></div>':''}<div><label>Retailer</label><select id="rRetailer"><option value="">All retailers</option></select></div></div><div class="form-actions"><button id="runReport">Generate report</button><button class="secondary" id="printReport">Print</button><button class="secondary" id="openSheet">Daily Sales Sheet</button></div></div><div id="reportSummary"></div><div id="repOut" style="margin-top:15px"></div></div>`;
   const [b,d,rtl,pl]=await Promise.all([queryAll('brands'),isAdmin?queryAll('dsos'):Promise.resolve([]),queryAll('retailers'),queryAll('products').catch(()=>[])]);
   const bm=isAdmin?await loadDsoBrandMap():{};
   if(tok!==navToken)return;
@@ -994,7 +994,12 @@ async function reportsPage(){
     $('rDso').innerHTML='<option value="">All DSOs</option>'+list.map(x=>`<option value="${x.id}">${esc(x.full_name)}</option>`).join('');
     if(list.some(x=>x.id===keep))$('rDso').value=keep;
   };
-  fillRDso();$('rBrand').onchange=fillRDso;
+  const fillModels=()=>{
+    const sel=$('rModel'),bid=$('rBrand').value;
+    const ms=bid?Object.values(rep.prods).filter(x=>String(x.brand_id)===String(bid)&&x.is_active!==false).sort((a,b)=>cmpTxt(a.product_name,b.product_name)):[];
+    sel.innerHTML='<option value="">'+(bid?'All models':'Select a brand first')+'</option>'+ms.map(x=>{const v=variantOnce(x.product_name,x.model_code);return `<option value="${x.id}">${esc(x.product_name+(v?' ('+v+')':''))}</option>`}).join('');
+  };
+  fillRDso();fillModels();$('rBrand').onchange=()=>{fillRDso();fillModels()};
   $('rFrom').value=today().slice(0,8)+'01';$('rTo').value=today();
   $('runReport').onclick=runReport;
   $('printReport').onclick=()=>{if(!rep.generated)return msg($('reportSummary'),'Generate a report first.');$('reportSummary').innerHTML='';rep.printAll=true;renderOut();window.print();rep.printAll=false;renderOut()};
@@ -1009,6 +1014,7 @@ async function reportsPage(){
     /* DSO-wise shows only DSOs, Brand-wise shows only brands: the Brand / DSO filters belong to the Daily report only */
     const showBrand=rep.type==='daily'||rep.type==='brand',showDso=rep.type==='daily'||rep.type==='dso';
     $('wBrand').classList.toggle('hidden',!showBrand);if(!showBrand)$('rBrand').value='';
+    $('wModel').classList.toggle('hidden',rep.type!=='brand');if(rep.type!=='brand')$('rModel').value='';
     if($('wDso')){$('wDso').classList.toggle('hidden',!showDso);if(!showDso)$('rDso').value=''}
     fillRDso();
   };
@@ -1068,7 +1074,12 @@ function renderOut(){
   const tabs=`<div class="tabs noprint"><button data-s="all" class="${rep.sub==='all'?'on':''}">${isDso?'All DSOs':'All brands'}</button>${groups.map(g=>`<button data-s="${g.id}" class="${rep.sub===g.id?'on':''}">${isDso?esc(g.name):brandTag(g.name,20)}</button>`).join('')}</div>`;
   const cur=groups.find(g=>g.id===rep.sub);
   let body;
-  if(!cur){
+  if(rep.model&&!isDso){
+    const mAgg=l=>{let q=0,v=0;l.forEach(x=>{(rep.items[x.id]||[]).forEach(i=>{q+=Number(i.quantity||0);v+=Number(i.quantity||0)*Number(i.unit_price||0)})});return {n:l.length,q,v}};
+    const pm=rep.prods[rep.model]||{},pv=variantOnce(pm.product_name,pm.model_code),mn=(pm.product_name||'Model')+(pv?' ('+pv+')':'');
+    const tot=mAgg(cur?cur.l:rows),list=cur?[cur]:groups;
+    body=title((cur?'Brand: '+brandTag(cur.name,28):'All brands')+' · Model: '+esc(mn))+`<div class="cards" style="margin:0 0 16px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))"><div class="card"><div class="k">Entries</div><div class="v">${tot.n}</div></div><div class="card"><div class="k">Sales quantity</div><div class="v">${tot.q.toLocaleString('en-US')}</div></div><div class="card"><div class="k">Sales value</div><div class="v">${money(tot.v)}</div></div></div><div class="table-wrap"><table><thead><tr><th>Brand</th><th>Model</th><th>Entries</th><th>Qty</th><th>Sales value</th></tr></thead><tbody>${list.map(g=>{const a=mAgg(g.l);return `<tr><td>${brandTag(g.name,22)}</td><td>${esc(mn)}</td><td>${a.n}</td><td>${a.q.toLocaleString('en-US')}</td><td>${money(a.v)}</td></tr>`}).join('')||'<tr><td colspan="5" class="empty">No sales of this model in the selected dates.</td></tr>'}</tbody></table></div><p class="muted" style="margin:8px 0 0;font-size:12px">Showing only the selected model. Trade promotion, received and outstanding belong to the whole entry, so they are not split by model.</p>`;
+  }else if(!cur){
     if(isDso)body=title('All DSOs')+cardsHtml(aggRows(rows))+`<div class="table-wrap"><table>${aggHead('DSO')}<tbody>${groups.map(g=>aggTr(esc(g.name),aggRows(g.l))).join('')}${aggTr('Grand total',aggRows(rows),GT)}</tbody></table></div>`;
     else body=title('All brands')+cardsHtml(aggRows(rows))+`<div class="table-wrap"><table>${aggHead('Brand / Model')}<tbody>${groups.map(g=>aggTr(brandTag(g.name,22),aggRows(g.l),'font-weight:800;background:#f1f5fb')+modelList(g.l).map(m=>`<tr><td style="padding-left:28px">${esc(m.label)}</td><td></td><td>${m.q.toLocaleString('en-US')}</td><td>${money(m.v)}</td><td></td><td></td><td></td><td></td></tr>`).join('')).join('')}${aggTr('Grand total',aggRows(rows),GT)}</tbody></table></div><p class="muted" style="margin:8px 0 0;font-size:12px">Under each brand: model-wise quantity and sales value. Trade promotion, received and outstanding are tracked per entry, so they appear on the brand line only.</p>`;
   }else if(isDso){
@@ -1103,6 +1114,8 @@ async function runReport(){
     if(tok!==navToken)return;
     {const mb=myBrandIds();if(mb)rows=rows.filter(x=>mb.includes(x.brand_id))}
     items=await loadRepItems(rows,tok);
+    rep.model=(rep.type==='brand'&&$('rModel'))?$('rModel').value:'';
+    if(items&&rep.model){Object.keys(items).forEach(k=>{items[k]=items[k].filter(i=>String(i.product_id)===String(rep.model))});rows=rows.filter(x=>!isDueRow(x)&&(items[x.id]||[]).length)}
   }catch(e){return msg($('reportSummary'),e.message)}
   if(tok!==navToken||!items)return;
   rep.rows=rows;rep.items=items;rep.page=1;rep.sub='all';rep.generated=true;
@@ -1178,9 +1191,9 @@ async function sheetPage(){
   const html=(g,m,date)=>{
     const mt=meta(g),t=m.tot;
     const th=m.cols.map(id=>{const p=plabel(id);return `<th class="pc">${esc(p.n)}${p.v?'<br>'+esc(p.v):''}</th>`}).join('');
-    const body=m.list.map((r,i)=>`<tr><td>${i+1}</td><td class="l">${esc(r.name)}</td><td class="l">${esc(r.notes.join('; '))}</td>${m.cols.map(id=>`<td>${r.q[id]||''}</td>`).join('')}<td><b>${fmtN(r.qty)}</b></td><td class="n">${fmtN(r.val)}</td><td class="n">${fmtN(r.tp)}</td><td class="n">${fmtN(r.col+r.due)}</td><td class="n">${fmtN(r.out)}</td></tr>`).join('');
-    const foot=`<tr class="gt"><td></td><td class="l">Grand Total</td><td></td>${m.cols.map(id=>`<td>${t.q[id]||''}</td>`).join('')}<td>${fmtN(t.qty)}</td><td class="n">${fmtN(t.val)}</td><td class="n">${fmtN(t.tp)}</td><td class="n">${fmtN(t.col+t.due)}</td><td class="n">${fmtN(t.out)}</td></tr>`;
-    return `<div class="sheet"><div class="stitle">SHEBA DISTRIBUTION SALES MANAGEMENT</div><table class="sh hd"><tr><td class="co"><img class="logo" src="${LOGO}" alt="${esc(COMPANY.name)}"></td><td class="ti"><div class="shbrand">${brandLogo(mt.brand,46)}<span>${esc(mt.brand.toUpperCase())} DAILY SALES SHEET</span></div></td></tr><tr><td colspan="2" class="ad">${esc(COMPANY.address)}</td></tr></table><table class="sh sm"><thead><tr><th>DSO NAME</th><th>DATE</th><th>BRAND</th></tr></thead><tbody><tr><td>${esc(mt.dso)}</td><td>${fmtDate(date)}</td><td>${esc(mt.brand)}</td></tr></tbody></table><div class="table-wrap"><table class="sh mx ${m.cols.length>12?'dense':''}"><thead><tr><th>SL</th><th class="l">Outlet Name</th><th class="l">Remarks</th>${th}<th>Total Qty</th><th>Total Sales Value (Tk)</th><th>TPP</th><th>Collection</th><th>Outstanding</th></tr></thead><tbody>${body}${foot}</tbody></table></div><div class="sheetfoot"><div><span>Prepared by (DSO)</span></div><div><span>Checked by</span></div><div><span>Authorised signature</span></div></div></div>`;
+    const body=m.list.map((r,i)=>`<tr><td>${i+1}</td><td class="l">${esc(r.name)}</td>${m.cols.map(id=>`<td>${r.q[id]||''}</td>`).join('')}<td><b>${fmtN(r.qty)}</b></td><td class="n">${fmtN(r.val)}</td><td class="n">${fmtN(r.tp)}</td><td class="n">${fmtN(r.col+r.due)}</td><td class="n">${fmtN(r.out)}</td><td class="l">${esc(r.notes.join('; '))}</td></tr>`).join('');
+    const foot=`<tr class="gt"><td></td><td class="l">Grand Total</td>${m.cols.map(id=>`<td>${t.q[id]||''}</td>`).join('')}<td>${fmtN(t.qty)}</td><td class="n">${fmtN(t.val)}</td><td class="n">${fmtN(t.tp)}</td><td class="n">${fmtN(t.col+t.due)}</td><td class="n">${fmtN(t.out)}</td><td></td></tr>`;
+    return `<div class="sheet"><div class="stitle">SHEBA DISTRIBUTION SALES MANAGEMENT</div><table class="sh hd"><tr><td class="co"><img class="logo" src="${LOGO}" alt="${esc(COMPANY.name)}"></td><td class="ti"><div class="shbrand">${brandLogo(mt.brand,46)}<span>${esc(mt.brand.toUpperCase())} DAILY SALES SHEET</span></div></td></tr><tr><td colspan="2" class="ad">${esc(COMPANY.address)}</td></tr></table><table class="sh sm"><thead><tr><th>DSO NAME</th><th>DATE</th><th>BRAND</th></tr></thead><tbody><tr><td>${esc(mt.dso)}</td><td>${fmtDate(date)}</td><td>${esc(mt.brand)}</td></tr></tbody></table><div class="table-wrap"><table class="sh mx ${m.cols.length>12?'dense':''}"><thead><tr><th>SL</th><th class="l">Outlet Name</th>${th}<th>Total Qty</th><th>Total Sales Value (Tk)</th><th>TPP</th><th>Collection</th><th>Outstanding</th><th class="l">Remarks</th></tr></thead><tbody>${body}${foot}</tbody></table></div><div class="sheetfoot"><div><span>Prepared by (DSO)</span></div><div><span>Checked by</span></div><div><span>Authorised signature</span></div></div></div>`;
   };
   const run=async()=>{
     const m=$('shMsg'),date=$('shDate').value;
