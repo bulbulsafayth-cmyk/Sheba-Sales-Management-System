@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Distribution Sales Management</title>
+<title>Sheba Distribution Sales Management</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#14243a">
 <link rel="icon" href="icons/icon-192.png">
@@ -23,7 +23,7 @@ textarea{width:100%;padding:11px 12px;border:1px solid #d9e1ed;border-radius:9px
 
 /* daily sales sheet */
 .sheetwrap{page:sheet}
-@page sheet{size:A4 landscape;margin:20mm 9mm 9mm 9mm}
+@page sheet{size:A4 landscape;margin:0 9mm 9mm 9mm}
 .sheet{background:#fff;color:#000;border:1px solid #cfd8e6;padding:12px;margin-bottom:22px;font-family:Calibri,Arial,sans-serif}
 table.sh{width:100%;min-width:0;border-collapse:collapse;margin-bottom:8px}
 table.sh th,table.sh td{padding:4px 6px;border:1px solid #000;white-space:normal;text-align:center;background:#fff;color:#000;font-size:11px;text-transform:none;letter-spacing:0}
@@ -55,7 +55,8 @@ table.sh.mx th,table.sh.mx td{border:1px solid #000;background:#fff;color:#000}
 table.sh.mx thead th{font-size:12px;font-weight:700;padding:8px 5px;vertical-align:middle}
 table.sh.mx td{font-size:13px;padding:9px 6px}
 table.sh.mx tr.gt td{font-weight:800;border-top:2px solid #000;background:#fff}
-.sheetfoot{display:flex;justify-content:space-between;gap:24px;margin-top:44px;font-size:12px;color:#000}
+.stitle{text-align:center;font-size:22px;font-weight:800;letter-spacing:.06em;margin:0 0 10px;color:#000}
+.sheetfoot{display:flex;justify-content:space-between;gap:24px;margin-top:56px;font-size:12px;color:#000}
 .sheetfoot div{flex:1;text-align:center}
 .sheetfoot div span{display:block;border-top:1px solid #000;padding-top:5px;margin:0 16px}
 @media print{
@@ -70,7 +71,8 @@ table.sh.mx tr.gt td{font-weight:800;border-top:2px solid #000;background:#fff}
   table.sh.mx td{font-size:11pt;padding:5px 5px}
   table.sh.mx.dense thead th{font-size:8pt;padding:6px 2px}
   table.sh.mx.dense td{font-size:9.5pt;padding:4px 3px}
-  .sheetfoot{margin-top:22px;font-size:10pt;break-inside:avoid}
+  .sheetfoot{margin-top:40px;font-size:10pt;break-inside:avoid}
+  .stitle{height:20mm;display:flex;align-items:flex-end;justify-content:center;padding-bottom:3mm;font-size:21pt;font-weight:800;letter-spacing:.06em;text-align:center}
 }
 /* dashboard: today + month rows */
 .dash-h{font-size:12px;font-weight:800;color:#23416f;text-transform:uppercase;letter-spacing:.06em;margin:4px 2px 10px;display:flex;align-items:center;gap:8px}
@@ -107,6 +109,7 @@ table.sh.mx tr.gt td{font-weight:800;border-top:2px solid #000;background:#fff}
 .pinbanner{position:sticky;top:0;z-index:60;background:#fff7e0;border-bottom:2px solid #f5b301;padding:8px 28px;display:flex;flex-direction:column;gap:6px}
 .pinbanner .pr{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:15px}.pinbanner .pn{font-size:28px;font-weight:800;letter-spacing:.3em;background:#fff;border:1px solid #f5b301;border-radius:8px;padding:2px 14px;color:#14243a}.pinbanner small{color:#8a6a00}
 @media(max-width:620px){.pinbanner{padding:8px 12px}}
+.mgrid td{padding:3px 4px}.mgrid input,.mgrid select{min-width:110px}.mgrid td:first-child{width:28px}
 .sec{margin-bottom:16px}
 .sec-h{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:800;margin-bottom:12px;color:#14243a}
 .sec-n{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--blue);color:#fff;font-size:13px;flex-shrink:0}
@@ -378,9 +381,20 @@ const configs={
 const crudState={};
 async function crudPage(table){
   const cfg=configs[table];crudState[table]={q:'',page:1};
-  $('page').innerHTML=`<h1 class="page-title">${cfg.plural}</h1><div class="sub">Add, edit or deactivate records.</div><div class="panel"><div class="toolbar"><h3 style="margin:0">${cfg.plural} list</h3><div class="right"><input id="search" placeholder="Search…">${table==='retailers'||table==='dsos'?'<button class="secondary" id="bulkBtn">☰ Bulk add</button>':''}<button id="addBtn">＋ Add ${cfg.title}</button></div></div><div id="editor"></div><div class="table-wrap"><table><thead><tr>${cfg.cols.map(c=>`<th>${c[1]}</th>`).join('')}<th>Status</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div><div id="pager"></div></div>`;
+  $('page').innerHTML=`<h1 class="page-title">${cfg.plural}</h1><div class="sub">Add, edit or deactivate records.</div><div class="panel"><div class="toolbar"><h3 style="margin:0">${cfg.plural} list</h3><div class="right"><input id="search" placeholder="Search…">${table==='retailers'?'<button class="secondary" id="manualBtn">✎ Manual bulk</button>':''}${table==='retailers'||table==='dsos'?'<button class="secondary" id="bulkBtn">☰ Bulk add</button>':''}<button id="addBtn">＋ Add ${cfg.title}</button></div></div><div id="editor"></div><div class="table-wrap"><table><thead><tr>${cfg.cols.map(c=>`<th>${c[1]}</th>`).join('')}<th>Status</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div><div id="pager"></div></div>`;
   $('addBtn').onclick=()=>editForm(table,null);
   if(table==='retailers')$('bulkBtn').onclick=()=>bulkRetailers();
+  if(table==='retailers')$('manualBtn').onclick=()=>{
+    const roads=(window._lkRows?.roads||[]).filter(x=>x.is_active!==false);
+    if(!roads.length)return msg($('editor'),'Add at least one road first (Roads page).');
+    manualGrid({host:'editor',title:'Manual bulk: add retailers',hint:'Type one retailer per row (name and road are required). Each new row copies the road of the row above.',saveLabel:'Save retailers',table:'retailers',
+      cols:[{k:'name',l:'Retailer name'},{k:'road_id',l:'Road',type:'select',opts:roads.map(x=>[x.id,x.name])},{k:'phone',l:'Phone'},{k:'address',l:'Address'}],
+      check:r=>r.name?null:'enter the retailer name',
+      key:r=>r.road_id+'|'+r.name.toLowerCase(),
+      exists:k=>(window._rows_retailers||[]).some(x=>x.road_id+'|'+String(x.name).trim().toLowerCase()===k),
+      make:r=>({name:r.name,road_id:r.road_id,phone:r.phone||null,address:r.address||null}),
+      done:async()=>{$('editor').innerHTML='';await loadRows('retailers')}});
+  };
   if(table==='dsos')$('bulkBtn').onclick=()=>bulkDsos();
   $('search').oninput=e=>{crudState[table].q=e.target.value;crudState[table].page=1;renderRows(table)};
   await loadRows(table);
@@ -430,6 +444,46 @@ function editForm(table,id){
       }
     }
     $('editor').innerHTML='';await loadRows(table);
+  };
+}
+/* manual bulk entry: type many records in a table, then save them together */
+function manualGrid(o){
+  const host=$(o.host);let n=0;
+  const cell=(c,i)=>c.type==='select'
+    ?`<select data-r="${i}" data-k="${c.k}">${c.opts.map(x=>`<option value="${x[0]}">${esc(x[1])}</option>`).join('')}</select>`
+    :`<input data-r="${i}" data-k="${c.k}" ${c.type==='number'?'type="number" min="0" step="0.01"':''} placeholder="${esc(c.l)}">`;
+  const rowHtml=i=>`<tr data-row="${i}"><td class="muted">${i+1}</td>${o.cols.map(c=>`<td>${cell(c,i)}</td>`).join('')}</tr>`;
+  host.innerHTML=`<div class="panel" style="background:#f8fafd;margin:10px 0"><h3>${esc(o.title)}</h3><p class="muted" style="margin:0 0 8px;font-size:12px">${esc(o.hint)}</p><div class="table-wrap"><table class="items mgrid"><thead><tr><th>#</th>${o.cols.map(c=>`<th>${esc(c.l)}</th>`).join('')}</tr></thead><tbody id="mgRows"></tbody></table></div><div class="form-actions"><button class="secondary" id="mgMore">＋ 5 more rows</button><button id="mgSave">${esc(o.saveLabel)}</button><button class="secondary" id="mgCancel">Cancel</button></div><div id="mgMsg"></div></div>`;
+  const add=k=>{for(let j=0;j<k;j++){$('mgRows').insertAdjacentHTML('beforeend',rowHtml(n));
+    if(n>0)o.cols.filter(c=>c.type==='select').forEach(c=>{const prev=$('mgRows').querySelector(`[data-r="${n-1}"][data-k="${c.k}"]`),cur=$('mgRows').querySelector(`[data-r="${n}"][data-k="${c.k}"]`);if(prev&&cur)cur.value=prev.value});
+    else o.cols.filter(c=>c.type==='select'&&c.def).forEach(c=>{$('mgRows').querySelector(`[data-r="0"][data-k="${c.k}"]`).value=c.def});
+    n++}};
+  add(o.rows||6);
+  $('mgMore').onclick=()=>add(5);
+  $('mgCancel').onclick=()=>{host.innerHTML=''};
+  $('mgSave').onclick=async()=>{
+    const m=$('mgMsg'),recs=[];
+    for(let i=0;i<n;i++){
+      const r={};let typed=false;
+      o.cols.forEach(c=>{const el=$('mgRows').querySelector(`[data-r="${i}"][data-k="${c.k}"]`);r[c.k]=el.value.trim();if(c.type!=='select'&&r[c.k]!=='')typed=true});
+      if(typed)recs.push({i:i+1,r});
+    }
+    if(!recs.length)return msg(m,'Type at least one row.');
+    const out=[],seen=new Set(),skipped=[];
+    for(const x of recs){
+      const e=o.check(x.r);
+      if(e)return msg(m,'Row '+x.i+': '+e);
+      const k=o.key(x.r);
+      if(o.exists(k)||seen.has(k)){skipped.push(x.i);continue}
+      seen.add(k);out.push(o.make(x.r));
+    }
+    if(!out.length)return msg(m,'Nothing new to save: every typed row already exists.');
+    $('mgSave').disabled=true;
+    const {error}=await db.from(o.table).insert(out);
+    $('mgSave').disabled=false;
+    if(error)return msg(m,error.message);
+    await o.done();
+    if(skipped.length)alert(out.length+' saved. Row '+skipped.join(', ')+' already existed and was skipped.');
   };
 }
 function bulkRetailers(){
@@ -562,7 +616,7 @@ async function deleteRow(table,id){
 async function productsPage(){
   const tok=navToken;
   const p=$('page');
-  p.innerHTML='<h1 class="page-title">Product Management</h1><div class="sub">Add product names, models and dealer sale prices.</div><div class="panel"><div class="toolbar"><h3 style="margin:0">Products</h3><div class="right"><input id="search" placeholder="Search…"><button class="secondary" id="bulkProduct">☰ Bulk add</button><button id="addProduct">＋ Add Product</button></div></div><div id="prodForm"></div><div class="tabs" id="brandTabs"></div><div class="table-wrap"><table><thead><tr><th>Brand</th><th>Product</th><th>Model code</th><th>Sale price</th><th>Status</th><th></th></tr></thead><tbody id="prodRows"></tbody></table></div><div id="pager"></div></div>';
+  p.innerHTML='<h1 class="page-title">Product Management</h1><div class="sub">Add product names, models and dealer sale prices.</div><div class="panel"><div class="toolbar"><h3 style="margin:0">Products</h3><div class="right"><input id="search" placeholder="Search…"><button class="secondary" id="manualProduct">✎ Manual bulk</button><button class="secondary" id="bulkProduct">☰ Bulk add</button><button id="addProduct">＋ Add Product</button></div></div><div id="prodForm"></div><div class="tabs" id="brandTabs"></div><div class="table-wrap"><table><thead><tr><th>Brand</th><th>Product</th><th>Model code</th><th>Sale price</th><th>Status</th><th></th></tr></thead><tbody id="prodRows"></tbody></table></div><div id="pager"></div></div>';
   const [brands,prods]=await Promise.all([queryAll('brands'),queryAll('products')]);
   if(tok!==navToken)return;
   window._rows_products=prods;const bn=Object.fromEntries(brands.map(b=>[b.id,b.name]));let q='',page=1;
@@ -582,6 +636,18 @@ async function productsPage(){
   render();
   $('brandTabs').onclick=e=>{const b=e.target.closest('button[data-b]');if(!b)return;window._prodTab=b.dataset.b;page=1;render()};
   $('search').oninput=e=>{q=e.target.value;page=1;render()};
+  $('manualProduct').onclick=()=>{
+    const act=brands.filter(b=>b.is_active!==false);
+    if(!act.length)return msg($('prodForm'),'Add at least one brand first.');
+    const k0=(b,n,m)=>(b+'|'+String(n||'').trim()+'|'+String(m||'').trim()).toLowerCase();
+    manualGrid({host:'prodForm',title:'Manual bulk: add products',hint:'Type one product per row (name and sale price are required, model code is optional). Each new row copies the brand of the row above.',saveLabel:'Save products',table:'products',
+      cols:[{k:'brand_id',l:'Brand',type:'select',opts:act.map(b=>[b.id,b.name]),def:(act.some(b=>b.id===window._prodTab)?window._prodTab:'')||act[0].id},{k:'product_name',l:'Product name'},{k:'model_code',l:'Model code'},{k:'sale_price',l:'Sale price',type:'number'}],
+      check:r=>!r.product_name?'enter the product name':(r.sale_price===''||!Number.isFinite(Number(r.sale_price))||Number(r.sale_price)<0)?'enter a valid sale price':null,
+      key:r=>k0(r.brand_id,r.product_name,r.model_code),
+      exists:k=>prods.some(x=>k0(x.brand_id,x.product_name,x.model_code)===k),
+      make:r=>({brand_id:r.brand_id,product_name:r.product_name,model_code:r.model_code||null,sale_price:Number(r.sale_price)}),
+      done:()=>productsPage()});
+  };
   $('bulkProduct').onclick=()=>{
     const act=brands.filter(b=>b.is_active!==false);
     const rk=t=>String(t||'').toLowerCase().replace(/&/g,' and ').replace(/[^a-z0-9ঀ-৿]+/g,' ').trim();
@@ -895,7 +961,7 @@ async function runReport(){
 }
 /* ---------- Daily Sales Sheet ---------- */
 /* one A4-landscape page per sheet: shrink long sheets to fit before printing */
-const FIT={avail:660,n:{a:309,b:29},d:{a:397,b:24}};
+const FIT={avail:736,n:{a:403,b:29},d:{a:491,b:24}};
 function fitSheets(){
   document.querySelectorAll('.sheet').forEach(sh=>{
     const n=sh.querySelectorAll('table.mx tbody tr').length;
@@ -905,7 +971,9 @@ function fitSheets(){
     sh.style.setProperty('--fit',Math.max(0.5,Math.min(1,sc)).toFixed(3));
   });
 }
-window.addEventListener('beforeprint',fitSheets);
+const PRINT_TITLE='Sheba Distribution Sales Management';let _oldTitle=document.title;
+window.addEventListener('beforeprint',()=>{_oldTitle=document.title;document.title=PRINT_TITLE;fitSheets()});
+window.addEventListener('afterprint',()=>{document.title=_oldTitle});
 
 /* show the variant only once: skip it when the product name already contains it (A6 6/128 + 6/128) */
 const variantOnce=(name,v)=>{const n=String(name||''),c=String(v||'').trim();if(!c)return '';const f=t=>t.toLowerCase().replace(/[\s\-_.()]+/g,'');return f(n).includes(f(c))?'':c};
@@ -951,7 +1019,7 @@ async function sheetPage(){
       if(e.notes&&!r.notes.includes(e.notes))r.notes.push(e.notes);
     }
     const cols=[...sold.keys()].filter(id=>sold.get(id)>0).sort((a,b)=>{const x=plabel(a),y=plabel(b);return cmp(x.n,y.n)||cmp(x.v,y.v)});
-    const list=[...rows.values()].sort((a,b)=>cmp(a.name,b.name)||(a.isDue?1:0)-(b.isDue?1:0));
+    const list=[...rows.values()].sort((a,b)=>(a.isDue?1:0)-(b.isDue?1:0)||cmp(a.name,b.name));
     const tot={q:{},qty:0,val:0,tp:0,col:0,due:0,out:0};
     list.forEach(r=>{r.due=r.due||0;if(r.due)r.notes.unshift('Due collection '+fmtN(r.due));r.out=r.val-r.tp-r.col;tot.qty+=r.qty;tot.val+=r.val;tot.tp+=r.tp;tot.col+=r.col;tot.due+=r.due;tot.out+=r.out;cols.forEach(id=>{tot.q[id]=(tot.q[id]||0)+(r.q[id]||0)})});
     return {cols,list,tot};
@@ -961,7 +1029,7 @@ async function sheetPage(){
     const th=m.cols.map(id=>{const p=plabel(id);return `<th class="pc">${esc(p.n)}${p.v?'<br>'+esc(p.v):''}</th>`}).join('');
     const body=m.list.map((r,i)=>`<tr><td>${i+1}</td><td class="l">${esc(r.name)}</td><td class="l">${esc(r.notes.join('; '))}</td>${m.cols.map(id=>`<td>${r.q[id]||''}</td>`).join('')}<td><b>${fmtN(r.qty)}</b></td><td class="n">${fmtN(r.val)}</td><td class="n">${fmtN(r.tp)}</td><td class="n">${fmtN(r.col+r.due)}</td><td class="n">${fmtN(r.out)}</td></tr>`).join('');
     const foot=`<tr class="gt"><td></td><td class="l">Grand Total</td><td></td>${m.cols.map(id=>`<td>${t.q[id]||''}</td>`).join('')}<td>${fmtN(t.qty)}</td><td class="n">${fmtN(t.val)}</td><td class="n">${fmtN(t.tp)}</td><td class="n">${fmtN(t.col+t.due)}</td><td class="n">${fmtN(t.out)}</td></tr>`;
-    return `<div class="sheet"><table class="sh hd"><tr><td class="co"><img class="logo" src="${LOGO}" alt="${esc(COMPANY.name)}"></td><td class="ti">${esc(mt.brand.toUpperCase())} DAILY SALES SHEET</td></tr><tr><td colspan="2" class="ad">${esc(COMPANY.address)}</td></tr></table><table class="sh sm"><thead><tr><th>DSO NAME</th><th>DATE</th><th>BRAND</th></tr></thead><tbody><tr><td>${esc(mt.dso)}</td><td>${fmtDate(date)}</td><td>${esc(mt.brand)}</td></tr></tbody></table><div class="table-wrap"><table class="sh mx ${m.cols.length>12?'dense':''}"><thead><tr><th>SL</th><th class="l">Outlet Name</th><th class="l">Remarks</th>${th}<th>Total Qty</th><th>Total Sales Value (Tk)</th><th>TPP</th><th>Collection</th><th>Outstanding</th></tr></thead><tbody>${body}${foot}</tbody></table></div><div class="sheetfoot"><div><span>Prepared by (DSO)</span></div><div><span>Checked by</span></div><div><span>Authorised signature</span></div></div></div>`;
+    return `<div class="sheet"><div class="stitle">SHEBA DISTRIBUTION SALES MANAGEMENT</div><table class="sh hd"><tr><td class="co"><img class="logo" src="${LOGO}" alt="${esc(COMPANY.name)}"></td><td class="ti">${esc(mt.brand.toUpperCase())} DAILY SALES SHEET</td></tr><tr><td colspan="2" class="ad">${esc(COMPANY.address)}</td></tr></table><table class="sh sm"><thead><tr><th>DSO NAME</th><th>DATE</th><th>BRAND</th></tr></thead><tbody><tr><td>${esc(mt.dso)}</td><td>${fmtDate(date)}</td><td>${esc(mt.brand)}</td></tr></tbody></table><div class="table-wrap"><table class="sh mx ${m.cols.length>12?'dense':''}"><thead><tr><th>SL</th><th class="l">Outlet Name</th><th class="l">Remarks</th>${th}<th>Total Qty</th><th>Total Sales Value (Tk)</th><th>TPP</th><th>Collection</th><th>Outstanding</th></tr></thead><tbody>${body}${foot}</tbody></table></div><div class="sheetfoot"><div><span>Prepared by (DSO)</span></div><div><span>Checked by</span></div><div><span>Authorised signature</span></div></div></div>`;
   };
   const run=async()=>{
     const m=$('shMsg'),date=$('shDate').value;
