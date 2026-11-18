@@ -186,8 +186,10 @@ body::after{inset:-300px;background-size:300px 300px;opacity:.5;animation:phDrif
 @keyframes phDrift2{from{transform:translate(0,0)}to{transform:translate(-300px,300px)}}
 @media (prefers-reduced-motion:reduce){body::before,body::after{animation:none}}
 @media print{body::before,body::after{display:none!important}}
-/* report tables: blue header cells with white text */
-#repOut table thead th,#repOut table thead td{background:#2563eb;color:#fff;border-color:#1e40af;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+/* report type buttons: blue fill, white text (selected one is darker) */
+.rtypes button{background:#2563eb;color:#fff;border-color:#1e40af}
+.rtypes button:hover{background:#1d4ed8;color:#fff}
+.rtypes button.on{background:#1e3a8a;color:#fff;border-color:#172554}
 </style></head>
 <body>
 <div id="loginView" class="login-wrap"><div class="login"><h1>Distribution Sales</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
