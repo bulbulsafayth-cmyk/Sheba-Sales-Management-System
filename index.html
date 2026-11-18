@@ -987,7 +987,7 @@ async function reportsPage(){
   const tok=navToken;
   const p=$('page'),isAdmin=userMode==='admin';
   rep={rows:[],items:{},page:1,type:null,sub:'all',generated:false,prods:rep.prods||{},printAll:false};
-  p.innerHTML=`<h1 class="page-title">Sales Reports</h1><div class="sub">Choose a report, press Generate and the report will appear.</div><div class="panel"><div class="rtypes noprint" id="repTypes"><button data-t="daily">Daily sales report</button>${isAdmin?'<button data-t="dso">DSO-wise report</button>':''}<button data-t="brand">Brand-wise report</button><button data-t="sheet">Daily Sales Sheet</button></div><div id="repFilters" class="hidden noprint"><div class="form-grid" style="margin-top:14px"><div><label>From date</label><input type="date" id="rFrom"></div><div><label>To date</label><input type="date" id="rTo"></div><div id="wBrand"><label>Brand</label><select id="rBrand"><option value="">All brands</option></select></div><div id="wModel" class="hidden"><label>Model</label><select id="rModel"><option value="">All models</option></select></div>${isAdmin?'<div id="wDso"><label>DSO</label><select id="rDso"><option value="">All DSOs</option></select></div>':''}<div><label>Retailer</label><select id="rRetailer"><option value="">All retailers</option></select></div></div><div class="form-actions"><button id="runReport">Generate report</button><button class="secondary" id="printReport">Print</button><button class="secondary" id="openSheet">Daily Sales Sheet</button></div></div><div id="reportSummary"></div><div id="repOut" style="margin-top:15px"></div></div>`;
+  p.innerHTML=`<h1 class="page-title">Sales Reports</h1><div class="sub">Choose a report, press Generate and the report will appear.</div><div class="panel"><div class="rtypes noprint" id="repTypes"><button data-t="daily">Daily sales report</button>${isAdmin?'<button data-t="dso">DSO-wise report</button>':''}<button data-t="brand">Brand-wise report</button><button data-t="sheet">Daily Sales Sheet</button></div><div id="repFilters" class="hidden noprint"><div class="form-grid" style="margin-top:14px"><div><label>From date</label><input type="date" id="rFrom"></div><div><label>To date</label><input type="date" id="rTo"></div><div id="wBrand"><label>Brand</label><select id="rBrand"><option value="">All brands</option></select></div><div id="wModel" class="hidden"><label>Model</label><select id="rModel"><option value="">All models</option></select></div>${isAdmin?'<div id="wDso"><label>DSO</label><select id="rDso"><option value="">All DSOs</option></select></div>':''}<div><label>Retailer</label><select id="rRetailer"><option value="">All retailers</option></select></div></div><div class="form-actions"><button id="runReport">Generate report</button><button class="secondary" id="printReport">Print</button><button class="secondary" id="shareReport">Share</button><button class="secondary" id="openSheet">Daily Sales Sheet</button></div></div><div id="reportSummary"></div><div id="repOut" style="margin-top:15px"></div></div>`;
   const [b,d,rtl,pl]=await Promise.all([queryAll('brands'),isAdmin?queryAll('dsos'):Promise.resolve([]),queryAll('retailers'),queryAll('products').catch(()=>[])]);
   const bm=isAdmin?await loadDsoBrandMap():{};
   if(tok!==navToken)return;
@@ -1009,6 +1009,25 @@ async function reportsPage(){
   fillRDso();fillModels();$('rBrand').onchange=()=>{fillRDso();fillModels()};
   $('rFrom').value=today().slice(0,8)+'01';$('rTo').value=today();
   $('runReport').onclick=runReport;
+  $('shareReport').onclick=()=>{
+    if(!rep.generated||!rep.rows.length)return msg($('reportSummary'),'Generate a report first.');
+    const nm={daily:'Daily sales report',dso:'DSO-wise report',brand:'Brand-wise report'}[rep.type]||'Sales report';
+    const range=fmtDate($('rFrom').value)+' - '+fmtDate($('rTo').value),L=['SHEBA DISTRIBUTION SALES MANAGEMENT',nm,range,''];
+    const isM=!!rep.model,key=rep.type==='dso'?(x=>x.dso_id):(x=>x.brand_id),label=rep.type==='dso'?(x=>x.dso_name):(x=>x.brand);
+    const mv=l=>{let q=0,v=0;l.forEach(x=>(rep.items[x.id]||[]).forEach(i=>{q+=Number(i.quantity||0);v+=Number(i.quantity||0)*Number(i.unit_price||0)}));return {q,v}};
+    if(isM){const t=mv(rep.rows),pm=rep.prods[rep.model]||{};L.push('Model: '+(pm.product_name||'')+(pm.model_code?' ('+pm.model_code+')':''),'Qty: '+fmtN(t.q),'Sales value: '+money(t.v))}
+    else{const a=aggRows(rep.rows);L.push('Entries: '+a.n,'Qty: '+fmtN(a.qty),'Gross sales: '+money(a.gross),'Trade promotion: '+money(a.tp),'Net sales: '+money(a.net),'Received: '+money(a.rec),'Outstanding: '+money(a.out))}
+    if(rep.type!=='daily'){
+      L.push('');
+      [...groupBy(rep.rows,key).entries()].map(([id,l])=>({n:label(l[0])||'—',l})).sort((a,b)=>cmpTxt(a.n,b.n)).forEach(g=>{
+        if(isM){const t=mv(g.l);L.push(g.n+': Qty '+fmtN(t.q)+', Value '+money(t.v))}
+        else{const a=aggRows(g.l);L.push(g.n+': Qty '+fmtN(a.qty)+', Net '+money(a.net)+', Outstanding '+money(a.out))}
+      });
+      if(rep.type==='brand'&&!isM){const sel=$('rBrand').value;if(sel){L.push('');modelList(rep.rows).forEach(m=>L.push(m.label+': Qty '+fmtN(m.q)+', '+money(m.v)))}}
+    }
+    L.push('','Developed By Safayth Hossen Bulbul');
+    shareText(nm,L.join('\n'));
+  };
   $('printReport').onclick=()=>{if(!rep.generated)return msg($('reportSummary'),'Generate a report first.');$('reportSummary').innerHTML='';rep.printAll=true;renderOut();window.print();rep.printAll=false;renderOut()};
   $('openSheet').onclick=()=>go('sheet');
   /* choosing a report type only shows its filters; nothing is loaded until Generate is pressed */
@@ -1148,12 +1167,18 @@ window.addEventListener('afterprint',()=>{document.title=_oldTitle});
 
 /* show the variant only once: skip it when the product name already contains it (A6 6/128 + 6/128) */
 const variantOnce=(name,v)=>{const n=String(name||''),c=String(v||'').trim();if(!c)return '';const f=t=>t.toLowerCase().replace(/[\s\-_.()]+/g,'');return f(n).includes(f(c))?'':c};
+/* share as text: opens the phone's share sheet (WhatsApp, Viber, WeChat, ...); on a computer the text is copied */
+async function shareText(title,text){
+  try{if(navigator.share){await navigator.share({title,text});return}}catch(e){if(e&&e.name==='AbortError')return}
+  try{await navigator.clipboard.writeText(text);alert('Copied. Paste it in WhatsApp, Viber or WeChat.')}
+  catch(e){window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank')}
+}
 const fmtN=n=>{n=Number(n||0);return n?n.toLocaleString('en-US',{maximumFractionDigits:2}):'–'};
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const fmtDate=d=>{const [y,m,dd]=String(d).split('-');return Number(dd)+' '+MON[Number(m)-1]+' '+y};
 async function sheetPage(){
   const tok=navToken,isAdmin=userMode==='admin';
-  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Daily Sales Sheet</h1><div class="sub">One printable sheet per DSO and brand for a single day. Print in A4 landscape.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="shDate"></div><div><label>Brand</label><select id="shBrand"><option value="">All brands</option></select></div>${isAdmin?'<div><label>DSO</label><select id="shDso"><option value="">All DSOs</option></select></div>':''}</div><div class="form-actions"><button id="shRun">Generate sheet</button><button class="secondary" id="shPrint">Print / PDF</button><button class="secondary" id="shXlsx">Excel</button><button class="secondary" id="shBack">← Summary report</button></div><div id="shMsg"></div></div></div><div id="shOut" class="sheetwrap"></div>`;
+  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Daily Sales Sheet</h1><div class="sub">One printable sheet per DSO and brand for a single day. Print in A4 landscape.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="shDate"></div><div><label>Brand</label><select id="shBrand"><option value="">All brands</option></select></div>${isAdmin?'<div><label>DSO</label><select id="shDso"><option value="">All DSOs</option></select></div>':''}</div><div class="form-actions"><button id="shRun">Generate sheet</button><button class="secondary" id="shPrint">Print / PDF</button><button class="secondary" id="shXlsx">Excel</button><button class="secondary" id="shImg">Share image</button><button class="secondary" id="shShare">Share text</button><button class="secondary" id="shBack">← Summary report</button></div><div id="shMsg"></div></div></div><div id="shOut" class="sheetwrap"></div>`;
   const [brands,dsos,roads,rets,prods]=await Promise.all(['brands','dsos','roads','retailers','products'].map(t=>queryAll(t)));
   if(tok!==navToken)return;
   const bm=await loadDsoBrandMap();
@@ -1241,6 +1266,54 @@ async function sheetPage(){
   $('shRun').onclick=run;
   $('shPrint').onclick=()=>{if(!last.length)return msg($('shMsg'),'Generate a sheet first.');window.print()};
   $('shXlsx').onclick=xlsx;
+  /* Share the sheet as a picture (PNG): WhatsApp / Viber / WeChat accept it from the phone's share menu */
+  let pendingImgs=null;
+  const loadH2C=()=>window.html2canvas?Promise.resolve():new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';sc.onload=ok;sc.onerror=()=>no(new Error('Could not load the image tool. Check the internet connection.'));document.head.appendChild(sc)});
+  const sendImgs=async files=>{
+    if(navigator.canShare&&navigator.canShare({files})){await navigator.share({files,title:'Daily Sales Sheet'});return true}
+    files.forEach(f=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),8000)});
+    msg($('shMsg'),'The picture was saved on this device. Open it from Downloads or Gallery and send it in WhatsApp, Viber or WeChat.','success');
+    return true;
+  };
+  $('shImg').onclick=async()=>{
+    if(!last.length)return msg($('shMsg'),'Generate a sheet first.');
+    const btn=$('shImg'),old='Share image';
+    if(pendingImgs){const f=pendingImgs;pendingImgs=null;btn.textContent=old;try{await sendImgs(f)}catch(e){if(!e||e.name!=='AbortError')msg($('shMsg'),'Could not share: '+(e.message||e))}return}
+    btn.disabled=true;btn.textContent='Preparing picture…';$('shMsg').innerHTML='';
+    let files=[];
+    try{
+      await loadH2C();
+      const els=[...document.querySelectorAll('#shOut .sheet')];
+      for(let i=0;i<els.length;i++){
+        const w=document.createElement('div');
+        w.style.cssText='position:fixed;left:-20000px;top:0;background:#fff;padding:20px;width:max-content;min-width:1300px';
+        const c=els[i].cloneNode(true);w.appendChild(c);
+        c.querySelectorAll('.table-wrap').forEach(t=>{t.style.overflow='visible'});
+        const cr=document.createElement('div');cr.textContent='Developed By Safayth Hossen Bulbul';cr.style.cssText='text-align:center;font-size:12px;margin-top:12px;color:#000';w.appendChild(cr);
+        document.body.appendChild(w);
+        const cv=await html2canvas(w,{scale:2,backgroundColor:'#ffffff',useCORS:true});
+        w.remove();
+        const blob=await new Promise(ok=>cv.toBlob(ok,'image/png'));
+        const mt=meta(last[i].g);
+        files.push(new File([blob],('Sales_Sheet_'+mt.dso+'_'+mt.brand+'_'+last[i].date+'.png').replace(/[^\w.\-]+/g,'_'),{type:'image/png'}));
+      }
+      await sendImgs(files);
+    }catch(e){
+      if(e&&e.name==='NotAllowedError'&&files.length){pendingImgs=files;btn.textContent='Tap again to send';btn.disabled=false;return}
+      if(!e||e.name!=='AbortError')msg($('shMsg'),'Could not make the picture: '+(e.message||e));
+    }
+    btn.disabled=false;if(!pendingImgs)btn.textContent=old;
+  };
+  $('shShare').onclick=()=>{
+    if(!last.length)return msg($('shMsg'),'Generate a sheet first.');
+    const out=last.map(({g,m,date})=>{
+      const mt=meta(g),t=m.tot;
+      return [mt.brand.toUpperCase()+' DAILY SALES SHEET','DSO: '+mt.dso,'Date: '+fmtDate(date),'',
+        ...m.list.map((x,i)=>(i+1)+'. '+x.name+' - Qty '+fmtN(x.qty)+', Sales '+fmtN(x.val)+', Collection '+fmtN(x.col+x.due)+', Outstanding '+fmtN(x.out)+(x.notes.length?' ('+x.notes.join('; ')+')':'')),
+        '','Total Qty: '+fmtN(t.qty),'Total Sales: '+fmtN(t.val),'TPP: '+fmtN(t.tp),'Collection: '+fmtN(t.col+t.due),'Outstanding: '+fmtN(t.out)].join('\n');
+    }).join('\n\n----------\n\n')+'\n\nDeveloped By Safayth Hossen Bulbul';
+    shareText('Daily Sales Sheet',out);
+  };
   $('shBack').onclick=()=>go('reports');
   await run();
 }
