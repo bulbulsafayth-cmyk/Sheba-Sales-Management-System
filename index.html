@@ -1101,6 +1101,7 @@ async function runReport(){
   try{
     rows=await fetchAll(()=>{let q=scopedReport().gte('sale_date',from).lte('sale_date',to);const br=$('rBrand').value,mb=myBrandIds();if(br)q=q.eq('brand_id',br);else if(mb)q=q.in('brand_id',mb);const ds=$('rDso')?.value;if(ds)q=q.eq('dso_id',ds);const rt=$('rRetailer').value;if(rt)q=q.eq('retailer_id',rt);return q.order('sale_date').order('id')});
     if(tok!==navToken)return;
+    {const mb=myBrandIds();if(mb)rows=rows.filter(x=>mb.includes(x.brand_id))}
     items=await loadRepItems(rows,tok);
   }catch(e){return msg($('reportSummary'),e.message)}
   if(tok!==navToken||!items)return;
