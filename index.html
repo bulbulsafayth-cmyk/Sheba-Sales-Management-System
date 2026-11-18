@@ -909,9 +909,12 @@ async function salesPage(editId){
     msg($('saleMsg'),'Retailer "'+data.name+'" added and selected.','success');
   };
   /* new model from this page */
-  $('newModLink').onclick=e=>{e.preventDefault();$('newModBox').classList.remove('hidden');$('nmMsg').innerHTML='';$('nmName').focus()};
+  /* only the Admin can create new models; a DSO picks from the existing list */
+  if(userMode!=='admin')$('newModLink').style.display='none';
+  $('newModLink').onclick=e=>{e.preventDefault();if(userMode!=='admin')return;$('newModBox').classList.remove('hidden');$('nmMsg').innerHTML='';$('nmName').focus()};
   $('nmCancel').onclick=()=>$('newModBox').classList.add('hidden');
   $('nmSave').onclick=async()=>{
+    if(userMode!=='admin')return;
     const brand=$('sBrand').value,name=$('nmName').value.trim(),model=$('nmModel').value.trim(),price=Number($('nmPrice').value),mm=$('nmMsg');
     if(!brand)return msg(mm,'Select a brand first.');
     if(!name)return msg(mm,'Enter the product name.');
