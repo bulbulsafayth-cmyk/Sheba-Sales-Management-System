@@ -1178,7 +1178,7 @@ const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','De
 const fmtDate=d=>{const [y,m,dd]=String(d).split('-');return Number(dd)+' '+MON[Number(m)-1]+' '+y};
 async function sheetPage(){
   const tok=navToken,isAdmin=userMode==='admin';
-  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Daily Sales Sheet</h1><div class="sub">One printable sheet per DSO and brand for a single day. Print in A4 landscape.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="shDate"></div><div><label>Brand</label><select id="shBrand"><option value="">All brands</option></select></div>${isAdmin?'<div><label>DSO</label><select id="shDso"><option value="">All DSOs</option></select></div>':''}</div><div class="form-actions"><button id="shRun">Generate sheet</button><button class="secondary" id="shPrint">Print / PDF</button><button class="secondary" id="shXlsx">Excel</button><button class="secondary" id="shImg">Share image</button><button class="secondary" id="shBack">← Summary report</button></div><div id="shMsg"></div></div></div><div id="shOut" class="sheetwrap"></div>`;
+  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Daily Sales Sheet</h1><div class="sub">One printable sheet per DSO and brand for a single day. Print in A4 landscape.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="shDate"></div><div><label>Brand</label><select id="shBrand"><option value="">All brands</option></select></div>${isAdmin?'<div><label>DSO</label><select id="shDso"><option value="">All DSOs</option></select></div>':''}</div><div class="form-actions"><button id="shRun">Generate sheet</button><button class="secondary" id="shPrint">Print / PDF</button><button class="secondary" id="shXlsx">Excel</button><button class="secondary" id="shImg"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-4.2M8.6 13.4l6.8 4.2"/></svg>Share</button><button class="secondary" id="shSave"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg>Save image</button><button class="secondary" id="shBack">← Summary report</button></div><div id="shMsg"></div></div></div><div id="shOut" class="sheetwrap"></div>`;
   const [brands,dsos,roads,rets,prods]=await Promise.all(['brands','dsos','roads','retailers','products'].map(t=>queryAll(t)));
   if(tok!==navToken)return;
   const bm=await loadDsoBrandMap();
@@ -1267,6 +1267,7 @@ async function sheetPage(){
   $('shPrint').onclick=()=>{if(!last.length)return msg($('shMsg'),'Generate a sheet first.');window.print()};
   $('shXlsx').onclick=xlsx;
   /* Share the sheet as a picture (PNG): WhatsApp / Viber / WeChat accept it from the phone's share menu */
+  const SHARE_HTML=$('shImg').innerHTML;
   let pendingImgs=null;
   const loadH2C=()=>window.html2canvas?Promise.resolve():new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';sc.onload=ok;sc.onerror=()=>no(new Error('Could not load the image tool. Check the internet connection.'));document.head.appendChild(sc)});
   const sendImgs=async files=>{
@@ -1275,11 +1276,14 @@ async function sheetPage(){
     msg($('shMsg'),'The picture was saved on this device. Open it from Downloads or Gallery and send it in WhatsApp, Viber or WeChat.','success');
     return true;
   };
+  let saveOnly=false;
+  $('shSave').onclick=()=>{saveOnly=true;$('shImg').onclick()};
   $('shImg').onclick=async()=>{
+    const so=saveOnly;saveOnly=false;
     if(!last.length)return msg($('shMsg'),'Generate a sheet first.');
-    const btn=$('shImg'),old='Share image';
-    if(pendingImgs){const f=pendingImgs;pendingImgs=null;btn.textContent=old;try{await sendImgs(f)}catch(e){if(!e||e.name!=='AbortError')msg($('shMsg'),'Could not share: '+(e.message||e))}return}
-    btn.disabled=true;btn.textContent='Preparing picture…';$('shMsg').innerHTML='';
+    const btn=$('shImg'),old=SHARE_HTML;
+    if(pendingImgs){const f=pendingImgs;pendingImgs=null;btn.innerHTML=old;try{await sendImgs(f)}catch(e){if(!e||e.name!=='AbortError')msg($('shMsg'),'Could not share: '+(e.message||e))}return}
+    btn.disabled=true;btn.textContent='Preparing…';$('shMsg').innerHTML='';
     let files=[];
     try{
       await loadH2C();
@@ -1297,12 +1301,13 @@ async function sheetPage(){
         const mt=meta(last[i].g);
         files.push(new File([blob],('Sales_Sheet_'+mt.dso+'_'+mt.brand+'_'+last[i].date+'.png').replace(/[^\w.\-]+/g,'_'),{type:'image/png'}));
       }
-      await sendImgs(files);
+      if(so){files.forEach(f=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),8000)});msg($('shMsg'),'Picture saved. Open it from Downloads or Gallery and send it in WeChat, WhatsApp or Viber.','success')}
+      else await sendImgs(files);
     }catch(e){
-      if(e&&e.name==='NotAllowedError'&&files.length){pendingImgs=files;btn.textContent='Tap again to send';btn.disabled=false;return}
+      if(e&&e.name==='NotAllowedError'&&files.length){pendingImgs=files;btn.textContent='Tap again to share';btn.disabled=false;return}
       if(!e||e.name!=='AbortError')msg($('shMsg'),'Could not make the picture: '+(e.message||e));
     }
-    btn.disabled=false;if(!pendingImgs)btn.textContent=old;
+    btn.disabled=false;if(!pendingImgs)btn.innerHTML=old;
   };
   $('shBack').onclick=()=>go('reports');
   await run();
