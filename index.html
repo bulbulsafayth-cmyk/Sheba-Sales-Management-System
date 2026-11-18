@@ -104,6 +104,9 @@ table.sh.mx tr.gt td{font-weight:800;border-top:2px solid #000;background:#fff}
 .salesfit .itemscroll thead th{position:sticky;top:0;background:#fff;z-index:2}
 .recvgrid{align-items:end}.recvgrid .saverow{display:flex;gap:8px;padding-bottom:1px}.recvgrid .saverow button{width:100%}
 @media(min-width:1000px){.salesfit .secdet .form-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.recvgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.pinbanner{position:sticky;top:0;z-index:60;background:#fff7e0;border-bottom:2px solid #f5b301;padding:8px 28px;display:flex;flex-direction:column;gap:6px}
+.pinbanner .pr{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:15px}.pinbanner .pn{font-size:28px;font-weight:800;letter-spacing:.3em;background:#fff;border:1px solid #f5b301;border-radius:8px;padding:2px 14px;color:#14243a}.pinbanner small{color:#8a6a00}
+@media(max-width:620px){.pinbanner{padding:8px 12px}}
 .sec{margin-bottom:16px}
 .sec-h{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:800;margin-bottom:12px;color:#14243a}
 .sec-n{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--blue);color:#fff;font-size:13px;flex-shrink:0}
@@ -113,8 +116,8 @@ table.sh.mx tr.gt td{font-weight:800;border-top:2px solid #000;background:#fff}
 
 </style></head>
 <body>
-<div id="loginView" class="login-wrap"><div class="login"><h1>Distribution Sales</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
-<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Distribution Sales<small>MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
+<div id="loginView" class="login-wrap"><div class="login"><h1>Distribution Sales</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><div id="pinStep" class="hidden"><p style="margin:0 0 4px;font-size:15px"><b id="pinWho"></b></p><p class="muted" style="margin:0 0 10px;font-size:13px">Press the button to get a PIN. The Admin sees it and tells it to you. The PIN works for 10 minutes and only once.</p><button id="pinReqBtn">Get PIN</button><div id="pinSent" class="hidden"><label>Enter the 4-digit PIN from Admin</label><input id="pinInput" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••" style="font-size:26px;letter-spacing:.5em;text-align:center"><button id="pinVerifyBtn">Verify &amp; sign in</button></div><button id="pinBackBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
+<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Distribution Sales<small>MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><div id="pinBanner" class="pinbanner hidden"></div><section class="content" id="page"></section></main></div>
 <script>
 const SUPABASE_URL='https://nvnogsganemysvbqmcpo.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_tyWf1VnXMzNVBs22Qgs3wg_SBy6HegJ';
@@ -160,7 +163,43 @@ async function showDsoPicker(){
   $('appView').classList.add('hidden');$('loginView').classList.remove('hidden');
   $('authFields').classList.add('hidden');$('dsoStep').classList.remove('hidden');$('loginMsg').innerHTML='';
 }
-async function useDso(id){const {data}=await db.from('dsos').select(DSO_COLS).eq('id',id).eq('is_active',true).maybeSingle();if(!data)return false;data.brandIds=await dsoBrandIds(data);data.roadIds=await dsoRoadIds(data);currentDso=data;store.set('dsoId',data.id);showApp('dso');return true}
+async function enterDso(d){d.brandIds=await dsoBrandIds(d);d.roadIds=await dsoRoadIds(d);currentDso=d;store.set('dsoId',d.id);showApp('dso')}
+async function useDso(id){const {data}=await db.from('dsos').select(DSO_COLS).eq('id',id).eq('is_active',true).maybeSingle();if(!data)return false;if(store.get('pinOk')===data.id)await enterDso(data);else showPinStep(data);return true}
+/* DSO PIN: every login needs a fresh 4-digit PIN that the Admin sees and gives out (works once, 10 minutes) */
+let _pinDso=null;
+function showPinStep(d){_pinDso=d;$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('authFields').classList.add('hidden');$('dsoStep').classList.add('hidden');$('pinStep').classList.remove('hidden');$('loginMsg').innerHTML='';$('pinWho').textContent='DSO: '+d.full_name;$('pinInput').value='';$('pinSent').classList.add('hidden');$('pinReqBtn').textContent='Get PIN'}
+const pinErr=e=>/function .*does not exist|schema cache|relation .* does not exist/i.test(e.message||'')?'PIN system is not set up yet. Admin must run add_dso_pin.sql in Supabase.':(e.message||String(e));
+$('pinReqBtn').onclick=async()=>{
+  const b=$('pinReqBtn');b.disabled=true;
+  const {error}=await db.rpc('request_dso_pin',{p_dso:_pinDso.id});
+  b.disabled=false;
+  if(error)return msg($('loginMsg'),pinErr(error));
+  msg($('loginMsg'),'PIN requested. Ask the Admin for the 4-digit PIN.','success');
+  $('pinSent').classList.remove('hidden');b.textContent='Get a new PIN';$('pinInput').value='';$('pinInput').focus();
+};
+$('pinVerifyBtn').onclick=async()=>{
+  const pin=$('pinInput').value.trim();
+  if(!/^\d{4}$/.test(pin))return msg($('loginMsg'),'Enter the 4-digit PIN.');
+  $('pinVerifyBtn').disabled=true;
+  const {data,error}=await db.rpc('verify_dso_pin',{p_dso:_pinDso.id,p_pin:pin});
+  $('pinVerifyBtn').disabled=false;
+  if(error)return msg($('loginMsg'),pinErr(error));
+  if(data!==true){$('pinInput').value='';return msg($('loginMsg'),'Wrong or expired PIN. Ask the Admin again, or press "Get a new PIN".')}
+  store.set('pinOk',_pinDso.id);$('pinStep').classList.add('hidden');await enterDso(_pinDso);
+};
+$('pinInput').addEventListener('keydown',e=>{if(e.key==='Enter')$('pinVerifyBtn').click()});
+$('pinBackBtn').onclick=()=>{$('pinStep').classList.add('hidden');showDsoPicker()};
+/* Admin: pending PINs appear at the top of every page */
+let _pinTm=null;
+async function pollPins(){
+  const el=$('pinBanner');if(!el||userMode!=='admin'||document.hidden)return;
+  const {data,error}=await db.from('dso_login_pins').select('id,pin,expires_at,created_at,dsos(full_name)').is('used_at',null).gt('expires_at',new Date().toISOString()).order('created_at',{ascending:false});
+  if(error||!data||!data.length){el.classList.add('hidden');el.innerHTML='';return}
+  el.classList.remove('hidden');
+  el.innerHTML=data.map(x=>{const m=Math.max(1,Math.ceil((new Date(x.expires_at)-Date.now())/60000));return `<div class="pr"><span>🔑 <b>${esc(x.dsos?.full_name||'DSO')}</b> wants to sign in — PIN:</span><span class="pn">${esc(x.pin)}</span><small>valid ~${m} min</small></div>`}).join('');
+}
+function startPinPoll(){stopPinPoll();pollPins();_pinTm=setInterval(pollPins,4000)}
+function stopPinPoll(){if(_pinTm)clearInterval(_pinTm);_pinTm=null;const el=$('pinBanner');if(el){el.classList.add('hidden');el.innerHTML=''}}
 /* FIX 2: DSO sessions are restored on refresh too */
 async function checkSession(){
   const {data:{session}}=await db.auth.getSession();if(!session)return;
@@ -170,7 +209,7 @@ async function checkSession(){
   if(p.role==='dso'){const id=p.dso_id||store.get('dsoId');if(id&&await useDso(id))return;return showDsoPicker()}
   await db.auth.signOut();
 }
-$('loginType').onchange=()=>{$('loginMsg').innerHTML='';$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden')};
+$('loginType').onchange=()=>{$('loginMsg').innerHTML='';$('pinStep').classList.add('hidden');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden')};
 $('password').addEventListener('keydown',e=>{if(e.key==='Enter')$('loginBtn').click()});
 $('loginBtn').onclick=async()=>{
   userMode=$('loginType').value;
@@ -191,16 +230,17 @@ $('loginBtn').onclick=async()=>{
 $('dsoContinueBtn').onclick=async()=>{
   const d=(window._availableDsos||[]).find(x=>x.id===$('dsoSelect').value);
   if(!d)return msg($('loginMsg'),'Please select your DSO name.');
-  d.brandIds=await dsoBrandIds(d);d.roadIds=await dsoRoadIds(d);currentDso=d;store.set('dsoId',d.id);showApp('dso');
+  if(store.get('pinOk')===d.id)await enterDso(d);else showPinStep(d);
 };
-$('backLoginBtn').onclick=async()=>{await db.auth.signOut();store.del('dsoId');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
-$('logoutBtn').onclick=async()=>{currentDso=null;store.del('dsoId');await db.auth.signOut();$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
+$('backLoginBtn').onclick=async()=>{await db.auth.signOut();store.del('dsoId');store.del('pinOk');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
+$('logoutBtn').onclick=async()=>{stopPinPoll();currentDso=null;store.del('dsoId');store.del('pinOk');await db.auth.signOut();$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('dsoStep').classList.add('hidden');$('pinStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
 const DSO_PAGES=['dashboard','sales','reports','sheet'];
 function showApp(mode='admin'){
   userMode=mode;$('loginView').classList.add('hidden');$('appView').classList.remove('hidden');
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('hidden',mode==='dso'&&!DSO_PAGES.includes(b.dataset.page)));
   $('sessionLabel').textContent=mode==='dso'?'DSO: '+(currentDso?.full_name||''):'Admin session';
   go(mode==='dso'?'sales':'dashboard');
+  if(mode==='admin')startPinPoll();else stopPinPoll();
 }
 $('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(b)go(b.dataset.page)});
 const titles={dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet'};
