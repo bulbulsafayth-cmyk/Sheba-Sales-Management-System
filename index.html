@@ -1178,7 +1178,7 @@ const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','De
 const fmtDate=d=>{const [y,m,dd]=String(d).split('-');return Number(dd)+' '+MON[Number(m)-1]+' '+y};
 async function sheetPage(){
   const tok=navToken,isAdmin=userMode==='admin';
-  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Daily Sales Sheet</h1><div class="sub">One printable sheet per DSO and brand for a single day. Print in A4 landscape.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="shDate"></div><div><label>Brand</label><select id="shBrand"><option value="">All brands</option></select></div>${isAdmin?'<div><label>DSO</label><select id="shDso"><option value="">All DSOs</option></select></div>':''}</div><div class="form-actions"><button id="shRun">Generate sheet</button><button class="secondary" id="shPrint">Print / PDF</button><button class="secondary" id="shXlsx">Excel</button><button class="secondary" id="shImg">Share image</button><button class="secondary" id="shShare">Share text</button><button class="secondary" id="shBack">← Summary report</button></div><div id="shMsg"></div></div></div><div id="shOut" class="sheetwrap"></div>`;
+  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Daily Sales Sheet</h1><div class="sub">One printable sheet per DSO and brand for a single day. Print in A4 landscape.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="shDate"></div><div><label>Brand</label><select id="shBrand"><option value="">All brands</option></select></div>${isAdmin?'<div><label>DSO</label><select id="shDso"><option value="">All DSOs</option></select></div>':''}</div><div class="form-actions"><button id="shRun">Generate sheet</button><button class="secondary" id="shPrint">Print / PDF</button><button class="secondary" id="shXlsx">Excel</button><button class="secondary" id="shImg">Share image</button><button class="secondary" id="shBack">← Summary report</button></div><div id="shMsg"></div></div></div><div id="shOut" class="sheetwrap"></div>`;
   const [brands,dsos,roads,rets,prods]=await Promise.all(['brands','dsos','roads','retailers','products'].map(t=>queryAll(t)));
   if(tok!==navToken)return;
   const bm=await loadDsoBrandMap();
@@ -1303,16 +1303,6 @@ async function sheetPage(){
       if(!e||e.name!=='AbortError')msg($('shMsg'),'Could not make the picture: '+(e.message||e));
     }
     btn.disabled=false;if(!pendingImgs)btn.textContent=old;
-  };
-  $('shShare').onclick=()=>{
-    if(!last.length)return msg($('shMsg'),'Generate a sheet first.');
-    const out=last.map(({g,m,date})=>{
-      const mt=meta(g),t=m.tot;
-      return [mt.brand.toUpperCase()+' DAILY SALES SHEET','DSO: '+mt.dso,'Date: '+fmtDate(date),'',
-        ...m.list.map((x,i)=>(i+1)+'. '+x.name+' - Qty '+fmtN(x.qty)+', Sales '+fmtN(x.val)+', Collection '+fmtN(x.col+x.due)+', Outstanding '+fmtN(x.out)+(x.notes.length?' ('+x.notes.join('; ')+')':'')),
-        '','Total Qty: '+fmtN(t.qty),'Total Sales: '+fmtN(t.val),'TPP: '+fmtN(t.tp),'Collection: '+fmtN(t.col+t.due),'Outstanding: '+fmtN(t.out)].join('\n');
-    }).join('\n\n----------\n\n')+'\n\nDeveloped By Safayth Hossen Bulbul';
-    shareText('Daily Sales Sheet',out);
   };
   $('shBack').onclick=()=>go('reports');
   await run();
