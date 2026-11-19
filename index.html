@@ -190,6 +190,14 @@ body::after{inset:-300px;background-size:300px 300px;opacity:.5;animation:phDrif
 .rtypes button{background:#2563eb;color:#fff;border-color:#1e40af}
 .rtypes button:hover{background:#1d4ed8;color:#fff}
 .rtypes button.on{background:#1e3a8a;color:#fff;border-color:#172554}
+.mprice{font-size:12px;color:var(--muted);font-weight:600;margin-top:1px}
+#brandFloat{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+#brandFloat .bf{position:absolute;opacity:.4;animation:bfFloat var(--d,30s) ease-in-out infinite alternate;animation-delay:var(--dl,0s);will-change:transform}
+#brandFloat img{display:block;border-radius:8px;box-shadow:0 2px 10px #0006}
+#brandFloat .bt{display:block;padding:6px 14px;border:2px solid #ffffffb0;border-radius:999px;color:#fff;font-weight:800;letter-spacing:.04em;white-space:nowrap;background:#ffffff14}
+@keyframes bfFloat{from{transform:translate(0,0) rotate(var(--r0,-6deg))}to{transform:translate(var(--dx,40px),var(--dy,-60px)) rotate(var(--r1,6deg))}}
+@media (prefers-reduced-motion:reduce){#brandFloat .bf{animation:none}}
+@media print{#brandFloat{display:none!important}}
 </style></head>
 <body>
 <div id="loginView" class="login-wrap"><div class="login"><h1>Distribution Sales</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
@@ -287,6 +295,7 @@ $('logoutBtn').onclick=async()=>{currentDso=null;store.del('dsoId');store.del('l
 const DSO_PAGES=['dashboard','sales','reports','sheet'];
 function showApp(mode='admin'){
   userMode=mode;$('loginView').classList.add('hidden');$('appView').classList.remove('hidden');
+  if(!window._bfNames){window._bfNames=1;addBrandNames()}
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('hidden',mode==='dso'&&!DSO_PAGES.includes(b.dataset.page)));
   $('sessionLabel').textContent=mode==='dso'?'DSO: '+(currentDso?.full_name||''):'Admin session';
   go(mode==='dso'?'sales':'dashboard');
@@ -1036,7 +1045,7 @@ async function reportsPage(){
         if(isM){const t=mv(g.l);L.push(g.n+': Qty '+fmtN(t.q)+', Value '+money(t.v))}
         else{const a=aggRows(g.l);L.push(g.n+': Qty '+fmtN(a.qty)+', Net '+money(a.net)+', Outstanding '+money(a.out))}
       });
-      if(rep.type==='brand'&&!isM){const sel=$('rBrand').value;if(sel){L.push('');modelList(rep.rows).forEach(m=>L.push(m.label+': Qty '+fmtN(m.q)+', '+money(m.v)))}}
+      if(rep.type==='brand'&&!isM){const sel=$('rBrand').value;if(sel){L.push('');modelList(rep.rows).forEach(m=>L.push(m.label+' ('+money(m.price)+'): Qty '+fmtN(m.q)+', '+money(m.v)))}}
     }
     L.push('','Developed By Safayth Hossen Bulbul');
     shareText(nm,L.join('\n'));
@@ -1081,10 +1090,11 @@ const cardsHtml=a=>`<div class="cards" style="margin:0 0 16px;grid-template-colu
 function groupBy(rows,keyFn){const m=new Map();rows.forEach(x=>{const k=keyFn(x);if(!m.has(k))m.set(k,[]);m.get(k).push(x)});return m}
 const cmpTxt=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});
 /* model-wise quantity and sales value for a list of entries */
+const mLabel=m=>esc(m.label)+'<div class="mprice">'+money(m.price)+'</div>';
 function modelList(list){
   const models=new Map();
-  list.forEach(x=>{(rep.items[x.id]||[]).forEach(i=>{const m=models.get(i.product_id)||{q:0,v:0};m.q+=Number(i.quantity||0);m.v+=Number(i.quantity||0)*Number(i.unit_price||0);models.set(i.product_id,m)})});
-  return [...models.entries()].map(([id,m])=>{const pr=rep.prods[id]||{},v=variantOnce(pr.product_name,pr.model_code);return {label:(pr.product_name||'Unknown model')+(v?' ('+v+')':''),q:m.q,v:m.v}}).sort((a,b)=>b.q-a.q||cmpTxt(a.label,b.label));
+  list.forEach(x=>{(rep.items[x.id]||[]).forEach(i=>{const m=models.get(i.product_id)||{q:0,v:0,up:Number(i.unit_price||0)};m.q+=Number(i.quantity||0);m.v+=Number(i.quantity||0)*Number(i.unit_price||0);models.set(i.product_id,m)})});
+  return [...models.entries()].map(([id,m])=>{const pr=rep.prods[id]||{},v=variantOnce(pr.product_name,pr.model_code);const price=Number(pr.sale_price!=null?pr.sale_price:m.up)||0;return {label:(pr.product_name||'Unknown model')+(v?' ('+v+')':''),price,q:m.q,v:m.v}}).sort((a,b)=>a.price-b.price||cmpTxt(a.label,b.label));
 }
 const byDate=list=>[...groupBy(list,x=>x.sale_date).entries()].sort((a,b)=>cmpTxt(a[0],b[0]));
 const dateTable=list=>`<div class="table-wrap"><table>${aggHead('Date')}<tbody>${byDate(list).map(([d,l])=>aggTr(esc(fmtDate(d)),aggRows(l))).join('')}${aggTr('Grand total',aggRows(list),GT)}</tbody></table></div>`;
@@ -1120,12 +1130,12 @@ function renderOut(){
     body=title((cur?'Brand: '+brandTag(cur.name,28):'All brands')+' · Model: '+esc(mn))+`<div class="cards" style="margin:0 0 16px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))"><div class="card"><div class="k">Entries</div><div class="v">${tot.n}</div></div><div class="card"><div class="k">Sales quantity</div><div class="v">${tot.q.toLocaleString('en-US')}</div></div><div class="card"><div class="k">Sales value</div><div class="v">${money(tot.v)}</div></div></div><div class="table-wrap"><table><thead><tr><th>Brand</th><th>Model</th><th>Entries</th><th>Qty</th><th>Sales value</th></tr></thead><tbody>${list.map(g=>{const a=mAgg(g.l);return `<tr><td>${brandTag(g.name,22)}</td><td>${esc(mn)}</td><td>${a.n}</td><td>${a.q.toLocaleString('en-US')}</td><td>${money(a.v)}</td></tr>`}).join('')||'<tr><td colspan="5" class="empty">No sales of this model in the selected dates.</td></tr>'}</tbody></table></div><p class="muted" style="margin:8px 0 0;font-size:12px">Showing only the selected model. Trade promotion, received and outstanding belong to the whole entry, so they are not split by model.</p>`;
   }else if(!cur){
     if(isDso)body=title('All DSOs')+cardsHtml(aggRows(rows))+`<div class="table-wrap"><table>${aggHead('DSO')}<tbody>${groups.map(g=>aggTr(esc(g.name),aggRows(g.l))).join('')}${aggTr('Grand total',aggRows(rows),GT)}</tbody></table></div>`;
-    else body=title('All brands')+cardsHtml(aggRows(rows))+`<div class="table-wrap"><table>${aggHead('Brand / Model')}<tbody>${groups.map(g=>aggTr(brandTag(g.name,22),aggRows(g.l),'font-weight:800;background:#f1f5fb')+modelList(g.l).map(m=>`<tr><td style="padding-left:28px">${esc(m.label)}</td><td></td><td>${m.q.toLocaleString('en-US')}</td><td>${money(m.v)}</td><td></td><td></td><td></td><td></td></tr>`).join('')).join('')}${aggTr('Grand total',aggRows(rows),GT)}</tbody></table></div><p class="muted" style="margin:8px 0 0;font-size:12px">Under each brand: model-wise quantity and sales value. Trade promotion, received and outstanding are tracked per entry, so they appear on the brand line only.</p>`;
+    else body=title('All brands')+cardsHtml(aggRows(rows))+`<div class="table-wrap"><table>${aggHead('Brand / Model')}<tbody>${groups.map(g=>aggTr(brandTag(g.name,22),aggRows(g.l),'font-weight:800;background:#f1f5fb')+modelList(g.l).map(m=>`<tr><td style="padding-left:28px">${mLabel(m)}</td><td></td><td>${m.q.toLocaleString('en-US')}</td><td>${money(m.v)}</td><td></td><td></td><td></td><td></td></tr>`).join('')).join('')}${aggTr('Grand total',aggRows(rows),GT)}</tbody></table></div><p class="muted" style="margin:8px 0 0;font-size:12px">Under each brand: model-wise quantity and sales value. Trade promotion, received and outstanding are tracked per entry, so they appear on the brand line only.</p>`;
   }else if(isDso){
     body=title('DSO: '+esc(cur.name))+cardsHtml(aggRows(cur.l))+dateTable(cur.l)+entriesTable(cur.l,true);
   }else{
     const ml=modelList(cur.l),tq=ml.reduce((s,m)=>s+m.q,0),tv=ml.reduce((s,m)=>s+m.v,0);
-    body=title('Brand: '+brandTag(cur.name,28))+cardsHtml(aggRows(cur.l))+`<h3 style="margin:0 0 10px">Model-wise sales</h3><div class="table-wrap"><table><thead><tr><th>Model</th><th>Qty</th><th>Sales value</th></tr></thead><tbody>${ml.map(m=>`<tr><td>${esc(m.label)}</td><td>${m.q.toLocaleString('en-US')}</td><td>${money(m.v)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">No product sales (collections only).</td></tr>'}<tr style="${GT}"><td>Total</td><td>${tq.toLocaleString('en-US')}</td><td>${money(tv)}</td></tr></tbody></table></div>`;
+    body=title('Brand: '+brandTag(cur.name,28))+cardsHtml(aggRows(cur.l))+`<h3 style="margin:0 0 10px">Model-wise sales</h3><div class="table-wrap"><table><thead><tr><th>Model</th><th>Qty</th><th>Sales value</th></tr></thead><tbody>${ml.map(m=>`<tr><td>${mLabel(m)}</td><td>${m.q.toLocaleString('en-US')}</td><td>${money(m.v)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">No product sales (collections only).</td></tr>'}<tr style="${GT}"><td>Total</td><td>${tq.toLocaleString('en-US')}</td><td>${money(tv)}</td></tr></tbody></table></div>`;
   }
   out.innerHTML=tabs+body;
   if(cur&&isDso)wirePager(cur.l);
@@ -1325,6 +1335,26 @@ async function sheetPage(){
   $('shBack').onclick=()=>go('reports');
   await run();
 }
+
+/* floating brand logos in the background (brands without a saved logo float as a name tag) */
+function buildBrandFloat(names){
+  let box=document.getElementById('brandFloat');
+  if(!box){box=document.createElement('div');box.id='brandFloat';document.body.prepend(box)}
+  const items=[];
+  Object.keys(BRAND_LOGOS).forEach(k=>items.push({logo:BRAND_LOGOS[k],name:k}));
+  (names||[]).forEach(n=>{if(!brandKey(n))items.push({name:n})});
+  const rnd=(a,b)=>a+Math.random()*(b-a),COPIES=items.length<=6?3:2;
+  box.innerHTML='';
+  items.forEach(it=>{for(let c=0;c<COPIES;c++){
+    const d=document.createElement('div');d.className='bf';
+    d.style.cssText='left:'+rnd(2,90).toFixed(1)+'%;top:'+rnd(3,88).toFixed(1)+'%;--d:'+rnd(18,40).toFixed(0)+'s;--dl:-'+rnd(0,30).toFixed(0)+'s;--dx:'+rnd(-90,90).toFixed(0)+'px;--dy:'+rnd(-110,110).toFixed(0)+'px;--r0:'+rnd(-10,0).toFixed(0)+'deg;--r1:'+rnd(0,10).toFixed(0)+'deg';
+    if(it.logo){const i=document.createElement('img');i.src=it.logo;i.alt='';i.style.height=rnd(26,44).toFixed(0)+'px';d.appendChild(i)}
+    else{const t=document.createElement('span');t.className='bt';t.textContent=it.name;t.style.fontSize=rnd(14,20).toFixed(0)+'px';d.appendChild(t)}
+    box.appendChild(d);
+  }});
+}
+buildBrandFloat();
+async function addBrandNames(){try{const {data}=await db.from('brands').select('name').eq('is_active',true);if(data&&data.length)buildBrandFloat(data.map(x=>x.name))}catch(e){}}
 
 checkSession();
 </script>
