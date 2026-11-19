@@ -192,9 +192,14 @@ body::after{inset:-300px;background-size:300px 300px;opacity:.5;animation:phDrif
 .rtypes button.on{background:#1e3a8a;color:#fff;border-color:#172554}
 .mprice{font-size:12px;color:var(--muted);font-weight:600;margin-top:1px}
 #brandFloat{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
-#brandFloat .bf{position:absolute;opacity:.16;animation:bfFloat var(--d,30s) ease-in-out infinite alternate;animation-delay:var(--dl,0s);will-change:transform}
-#brandFloat img{display:block;border-radius:8px;box-shadow:0 2px 10px #0006}
-#brandFloat .bt{display:block;padding:6px 14px;border:2px solid #ffffffb0;border-radius:999px;color:#fff;font-weight:800;letter-spacing:.04em;white-space:nowrap;background:#ffffff14}
+#brandFloat .bf{position:absolute;animation:bfFloat var(--d,30s) ease-in-out infinite alternate;animation-delay:var(--dl,0s);will-change:transform}
+#brandFloat .bb{display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;color:#fff;font-weight:800;letter-spacing:.03em;text-shadow:0 1px 4px #000c;background:radial-gradient(circle at 30% 25%,#ffffff45,#ffffff14 60%,#ffffff0a);border:2px solid #ffffff5c;box-shadow:inset 0 0 16px #ffffff26,0 6px 20px #0006}
+#brandFloat .bb img{height:22px;width:auto;border-radius:5px;flex:none}
+#brandFloat .s0{border-radius:50%;aspect-ratio:1;padding:12px;flex-direction:column;gap:5px}
+#brandFloat .s1{border-radius:999px;padding:12px 26px}
+#brandFloat .s2{border-radius:30px;padding:18px 24px}
+#brandFloat .s3{border-radius:58% 42% 55% 45%/48% 56% 44% 52%;padding:24px 30px}
+#brandFloat .s4{border-radius:50%;padding:22px 40px}
 @keyframes bfFloat{from{transform:translate(0,0) rotate(var(--r0,-6deg))}to{transform:translate(var(--dx,40px),var(--dy,-60px)) rotate(var(--r1,6deg))}}
 @media (prefers-reduced-motion:reduce){#brandFloat .bf{animation:none}}
 @media print{#brandFloat{display:none!important}}
@@ -970,6 +975,16 @@ async function salesPage(editId){
     if(head.trade_promotion_amount>gross)return msg(m,'Trade promotion cannot be more than gross sales.');
     if(collOnly&&!(head.received_amount>0))return msg(m,'Enter the collected amount.');
     if(!collOnly&&head.received_amount>gross-head.trade_promotion_amount&&!confirm('Received amount is more than net sales. Save anyway?'))return;
+    /* warn when money is still due: nothing collected, or only part of the net sales */
+    if(!collOnly){
+      const net=gross-head.trade_promotion_amount,due=net-head.received_amount;
+      if(due>0.009){
+        const ask=head.received_amount<=0
+          ?'No collection amount was entered.\n\nDo you want to keep the full '+money(net)+' as DUE?'
+          :'Net sales '+money(net)+', received '+money(head.received_amount)+'.\n\n'+money(due)+' will stay as DUE. Do you want to keep it as due and save?';
+        if(!confirm(ask))return;
+      }
+    }
     btn.disabled=true;
     try{
       await saveEntry(editing?editId:null,head,collOnly?[]:used.map(x=>({product_id:x.product_id,quantity:x.quantity,unit_price:x.unit_price})));
@@ -1326,20 +1341,23 @@ async function sheetPage(){
 function buildBrandFloat(names){
   let box=document.getElementById('brandFloat');
   if(!box){box=document.createElement('div');box.id='brandFloat';document.body.prepend(box)}
-  const items=[];
-  Object.keys(BRAND_LOGOS).forEach(k=>items.push({logo:BRAND_LOGOS[k],name:k}));
-  (names||[]).forEach(n=>{if(!brandKey(n))items.push({name:n})});
-  const rnd=(a,b)=>a+Math.random()*(b-a),COPIES=items.length<=6?3:2;
+  const cap=k=>k.length<=3?k.toUpperCase():k.charAt(0).toUpperCase()+k.slice(1);
+  const list=(names&&names.length)?names:Object.keys(BRAND_LOGOS).map(cap);
+  const rnd=(a,b)=>a+Math.random()*(b-a),COPIES=list.length<=6?3:2;
   box.innerHTML='';
-  items.forEach(it=>{for(let c=0;c<COPIES;c++){
+  list.forEach(n=>{for(let c=0;c<COPIES;c++){
     const d=document.createElement('div');d.className='bf';
-    d.style.cssText='left:'+rnd(2,90).toFixed(1)+'%;top:'+rnd(3,88).toFixed(1)+'%;--d:'+rnd(18,40).toFixed(0)+'s;--dl:-'+rnd(0,30).toFixed(0)+'s;--dx:'+rnd(-90,90).toFixed(0)+'px;--dy:'+rnd(-110,110).toFixed(0)+'px;--r0:'+rnd(-10,0).toFixed(0)+'deg;--r1:'+rnd(0,10).toFixed(0)+'deg';
-    if(it.logo){const i=document.createElement('img');i.src=it.logo;i.alt='';i.style.height=rnd(26,44).toFixed(0)+'px';d.appendChild(i)}
-    else{const t=document.createElement('span');t.className='bt';t.textContent=it.name;t.style.fontSize=rnd(14,20).toFixed(0)+'px';d.appendChild(t)}
-    box.appendChild(d);
+    d.style.cssText='left:'+rnd(2,88).toFixed(1)+'%;top:'+rnd(3,86).toFixed(1)+'%;--d:'+rnd(18,40).toFixed(0)+'s;--dl:-'+rnd(0,30).toFixed(0)+'s;--dx:'+rnd(-90,90).toFixed(0)+'px;--dy:'+rnd(-110,110).toFixed(0)+'px;--r0:'+rnd(-8,0).toFixed(0)+'deg;--r1:'+rnd(0,8).toFixed(0)+'deg';
+    const sh=Math.floor(rnd(0,5)),bb=document.createElement('div');
+    bb.className='bb s'+sh;
+    bb.style.fontSize=rnd(14,20).toFixed(0)+'px';
+    if(sh===0)bb.style.width=rnd(104,150).toFixed(0)+'px';
+    const k=brandKey(n);
+    if(k){const i=document.createElement('img');i.src=BRAND_LOGOS[k];i.alt='';bb.appendChild(i)}
+    const t=document.createElement('span');t.textContent=n;bb.appendChild(t);
+    d.appendChild(bb);box.appendChild(d);
   }});
 }
-buildBrandFloat();
 async function addBrandNames(){try{const {data}=await db.from('brands').select('name').eq('is_active',true);if(data&&data.length)buildBrandFloat(data.map(x=>x.name))}catch(e){}}
 
 checkSession();
