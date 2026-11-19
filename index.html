@@ -203,6 +203,28 @@ body::after{inset:-300px;background-size:300px 300px;opacity:.5;animation:phDrif
 @keyframes bfFloat{from{transform:translate(0,0) rotate(var(--r0,-6deg))}to{transform:translate(var(--dx,40px),var(--dy,-60px)) rotate(var(--r1,6deg))}}
 @media (prefers-reduced-motion:reduce){#brandFloat .bf{animation:none}}
 @media print{#brandFloat{display:none!important}}
+/* credit & cheque report */
+@page cr{size:A4 landscape;margin:8mm}
+.crsheet{background:#fff;color:#000;border:1px solid #cfd8e6;border-radius:10px;overflow:auto;page:cr;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.crsheet .cr-title{text-align:center;font-weight:800;font-size:28px;padding:8px 10px;line-height:1.15}
+.crsheet .cr-cheque{background:#ff0000;color:#fff}
+.crsheet .cr-credit{background:#b7dee8;color:#000;border-bottom:2px solid #000}
+.crsheet .cr-date{background:#f79646;text-align:center;font-weight:800;font-size:22px;padding:4px}
+.crsheet .cr-road{font-weight:800;font-size:21px;padding:4px 10px;border:1px solid #000;margin-top:12px}
+.crsheet:has(.cr-cheque) .cr-road{background:#92d050;text-align:center}
+.crsheet:has(.cr-credit) .cr-road{background:#ffc000;display:inline-block;min-width:240px;margin-left:0}
+table.crt{border-collapse:collapse;width:100%;min-width:0}
+table.crt th,table.crt td{border:1px solid #000;padding:6px 7px;text-align:center;font-size:13px;background:#fff;color:#e00000;font-weight:700;text-transform:none;letter-spacing:0;vertical-align:middle}
+table.crt tr.cr-h th{color:#000;font-weight:800;background:#fff;font-size:13px}
+.crsheet:has(.cr-credit) table.crt tr.cr-h th{background:#bfbfbf}
+table.crt td.l{text-align:left}
+table.crt td.n{font-variant-numeric:tabular-nums}
+table.crt tr.crsum td{color:#000;font-weight:800;background:#f1f1f1}
+table.crt tr.crdone td{color:#6b7280;text-decoration:line-through}
+table.crt td.cract{white-space:nowrap;text-decoration:none}
+table.crt td.cract button{padding:4px 9px;font-size:12px}
+.crsheet .cr-credit-foot{display:none}
+@media print{.crsheet{border:0;border-radius:0;overflow:visible}.crsheet .cr-credit-foot{display:block;text-align:center;font-size:9pt;font-weight:600;margin-top:8px;color:#000}table.crt th,table.crt td{font-size:10px;padding:3px 4px}.crsheet .cr-title{font-size:22px}.crsheet .cr-date{font-size:16px}.crsheet .cr-road{font-size:15px}}
 </style></head>
 <body>
 <div id="loginView" class="login-wrap"><div class="login"><h1>Distribution Sales</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
@@ -295,7 +317,7 @@ $('dsoContinueBtn').onclick=async()=>{
 };
 $('backLoginBtn').onclick=async()=>{await db.auth.signOut();store.del('dsoId');store.del('loggedDso');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
 $('logoutBtn').onclick=async()=>{currentDso=null;store.del('dsoId');store.del('loggedDso');await db.auth.signOut();$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
-const DSO_PAGES=['dashboard','sales','reports','sheet'];
+const DSO_PAGES=['dashboard','sales','reports','sheet','credit'];
 function showApp(mode='admin'){
   userMode=mode;$('loginView').classList.add('hidden');$('appView').classList.remove('hidden');
   if(!window._bfNames){window._bfNames=1;addBrandNames()}
@@ -304,12 +326,12 @@ function showApp(mode='admin'){
   go(mode==='dso'?'sales':'dashboard');
 }
 $('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(b)go(b.dataset.page)});
-const titles={dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet'};
-const pages={dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage()};
+const titles={dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report'};
+const pages={dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage()};
 function go(p,arg){
   if(userMode==='dso'&&!DSO_PAGES.includes(p))p='sales';
   currentPage=p;navToken++;
-  document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===(p==='sheet'?'reports':p)));
+  document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===((p==='sheet'||p==='credit')?'reports':p)));
   $('topTitle').textContent=titles[p];
   Promise.resolve(pages[p](arg)).catch(e=>{$('page').innerHTML=`<div class="notice error">${esc(e.message||e)}</div>`});
 }
@@ -352,6 +374,169 @@ async function dashboard(){
     bars($('brandBars'),x=>x.brand_id,brandNm,8);
     if($('dsoBars'))bars($('dsoBars'),x=>x.dso_id,dsoNm,8);
   }catch(e){p.insertAdjacentHTML('beforeend',`<div class="notice error">${esc(e.message)}</div>`)}
+}
+
+/* ---------- Credit (verbal due) & Cheque report ---------- */
+const dmy=d=>{const [y,m,dd]=String(d).split('-');return dd+'.'+m+'.'+String(y).slice(2)};
+const dmyFull=d=>{const [y,m,dd]=String(d).split('-');return dd+'.'+m+'.'+y};
+const daysBetween=(a,b)=>Math.round((Date.parse(b)-Date.parse(a))/864e5);
+const fAmt=n=>{n=Math.round(Number(n||0));return n?n.toLocaleString('en-US'):''};
+const loadH2C=()=>window.html2canvas?Promise.resolve():new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';sc.onload=ok;sc.onerror=()=>no(new Error('Could not load the image tool. Check the internet connection.'));document.head.appendChild(sc)});
+async function creditPage(){
+  const tok=navToken,isAdmin=userMode==='admin';
+  const SHARE_SVG='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-4.2M8.6 13.4l6.8 4.2"/></svg>';
+  const DL_SVG='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg>';
+  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Credit &amp; Cheque Report</h1><div class="sub">Daily verbal-due (credit) list and retailer cheque list.</div><div class="panel"><div class="rtypes" id="crTypes"><button data-k="credit" class="on">Credit report (verbal due)</button><button data-k="cheque">Cheque report</button></div><div class="form-grid" style="margin-top:14px"><div><label>Date</label><input type="date" id="crDate"></div><div><label>Road</label><select id="crRoad"><option value="">All roads</option></select></div><div><label>Brand</label><select id="crBrand"><option value="">All brands</option></select></div>${isAdmin?'<div><label>DSO</label><select id="crDso"><option value="">All DSOs</option></select></div>':''}</div><div class="form-actions"><button id="crRun">Generate</button><button class="secondary" id="crPrint">Print / PDF</button><button class="secondary" id="crImg">${SHARE_SVG}Share</button><button class="secondary" id="crSave">${DL_SVG}Save image</button><button class="secondary" id="crXlsx">Excel</button><button class="secondary" id="crBack">← Reports</button></div><div id="crMsg"></div></div></div><div id="crOut"></div>`;
+  const [brands,dsos,roads]=await Promise.all(['brands','dsos','roads'].map(queryAll));
+  if(tok!==navToken)return;
+  const by1=a=>Object.fromEntries(a.map(x=>[x.id,x]));
+  const L={brand:by1(brands),road:by1(roads)};
+  const myRoads=userMode==='dso'&&currentDso&&(currentDso.roadIds||[]).length?currentDso.roadIds:null;
+  $('crRoad').innerHTML+=roads.filter(x=>x.is_active!==false&&(!myRoads||myRoads.includes(x.id))).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
+  $('crBrand').innerHTML+=onlyMyBrands(brands).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
+  if($('crDso'))$('crDso').innerHTML+=dsos.filter(x=>x.is_active!==false).map(x=>`<option value="${x.id}">${esc(x.full_name)}</option>`).join('');
+  $('crDate').value=today();
+  let kind='credit',view=null;
+  const cmp=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});
+  const roadName=id=>L.road[id]?.name||'—';
+  const filt=rows=>{
+    const rd=$('crRoad').value,br=$('crBrand').value,ds=$('crDso')?.value,mb=myBrandIds();
+    return rows.filter(x=>(!br||x.brand_id===br)&&(!ds||x.dso_id===ds)&&(!mb||mb.includes(x.brand_id)));
+  };
+  /* ----- verbal credit: due balance per retailer + brand, oldest dues paid first (FIFO) ----- */
+  async function buildCredit(D){
+    let rows=await fetchAll(()=>scopedReport().lte('sale_date',D).order('sale_date').order('id'));
+    rows=filt(rows);
+    const m=new Map();
+    rows.forEach(x=>{
+      const k=x.retailer_id+'|'+x.brand_id;let g=m.get(k);
+      if(!g){g={shop:x.retailer||'—',brand:x.brand||'—',pn:0,pr:0,tn:0,tr:0,td:0,paid:0,ch:[]};m.set(k,g)}
+      g.shop=x.retailer||g.shop;g.road=x.road;g.dso=x.dso_name||g.dso||'—';
+      const net=isDueRow(x)?0:Number(x.net_sales||0),rec=Number(x.received_amount||0);
+      if(x.sale_date<D){g.pn+=net;g.pr+=rec}else{g.tn+=net;g.tr+=rec;if(!isDueRow(x))g.td+=Math.max(0,net-rec)}
+      g.paid+=rec;g.ch.push({d:x.sale_date,net});
+    });
+    const rd=L.road[$('crRoad').value]?.name,out=[];
+    m.forEach(g=>{
+      if(rd&&g.road!==rd)return;
+      const prev=Math.max(0,g.pn-g.pr),rec=Math.max(0,g.tr-(g.tn-g.td)),left=Math.max(0,g.pn-g.pr+g.tn-g.tr);
+      if(!(prev>0||g.td>0||rec>0))return;
+      let cum=0,old=null;for(const c of g.ch){cum+=c.net;if(cum>g.paid+0.5){old=c.d;break}}
+      out.push({road:g.road,c:[g.shop,g.brand,g.dso,prev,g.td,rec,left,left>0&&old?daysBetween(old,D):'']});
+    });
+    return {title:'Retailer Credit Data ('+dmy(D).replace(/\./g,'-')+')',cls:'cr-credit',date:null,
+      head:['Shop Name','Brand Name','Responsible person','Previous Due Amount','Todays Due Amount','Recovery Amount','Amount Left','Day Pass'],
+      sum:[3,4,5,6],txt:[0,1,2],groups:groupRoad(out)};
+  }
+  function groupRoad(list){
+    const g=new Map();list.forEach(r=>{const n=r.road||'—';if(!g.has(n))g.set(n,[]);g.get(n).push(r)});
+    return [...g.entries()].sort((a,b)=>cmp(a[0],b[0])).map(([name,rows])=>({name,rows:rows.sort((a,b)=>cmp(a.c[0],b.c[0])||cmp(a.c[1],b.c[1]))}));
+  }
+  /* ----- cheque list ----- */
+  async function buildCheque(D){
+    const cq=await fetchAll(()=>db.from('cheques').select('*').order('id'));
+    let rcs=[];try{rcs=await fetchAll(()=>db.from('cheque_recoveries').select('*').order('id'))}catch(e){throw new Error('cheque_recoveries does not exist')}
+    const rbyc={};rcs.forEach(x=>{(rbyc[x.cheque_id]=rbyc[x.cheque_id]||[]).push(x)});
+    const ids=[...new Set(cq.map(x=>x.sales_entry_id))],ent={};
+    for(let i=0;i<ids.length;i+=100){(await fetchAll(()=>scopedReport().in('id',ids.slice(i,i+100)))).forEach(x=>{ent[x.id]=x})}
+    const rd=L.road[$('crRoad').value]?.name,out=[];
+    const okIds=new Set(filt(Object.values(ent)).map(x=>x.id));
+    cq.forEach(c=>{
+      const e=ent[c.sales_entry_id];if(!e||!okIds.has(e.id))return;
+      if(rd&&e.road!==rd)return;
+      const recd=e.sale_date;if(recd>D)return;
+      const amt=Number(c.amount||0),rl=rbyc[c.id]||[];
+      const before=rl.filter(r=>r.recovered_on<D).reduce((a,r)=>a+Number(r.amount||0),0);
+      const today=rl.filter(r=>r.recovered_on===D).reduce((a,r)=>a+Number(r.amount||0),0);
+      const all=rl.reduce((a,r)=>a+Number(r.amount||0),0);
+      if(amt-before<=0.005)return;
+      const isNew=recd===D,open=amt-before,due=Math.max(0,open-today);
+      const bank=[c.bank_name,c.cheque_no?('#'+c.cheque_no):''].filter(Boolean).join(' ');
+      const pd=c.payable_date?dmy(c.payable_date):'';
+      out.push({road:e.road,id:c.id,rem:c.remarks||'',left:Math.max(0,amt-all),hasRec:rl.length>0,done:due<=0.005,
+        c:[e.retailer||'—',(e.dso_name||'—')+' · '+(e.brand||''),bank,dmy(recd),isNew?'':open,isNew?'':pd,isNew?amt:'',isNew?pd:'',today||'',due,daysBetween(recd,D),c.remarks||'']});
+    });
+    return {title:'Retailer Cheque Information List',cls:'cr-cheque',date:dmyFull(D),
+      head:['Enterprise Name','Responsible Person','Bank / Chq No.','Cheque Receiving / Invoice Date','Opening Info (Cheque Amount)','Payable Date','Today Received (Cheque Amount)','Payable Date','Recovery Amount','Cheque Amount (Due)','Day Count','Remarks'],
+      sum:[4,6,8,9],txt:[0,1,2,11],amt:[4,6,8,9],groups:groupRoad(out),cheque:true};
+  }
+  const render=()=>{
+    const v=view;if(!v)return;
+    const act=v.cheque&&isAdmin;
+    const cell=(r,i)=>{const val=r.c[i];const isAmt=(v.sum||[]).includes(i);return `<td class="${isAmt?'n':(i===0?'l':'')}">${isAmt?fAmt(val):esc(val===''||val==null?'':val)}</td>`};
+    const sumRow=rows=>`<tr class="crsum"><td></td>${v.head.map((h,i)=>i===0?'<td style="text-align:right">Total</td>':(v.sum.includes(i)?`<td class="n">${fAmt(rows.reduce((x,r)=>x+Number(r.c[i]||0),0))}</td>`:'<td></td>')).join('')}${act?'<td class="noprint"></td>':''}</tr>`;
+    const body=v.groups.map(g=>`<div class="cr-road">${esc(g.name)}</div><table class="crt"><thead><tr class="cr-h"><th>SL No.</th>${v.head.map(h=>`<th>${esc(h)}</th>`).join('')}${act?'<th class="noprint">Action</th>':''}</tr></thead><tbody>${g.rows.map((r,n)=>`<tr${r.done?' class="crdone"':''}><td>${n+1}</td>${r.c.map((_,i)=>cell(r,i)).join('')}${act?`<td class="noprint cract">${r.left>0.005?`<button data-act="rec" data-id="${r.id}" data-left="${r.left}">Recovery</button> `:''}${r.hasRec?`<button class="secondary" data-act="unrec" data-id="${r.id}">Undo last</button> `:''}<button class="secondary" data-act="rem" data-id="${r.id}" data-v="${esc(r.rem)}">Remarks</button></td>`:''}</tr>`).join('')}${sumRow(g.rows)}</tbody></table>`).join('')||'<p class="muted" style="padding:14px;text-align:center;color:#000">Nothing to show for this date.</p>';
+    $('crOut').innerHTML=`<div class="crsheet" id="crSheet"><div class="cr-title ${v.cls}">${esc(v.title)}</div>${v.date?`<div class="cr-date">Date :  ${esc(v.date)}</div>`:''}${body}<div class="cr-credit-foot">Developed By Safayth Hossen Bulbul</div></div>`;
+  };
+  const run=async()=>{
+    const D=$('crDate').value,m=$('crMsg');m.innerHTML='';
+    if(!D)return msg(m,'Please choose a date.');
+    $('crOut').innerHTML='<div class="notice">Loading…</div>';
+    try{
+      const v=kind==='credit'?await buildCredit(D):await buildCheque(D);
+      if(tok!==navToken)return;view=v;render();
+    }catch(e){$('crOut').innerHTML='';msg(m,/cheque/i.test(e.message||'')&&/does not exist|schema cache|relation/i.test(e.message||'')?'Cheque tracking is not set up yet. Run cheque-setup.sql in Supabase.':(e.message||String(e)))}
+  };
+  $('crTypes').onclick=e=>{const b=e.target.closest('button[data-k]');if(!b)return;kind=b.dataset.k;document.querySelectorAll('#crTypes button').forEach(x=>x.classList.toggle('on',x===b));view=null;$('crOut').innerHTML='';run()};
+  $('crRun').onclick=run;$('crBack').onclick=()=>go('reports');
+  $('crPrint').onclick=()=>{if(!view)return msg($('crMsg'),'Generate the report first.');window.print()};
+  $('crXlsx').onclick=()=>{
+    if(!view)return msg($('crMsg'),'Generate the report first.');
+    if(!window.XLSX)return alert('The Excel library could not load. Check the internet connection.');
+    const aoa=[[view.title],view.date?['Date: '+view.date]:[]];
+    view.groups.forEach(g=>{aoa.push([],[g.name],['SL No.',...view.head]);g.rows.forEach((r,n)=>aoa.push([n+1,...r.c]));aoa.push(['Total','',...view.head.map((_,i)=>view.sum.includes(i)?g.rows.reduce((a,r)=>a+Number(r.c[i]||0),0):'').slice(1)])});
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),kind==='credit'?'Credit':'Cheque');
+    XLSX.writeFile(wb,(kind==='credit'?'Retailer_Credit_':'Retailer_Cheque_')+$('crDate').value+'.xlsx');
+  };
+  /* picture of the report: Share (phone share menu) or Save image */
+  let pend=null;
+  const picture=async(btnEl,saveOnly)=>{
+    if(!view)return msg($('crMsg'),'Generate the report first.');
+    const old=btnEl.innerHTML;
+    if(pend&&!saveOnly){const f=pend;pend=null;btnEl.innerHTML=old;try{await navigator.share({files:[f],title:view.title})}catch(e){}return}
+    btnEl.disabled=true;btnEl.textContent='Preparing…';$('crMsg').innerHTML='';
+    let file=null;
+    try{
+      await loadH2C();
+      const w=document.createElement('div');w.style.cssText='position:fixed;left:-20000px;top:0;background:#fff;padding:16px;width:max-content;min-width:1300px';
+      const c=$('crSheet').cloneNode(true);c.querySelectorAll('.noprint').forEach(x=>x.remove());c.style.overflow='visible';w.appendChild(c);document.body.appendChild(w);
+      const cv=await html2canvas(w,{scale:2,backgroundColor:'#ffffff',useCORS:true});w.remove();
+      const blob=await new Promise(ok=>cv.toBlob(ok,'image/png'));
+      file=new File([blob],((kind==='credit'?'Retailer_Credit_':'Retailer_Cheque_')+$('crDate').value+'.png'),{type:'image/png'});
+      if(!saveOnly&&navigator.canShare&&navigator.canShare({files:[file]}))await navigator.share({files:[file],title:view.title});
+      else{const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),8000);msg($('crMsg'),'Picture saved. Open it from Downloads or Gallery and send it in WeChat, WhatsApp or Viber.','success')}
+    }catch(e){
+      if(e&&e.name==='NotAllowedError'&&file){pend=file;btnEl.textContent='Tap again to share';btnEl.disabled=false;return}
+      if(!e||e.name!=='AbortError')msg($('crMsg'),'Could not make the picture: '+(e.message||e));
+    }
+    btnEl.disabled=false;if(!pend)btnEl.innerHTML=old;
+  };
+  $('crImg').onclick=()=>picture($('crImg'),false);
+  $('crSave').onclick=()=>picture($('crSave'),true);
+  /* Admin: mark a cheque as recovered / edit its remarks */
+  $('crOut').onclick=async e=>{
+    const b=e.target.closest('button[data-act]');if(!b||!isAdmin)return;
+    const id=b.dataset.id,act=b.dataset.act;let res=null;
+    if(act==='rec'){
+      const left=Number(b.dataset.left)||0;
+      const a=prompt('Recovery amount (Tk). Remaining on this cheque: '+fAmt(left),String(left));if(a===null)return;
+      const amt=Number(a);if(!(amt>0)||amt>left+0.005)return alert('Enter an amount between 1 and '+fAmt(left)+'.');
+      const d=prompt('Recovered on (YYYY-MM-DD):',$('crDate').value);if(!d)return;
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return alert('Use the format YYYY-MM-DD.');
+      res=await db.from('cheque_recoveries').insert({cheque_id:id,amount:amt,recovered_on:d});
+    }else if(act==='unrec'){
+      const {data}=await db.from('cheque_recoveries').select('*').eq('cheque_id',id).order('id',{ascending:false}).limit(1);
+      const last=data&&data[0];if(!last)return;
+      if(!confirm('Remove the last recovery ('+fAmt(last.amount)+' on '+last.recovered_on+')?'))return;
+      res=await db.from('cheque_recoveries').delete().eq('id',last.id);
+    }else{
+      const t=prompt('Remarks:',b.dataset.v||'');if(t===null)return;
+      res=await db.from('cheques').update({remarks:t.trim()||null}).eq('id',id);
+    }
+    if(res&&res.error)return msg($('crMsg'),res.error.message);
+    run();
+  };
+  run();
 }
 
 /* ---------- file import helpers (CSV / Excel) ---------- */
@@ -829,7 +1014,7 @@ async function salesPage(editId){
 <div class="totals sticky" id="totals"></div>
 <div class="panel sec secdet"><div class="sec-h"><span class="sec-n">1</span>Retailer, DSO &amp; Brand details</div><div class="form-grid"><div style="grid-column:1/-1"><label style="display:flex;gap:8px;align-items:center;margin:0 0 4px;font-size:13px;color:#182338;cursor:pointer"><input type="checkbox" id="sColl" style="width:auto"> Due collection only (no sale - just money received)</label></div><div><label>Date</label><input type="date" id="sDate"></div><div><label>Brand <span id="sBrandLogo" style="float:right"></span></label><select id="sBrand"></select></div><div><label>Road</label><select id="sRoad"></select></div><div><label>DSO</label><select id="sDso"></select></div><div><label>Retailer <a href="#" id="newRetLink" style="float:right;font-weight:700;color:#2563eb;text-decoration:none">＋ New retailer</a></label><select id="sRetailer"></select></div><div><label>Notes (optional)</label><input id="sNotes"></div><div id="newRetBox" class="hidden" style="grid-column:1/-1;background:#f8fafd;border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:4px"><div class="form-grid"><div><label style="margin-top:0">New retailer name</label><input id="nrName"></div><div><label style="margin-top:0">Phone (optional)</label><input id="nrPhone"></div><div style="grid-column:1/-1"><label style="margin-top:0">Address (optional)</label><input id="nrAddr"></div></div><p class="muted" style="margin:6px 0 0;font-size:12px">The retailer is added to the road selected above.</p><div class="form-actions"><button id="nrSave">Save retailer</button><button class="secondary" id="nrCancel">Cancel</button></div><div id="nrMsg"></div></div></div></div>
 <div class="panel sec" id="prodBox"><div class="sec-h"><span class="sec-n">2</span>Products<span class="prodtools">${userMode==='dso'&&!editing?'<button class="secondary" id="todayToggle">Today\'s entries</button>':''}<button class="secondary" id="addItem">＋ Add product</button> <a href="#" id="newModLink" style="font-weight:700;color:#2563eb;text-decoration:none;white-space:nowrap">＋ New model</a></span></div><div class="table-wrap itemscroll"><table class="items"><thead><tr><th>Product</th><th>Qty</th><th>Unit price</th><th>Line total</th><th></th></tr></thead><tbody id="itemRows"></tbody></table></div><div id="newModBox" class="hidden" style="background:#f8fafd;border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px"><div class="form-grid"><div><label style="margin-top:0">Product name</label><input id="nmName"></div><div><label style="margin-top:0">Model code (optional)</label><input id="nmModel"></div><div><label style="margin-top:0">Sale price (Tk)</label><input id="nmPrice" type="number" min="0" step="0.01"></div></div><p class="muted" style="margin:6px 0 0;font-size:12px">The model is added to the brand selected above and picked in the product list.</p><div class="form-actions"><button id="nmSave">Save model</button><button class="secondary" id="nmCancel">Cancel</button></div><div id="nmMsg"></div></div></div>
-<div class="panel sec"><div class="sec-h"><span class="sec-n">3</span>Receiving &amp; Trade promotion</div><div class="form-grid recvgrid"><div><label>Received amount</label><input type="number" min="0" step="0.01" id="sReceived" value="0"></div><div><label>Trade promotion amount</label><input type="number" min="0" step="0.01" id="sTp" value="0"></div><div class="saverow"><button id="saveSale">${editing?'Update sales entry':'Save sales entry'}</button>${editing?'<button class="secondary" id="cancelEdit">Cancel</button>':''}</div></div></div>
+<div class="panel sec"><div class="sec-h"><span class="sec-n">3</span>Receiving &amp; Trade promotion</div><div class="form-grid recvgrid"><div><label>Cash received</label><input type="number" min="0" step="0.01" id="sReceived" value="0"></div><div><label>Cheque amount <span class="muted" style="font-weight:500">(counts as collection)</span></label><input type="number" min="0" step="0.01" id="sCheque" value="0"></div><div><label>Trade promotion amount</label><input type="number" min="0" step="0.01" id="sTp" value="0"></div><div id="chequeBox" class="hidden" style="grid-column:1/-1"><div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))"><div><label>Cheque payable date</label><input type="date" id="sChqDate"></div><div><label>Bank name</label><input id="sChqBank" placeholder="e.g. Islami Bank"></div><div><label>Cheque no. (optional)</label><input id="sChqNo"></div></div></div><div class="saverow"><button id="saveSale">${editing?'Update sales entry':'Save sales entry'}</button>${editing?'<button class="secondary" id="cancelEdit">Cancel</button>':''}</div></div></div>
 <div id="saleMsg"></div></div>${userMode==='dso'&&!editing?'<div class="panel hidden" id="todayBox" style="margin-top:18px"><h3>Your entries today</h3><p class="muted">Loading…</p></div>':''}`;
   $('sBrand').innerHTML=opts(usable(b),'name');$('sRoad').innerHTML=opts(usable(r),'name');
   const fillDsos=()=>{
@@ -860,8 +1045,9 @@ async function salesPage(editId){
   const totals=()=>{
     const sq=rows.reduce((a,x)=>a+(Number(x.quantity)||0),0),sv=rows.reduce((a,x)=>a+(Number(x.quantity)||0)*(Number(x.unit_price)||0),0);
 
-    if(collOnly){$('totals').innerHTML=`<div><span class="muted">Collection received (reduces due)</span><b>${money(Number($('sReceived').value)||0)}</b></div>`;return}
-    const gross=rows.reduce((a,x)=>a+x.quantity*x.unit_price,0),tp=Number($('sTp').value)||0,rec=Number($('sReceived').value)||0;
+    const chq=Number($('sCheque').value)||0;
+    if(collOnly){$('totals').innerHTML=`<div><span class="muted">Collection received (reduces due)</span><b>${money((Number($('sReceived').value)||0)+chq)}</b></div>`;return}
+    const gross=rows.reduce((a,x)=>a+x.quantity*x.unit_price,0),tp=Number($('sTp').value)||0,rec=(Number($('sReceived').value)||0)+chq;
     $('totals').innerHTML=`<div><span class="muted">Sales quantity</span><b>${sq.toLocaleString('en-US')}</b></div>`+[['Gross sales',gross],['Trade promotion',tp],['Net sales',gross-tp],['Outstanding',gross-tp-rec]].map(x=>`<div><span class="muted">${x[0]}</span><b>${money(x[1]).replace(/\.00$/,'')}</b></div>`).join('');
   };
   const fitItems=()=>{const el=document.querySelector('.itemscroll'),rc=document.querySelector('.recvgrid');if(!el||!rc||innerWidth<1000)return;const rp=rc.closest('.panel'),t=el.getBoundingClientRect().top;const h=innerHeight-t-rp.offsetHeight-52-($('newModBox')&&!$('newModBox').classList.contains('hidden')?$('newModBox').offsetHeight:0);el.style.maxHeight=Math.max(150,h)+'px'};
@@ -882,7 +1068,8 @@ async function salesPage(editId){
   $('addItem').onclick=()=>{rows.push(newRow());renderItems()};
   const applyColl=()=>{collOnly=$('sColl').checked;$('prodBox').classList.toggle('hidden',collOnly);$('sTp').disabled=collOnly;if(collOnly)$('sTp').value=0;totals()};
   $('sColl').onchange=applyColl;
-  $('sTp').oninput=totals;$('sReceived').oninput=totals;
+  const showChq=()=>{$('chequeBox').classList.toggle('hidden',!(Number($('sCheque').value)>0));if(window._fitItems)window._fitItems()};
+  $('sTp').oninput=totals;$('sReceived').oninput=totals;$('sCheque').oninput=()=>{showChq();totals()};
   let prevBrand='';
   const setBrandLogo=()=>{const o=$('sBrand').selectedOptions[0];$('sBrandLogo').innerHTML=o?brandLogo(o.textContent,22):''};
   $('sBrand').onchange=()=>{
@@ -893,6 +1080,8 @@ async function salesPage(editId){
   /* initial values */
   $('sDate').value=entry?.sale_date||today();
   if(entry){$('sBrand').value=entry.brand_id;$('sRoad').value=entry.road_id;$('sTp').value=Number(entry.trade_promotion_amount||0);$('sReceived').value=Number(entry.received_amount||0);$('sNotes').value=entry.notes||''}
+  let oldChq=null;
+  if(editing){try{const {data:cq}=await db.from('cheques').select('*').eq('sales_entry_id',editId).order('id').limit(1);if(cq&&cq[0]){oldChq=cq[0];$('sCheque').value=Number(oldChq.amount||0);$('sReceived').value=Math.max(0,Number(entry.received_amount||0)-Number(oldChq.amount||0));$('sChqDate').value=oldChq.payable_date||'';$('sChqBank').value=oldChq.bank_name||'';$('sChqNo').value=oldChq.cheque_no||'';showChq()}}catch(e){}}
   if(userMode==='dso'&&currentDso){
     const bi=currentDso.brandIds||(currentDso.brand_id?[currentDso.brand_id]:[]);
     if(bi.length){$('sBrand').innerHTML=opts(usable(b).filter(x=>bi.includes(x.id)),'name');if(entry)$('sBrand').value=entry.brand_id;if(bi.length===1)$('sBrand').disabled=true}
@@ -964,10 +1153,12 @@ async function salesPage(editId){
   if(editing&&userMode==='dso')$('sDate').disabled=true;
   $('saveSale').onclick=async()=>{
     const btn=$('saveSale'),m=$('saleMsg');
-    const head={sale_date:$('sDate').value,brand_id:$('sBrand').value,road_id:$('sRoad').value,dso_id:$('sDso').value,retailer_id:$('sRetailer').value,trade_promotion_amount:Number($('sTp').value),received_amount:Number($('sReceived').value),notes:$('sNotes').value.trim()};
+    const head={sale_date:$('sDate').value,brand_id:$('sBrand').value,road_id:$('sRoad').value,dso_id:$('sDso').value,retailer_id:$('sRetailer').value,trade_promotion_amount:Number($('sTp').value),received_amount:(Number($('sReceived').value)||0)+(Number($('sCheque').value)||0),notes:$('sNotes').value.trim()};
+    const chqAmt=Number($('sCheque').value)||0,cashAmt=Number($('sReceived').value);
     if(!head.sale_date||!head.brand_id||!head.road_id||!head.dso_id)return msg(m,'Please select date, brand, road and DSO.');
     if(!head.retailer_id)return msg(m,'Please select a retailer, or click + New retailer to add one.');
-    if(!Number.isFinite(head.trade_promotion_amount)||!Number.isFinite(head.received_amount)||head.trade_promotion_amount<0||head.received_amount<0)return msg(m,'Check trade promotion and received amounts.');
+    if(!Number.isFinite(head.trade_promotion_amount)||!Number.isFinite(head.received_amount)||!Number.isFinite(cashAmt)||cashAmt<0||chqAmt<0||head.trade_promotion_amount<0||head.received_amount<0)return msg(m,'Check trade promotion, cash and cheque amounts.');
+    if(chqAmt>0&&!$('sChqDate').value)return msg(m,'Enter the cheque payable date.');
     const used=rows.filter(x=>x.product_id||x.quantity>0);
     if(!collOnly&&!used.length)return msg(m,'Select at least one product and enter its quantity.');
     if(!collOnly&&used.some(x=>!x.product_id||!Number.isInteger(x.quantity)||x.quantity<1||!Number.isFinite(x.unit_price)||x.unit_price<0))return msg(m,'Every product line needs a product, a whole-number quantity of at least 1 and a valid price.');
@@ -985,11 +1176,22 @@ async function salesPage(editId){
         if(!confirm(ask))return;
       }
     }
+    if(chqAmt>0||oldChq){const t=await db.from('cheques').select('id').limit(1);if(t.error)return msg(m,'Cheque tracking is not set up yet. Run cheque-setup.sql in Supabase, then try again. Nothing was saved.')}
     btn.disabled=true;
     try{
       await saveEntry(editing?editId:null,head,collOnly?[]:used.map(x=>({product_id:x.product_id,quantity:x.quantity,unit_price:x.unit_price})));
+      if(chqAmt>0||oldChq){
+        let eid=editing?editId:null;
+        if(!eid){const f=await db.from('sales_entries').select('id').eq('dso_id',head.dso_id).eq('retailer_id',head.retailer_id).eq('brand_id',head.brand_id).eq('sale_date',head.sale_date).order('id',{ascending:false}).limit(1);if(f.error||!f.data||!f.data[0])throw new Error('The entry was saved but the cheque could not be linked. Open today\'s entries, press Edit and add the cheque again.');eid=f.data[0].id}
+        const cv={amount:chqAmt,payable_date:$('sChqDate').value||null,bank_name:$('sChqBank').value.trim()||null,cheque_no:$('sChqNo').value.trim()||null};
+        let ce=null;
+        if(oldChq&&chqAmt>0)ce=(await db.from('cheques').update(cv).eq('id',oldChq.id)).error;
+        else if(oldChq)ce=(await db.from('cheques').delete().eq('id',oldChq.id)).error;
+        else ce=(await db.from('cheques').insert({...cv,sales_entry_id:eid})).error;
+        if(ce)throw new Error('The entry was saved but the cheque was not: '+ce.message);
+      }
       if(editing){go('reports');return}
-      rows=[newRow()];$('sTp').value=0;$('sReceived').value=0;$('sNotes').value='';renderItems();
+      rows=[newRow()];$('sTp').value=0;$('sReceived').value=0;$('sCheque').value=0;$('sChqDate').value=$('sChqBank').value=$('sChqNo').value='';showChq();$('sNotes').value='';renderItems();
       msg(m,collOnly?'Collection saved successfully.':'Sales entry saved successfully.','success');loadToday();
     }catch(err){msg(m,err.message||String(err))}
     btn.disabled=false;
@@ -1010,7 +1212,7 @@ async function reportsPage(){
   const tok=navToken;
   const p=$('page'),isAdmin=userMode==='admin';
   rep={rows:[],items:{},page:1,type:null,sub:'all',generated:false,prods:rep.prods||{},printAll:false};
-  p.innerHTML=`<h1 class="page-title">Sales Reports</h1><div class="sub">Choose a report, press Generate and the report will appear.</div><div class="panel"><div class="rtypes noprint" id="repTypes"><button data-t="daily">Daily sales report</button>${isAdmin?'<button data-t="dso">DSO-wise report</button>':''}<button data-t="brand">Brand-wise report</button><button data-t="sheet">Daily Sales Sheet</button></div><div id="repFilters" class="hidden noprint"><div class="form-grid" style="margin-top:14px"><div><label>From date</label><input type="date" id="rFrom"></div><div><label>To date</label><input type="date" id="rTo"></div><div id="wBrand"><label>Brand</label><select id="rBrand"><option value="">All brands</option></select></div><div id="wModel" class="hidden"><label>Model</label><select id="rModel"><option value="">All models</option></select></div>${isAdmin?'<div id="wDso"><label>DSO</label><select id="rDso"><option value="">All DSOs</option></select></div>':''}<div><label>Retailer</label><select id="rRetailer"><option value="">All retailers</option></select></div></div><div class="form-actions"><button id="runReport">Generate report</button><button class="secondary" id="printReport">Print</button><button class="secondary" id="shareReport">Share</button><button class="secondary" id="openSheet">Daily Sales Sheet</button></div></div><div id="reportSummary"></div><div id="repOut" style="margin-top:15px"></div></div>`;
+  p.innerHTML=`<h1 class="page-title">Sales Reports</h1><div class="sub">Choose a report, press Generate and the report will appear.</div><div class="panel"><div class="rtypes noprint" id="repTypes"><button data-t="daily">Daily sales report</button>${isAdmin?'<button data-t="dso">DSO-wise report</button>':''}<button data-t="brand">Brand-wise report</button><button data-t="sheet">Daily Sales Sheet</button><button data-t="credit">Credit &amp; Cheque Report</button></div><div id="repFilters" class="hidden noprint"><div class="form-grid" style="margin-top:14px"><div><label>From date</label><input type="date" id="rFrom"></div><div><label>To date</label><input type="date" id="rTo"></div><div id="wBrand"><label>Brand</label><select id="rBrand"><option value="">All brands</option></select></div><div id="wModel" class="hidden"><label>Model</label><select id="rModel"><option value="">All models</option></select></div>${isAdmin?'<div id="wDso"><label>DSO</label><select id="rDso"><option value="">All DSOs</option></select></div>':''}<div><label>Retailer</label><select id="rRetailer"><option value="">All retailers</option></select></div></div><div class="form-actions"><button id="runReport">Generate report</button><button class="secondary" id="printReport">Print</button><button class="secondary" id="shareReport">Share</button><button class="secondary" id="openSheet">Daily Sales Sheet</button></div></div><div id="reportSummary"></div><div id="repOut" style="margin-top:15px"></div></div>`;
   const [b,d,rtl,pl]=await Promise.all([queryAll('brands'),isAdmin?queryAll('dsos'):Promise.resolve([]),queryAll('retailers'),queryAll('products').catch(()=>[])]);
   const bm=isAdmin?await loadDsoBrandMap():{};
   if(tok!==navToken)return;
@@ -1057,6 +1259,7 @@ async function reportsPage(){
   $('repTypes').onclick=e=>{
     const t=e.target.closest('button[data-t]');if(!t)return;
     if(t.dataset.t==='sheet')return go('sheet');
+    if(t.dataset.t==='credit')return go('credit');
     rep.type=t.dataset.t;rep.generated=false;rep.sub='all';rep.rows=[];rep.items={};rep.page=1;
     document.querySelectorAll('#repTypes button').forEach(x=>x.classList.toggle('on',x===t));
     $('repFilters').classList.remove('hidden');$('reportSummary').innerHTML='';$('repOut').innerHTML='';
