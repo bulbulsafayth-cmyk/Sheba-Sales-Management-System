@@ -254,8 +254,6 @@ async function showDsoPicker(){
   $('authFields').classList.add('hidden');$('dsoStep').classList.remove('hidden');$('loginMsg').innerHTML='';
 }
 async function enterDso(d){d.brandIds=await dsoBrandIds(d);d.roadIds=await dsoRoadIds(d);currentDso=d;store.set('dsoId',d.id);
-  /* record the login once per sign-in (not on every page refresh) so the Admin can see it on the Dashboard */
-  if(store.get('loggedDso')!==d.id){store.set('loggedDso',d.id);try{await db.from('dso_login_log').insert({dso_id:d.id})}catch(e){}}
   showApp('dso')}
 async function useDso(id){const {data}=await db.from('dsos').select(DSO_COLS).eq('id',id).eq('is_active',true).maybeSingle();if(!data)return false;await enterDso(data);return true}
 /* FIX 2: DSO sessions are restored on refresh too */
@@ -319,8 +317,7 @@ async function dashboard(){
   const hr=new Date().getHours(),greet=hr<12?'Good morning':hr<17?'Good afternoon':'Good evening';
   const wd=new Date(t0+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long'});
   const row=(id,title)=>`<div class="dash-h">${title}</div><div class="cards cards5" id="${id}"></div>`;
-  p.innerHTML=`<div class="hero"><div><div class="hero-h">${greet}, ${esc(who)}</div><div class="hero-s">${wd}, ${fmtDate(t0)} · ${isAdmin?'Distribution sales overview':'Your sales summary'}</div></div><div class="hero-a"><button onclick="go('sales')">＋ New sales entry</button><button class="ghost" onclick="go('reports')">Reports</button><button class="ghost" onclick="go('sheet')">Daily sales sheet</button></div></div>${row('todayStats','Today · '+fmtDate(t0))}${row('monthStats','This month · '+MON[Number(t0.slice(5,7))-1]+' '+t0.slice(0,4))}<div class="dgrid"><div class="panel"><h3>This month by brand</h3><div id="brandBars"><p class="muted">Loading…</p></div></div>${isAdmin?'<div class="panel"><h3>Top DSOs this month</h3><div id="dsoBars"><p class="muted">Loading…</p></div></div>':''}</div>${isAdmin?'<div class="chips" id="stats"></div><div class="panel" id="loginLog"><div class="toolbar"><h3 style="margin:0">DSO logins</h3><button class="secondary" id="logRefresh">↻ Refresh</button></div><div id="logBody"><p class="muted">Loading…</p></div></div>':''}`;
-  if(isAdmin)loadLoginLog(tok);
+  p.innerHTML=`<div class="hero"><div><div class="hero-h">${greet}, ${esc(who)}</div><div class="hero-s">${wd}, ${fmtDate(t0)} · ${isAdmin?'Distribution sales overview':'Your sales summary'}</div></div><div class="hero-a"><button onclick="go('sales')">＋ New sales entry</button><button class="ghost" onclick="go('reports')">Reports</button><button class="ghost" onclick="go('sheet')">Daily sales sheet</button></div></div>${row('todayStats','Today · '+fmtDate(t0))}${row('monthStats','This month · '+MON[Number(t0.slice(5,7))-1]+' '+t0.slice(0,4))}<div class="dgrid"><div class="panel"><h3>This month by brand</h3><div id="brandBars"><p class="muted">Loading…</p></div></div>${isAdmin?'<div class="panel"><h3>Top DSOs this month</h3><div id="dsoBars"><p class="muted">Loading…</p></div></div>':''}</div>${isAdmin?'<div class="chips" id="stats"></div>':''}`;
   const card=(k,v,cls,ic)=>`<div class="kcard ${cls||''}"><div class="ic">${ic||'•'}</div><div><div class="k">${k}</div><div class="v">${v}</div></div></div>`;
   const five=m=>card('Sales quantity',Number(m.qty).toLocaleString('en-US'),'','▣')+card('Sales amount',money(m.gross),'','Tk')+card('Trade promotion',money(m.tp),'kc-amber','％')+card('Collection amount',money(m.col),'kc-green','✓')+card('Due amount',money(m.due),'kc-red','!');
   $('todayStats').innerHTML=card('Loading…','…');$('monthStats').innerHTML=card('Loading…','…');
@@ -350,17 +347,6 @@ async function dashboard(){
     bars($('brandBars'),x=>x.brand_id,brandNm,8);
     if($('dsoBars'))bars($('dsoBars'),x=>x.dso_id,dsoNm,8);
   }catch(e){p.insertAdjacentHTML('beforeend',`<div class="notice error">${esc(e.message)}</div>`)}
-}
-
-/* DSO login history (Admin dashboard): which DSO signed in and when */
-async function loadLoginLog(tok){
-  const body=$('logBody');if(!body)return;
-  const btn=$('logRefresh');if(btn)btn.onclick=()=>{body.innerHTML='<p class="muted">Loading…</p>';loadLoginLog(navToken)};
-  const {data,error}=await db.from('dso_login_log').select('id,logged_in_at,dsos(full_name)').order('logged_in_at',{ascending:false}).limit(50);
-  if(tok!==navToken||!$('logBody'))return;
-  if(error)return msg(body,/does not exist|schema cache|relation/i.test(error.message||'')?'Login history is not set up yet. Run the dso_login_log SQL in Supabase.':error.message);
-  const f=t=>new Date(t).toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
-  body.innerHTML=`<div class="table-wrap"><table><thead><tr><th>DSO</th><th>Login time</th></tr></thead><tbody>${(data||[]).map(x=>`<tr><td>${esc(x.dsos?.full_name||'—')}</td><td>${esc(f(x.logged_in_at))}</td></tr>`).join('')||'<tr><td colspan="2" class="empty">No DSO login yet.</td></tr>'}</tbody></table></div><p class="muted" style="margin:8px 0 0;font-size:12px">Latest 50 logins.</p>`;
 }
 
 /* ---------- file import helpers (CSV / Excel) ---------- */
