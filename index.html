@@ -409,10 +409,14 @@ async function creditPage(){
   };
   /* ----- verbal credit: due balance per retailer + brand, oldest dues paid first (FIFO) ----- */
   let CM=[];
+  const loadHiddenSales=async()=>{try{return await fetchAll(()=>db.from('credit_hidden').select('*').order('id'))}catch(e){return []}};
   const loadManual=async()=>{try{return await fetchAll(()=>db.from('credit_manual').select('*').order('entry_date').order('id'))}catch(e){return null}};
   async function buildCredit(D){
     let rows=filt(await fetchAll(()=>scopedReport().lte('sale_date',D).order('sale_date').order('id')));
     CM=(await loadManual())||[];
+    /* sales entries the Admin removed from the CREDIT report only (the sale itself is untouched) */
+    const HID=new Set(((await loadHiddenSales())||[]).map(x=>String(x.sales_entry_id)));
+    rows=rows.filter(x=>!HID.has(String(x.id)));
     /* opening dues uploaded for a date already include everything up to that date, so older sales rows are not counted twice */
     const od=await loadOpeningDues();
     const A=od.reduce((a,x)=>x.as_of>a?x.as_of:a,'');
@@ -676,7 +680,7 @@ async function creditPage(){
   $('crSave').onclick=()=>picture($('crSave'),true);
   /* ----- Admin: manual credit entries (new due / recovery / edit / delete) and cheque delete ----- */
   const dayOk=v=>/^\d{4}-\d{2}-\d{2}$/.test(v)&&!isNaN(Date.parse(v));
-  const cmErr=e=>/credit_manual|schema cache|relation|does not exist/i.test(e.message||'')?'Manual credit entries are not set up yet. Run credit-manual-setup.sql in Supabase, then try again.':(e.message||String(e));
+  const cmErr=e=>/credit_manual|credit_hidden|schema cache|relation|does not exist/i.test(e.message||'')?'Manual credit entries are not set up yet. Run credit-manual-setup.sql in Supabase, then try again.':(e.message||String(e));
   const showNewDue=async()=>{
     const box=$('crForm');if(!box)return;
     box.innerHTML='<div class="notice" style="margin-top:12px">Loading shops…</div>';
@@ -715,22 +719,23 @@ async function creditPage(){
   };
   async function showEntries(base){
     const box=$('crForm');box.innerHTML='<div class="notice" style="margin-top:12px">Loading…</div>';
-    const [qm,qs,qo,od]=await Promise.all([
+    const [qm,qs,qo,od,qh]=await Promise.all([
       db.from('credit_manual').select('*').eq('retailer_id',base.retailer_id).eq('brand_id',base.brand_id).order('entry_date').order('id'),
       db.from('sales_report').select('*').eq('retailer_id',base.retailer_id).eq('brand_id',base.brand_id).order('sale_date').order('id'),
       db.from('opening_dues').select('*').eq('retailer_id',base.retailer_id).eq('brand_id',base.brand_id).order('as_of').order('id'),
-      loadOpeningDues()]);
+      loadOpeningDues(),db.from('credit_hidden').select('*')]);
     if(qs.error){box.innerHTML='';return msg($('crMsg'),qs.error.message)}
     if(qm.error&&!/credit_manual|schema cache|relation|does not exist/i.test(qm.error.message||'')){box.innerHTML='';return msg($('crMsg'),qm.error.message)}
     const RT=await needRet(),sh=RT[base.retailer_id]?.name||'—',bn=L.brand[base.brand_id]?.name||'—',lst=base.list_name||'';
     const A=od.reduce((m0,x)=>x.as_of>m0?x.as_of:m0,'');
+    const HS=new Set((qh.data||[]).map(x=>String(x.sales_entry_id)));
     const items=[];
-    (qs.data||[]).forEach(x=>{const due=isDueRow(x);items.push({src:'sale',id:x.id,d:x.sale_date,src_l:'Sales entry',type:due?'Recovery':'Sale',amt:due?Number(x.received_amount||0):Number(x.net_sales||0),rec:due?'':Number(x.received_amount||0),note:A&&x.sale_date<=A?'Before opening date: not counted in the report':''})});
+    (qs.data||[]).forEach(x=>{const due=isDueRow(x);items.push({src:'sale',id:x.id,d:x.sale_date,src_l:'Sales entry',type:due?'Recovery':'Sale',amt:due?Number(x.received_amount||0):Number(x.net_sales||0),rec:due?'':Number(x.received_amount||0),note:HS.has(String(x.id))?'Hidden from the credit report':(A&&x.sale_date<=A?'Before opening date: not counted in the report':''),hid:HS.has(String(x.id))})});
     (qo.data||[]).filter(x=>(x.list_name||'')===lst).forEach(x=>items.push({src:'open',id:x.id,d:x.as_of,src_l:'Opening list'+(lst?' ('+lst+')':''),type:'Opening due',amt:Number(x.amount||0),rec:'',note:x.due_date?'Due date '+dmyFull(x.due_date):'',asOf:x.as_of}));
     (qm.data||[]).filter(x=>(x.list_name||'')===lst).forEach(x=>items.push({src:'manual',id:x.id,d:x.entry_date,src_l:'Manual',type:x.kind==='due'?'Due':'Recovery',amt:Number(x.amount||0),rec:'',note:x.remarks||'',raw:x}));
     items.sort((p1,p2)=>p1.d<p2.d?-1:p1.d>p2.d?1:0);
     const key=(x)=>x.src+':'+x.id;
-    box.innerHTML=`<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 10px">All entries: ${esc(sh)} · ${esc(bn)}</h3>${items.length?`<div style="overflow-x:auto"><table><thead><tr><th>Date</th><th>Source</th><th>Type</th><th>Amount</th><th>Received</th><th>Note</th><th>Action</th></tr></thead><tbody>${items.map(x=>`<tr><td>${esc(dmyFull(x.d))}</td><td>${esc(x.src_l)}</td><td>${esc(x.type)}</td><td>${fAmt(x.amt)}</td><td>${fAmt(x.rec)}</td><td>${esc(x.note)}</td><td>${x.src==='manual'?`<button class="secondary" data-e="edit" data-k="${esc(key(x))}">Edit</button> `:''}<button class="danger" data-e="del" data-k="${esc(key(x))}">Delete</button></td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">No entries found for this shop and brand.</p>'}<p class="muted" style="margin:10px 0 0">Deleting a <b>Sales entry</b> removes the whole sale (all its products) from every sales report too. Deleting an <b>Opening list</b> row or a <b>Manual</b> entry only changes the credit report.</p><div class="form-actions"><button class="secondary" data-e="close">Close</button></div></div>`;
+    box.innerHTML=`<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 10px">All entries: ${esc(sh)} · ${esc(bn)}</h3>${items.length?`<div style="overflow-x:auto"><table><thead><tr><th>Date</th><th>Source</th><th>Type</th><th>Amount</th><th>Received</th><th>Note</th><th>Action</th></tr></thead><tbody>${items.map(x=>`<tr><td>${esc(dmyFull(x.d))}</td><td>${esc(x.src_l)}</td><td>${esc(x.type)}</td><td>${fAmt(x.amt)}</td><td>${fAmt(x.rec)}</td><td>${esc(x.note)}</td><td>${x.src==='manual'?`<button class="secondary" data-e="edit" data-k="${esc(key(x))}">Edit</button> `:''}${x.hid?`<button class="secondary" data-e="restore" data-k="${esc(key(x))}">Restore</button>`:`<button class="danger" data-e="del" data-k="${esc(key(x))}">Delete</button>`}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">No entries found for this shop and brand.</p>'}<p class="muted" style="margin:10px 0 0">Deleting a <b>Sales entry</b> here only removes it from the credit report; the sale itself stays in Sales and in every sales report (use Restore to bring it back). Deleting an <b>Opening list</b> row or a <b>Manual</b> entry also only changes the credit report.</p><div class="form-actions"><button class="secondary" data-e="close">Close</button></div></div>`;
     box.onclick=async ev=>{
       const t=ev.target.closest('button[data-e]');if(!t)return;
       if(t.dataset.e==='close'){box.innerHTML='';return}
@@ -738,9 +743,8 @@ async function creditPage(){
       let res;
       if(t.dataset.e==='del'){
         if(it.src==='sale'){
-          if(!confirm('Delete this SALES ENTRY ('+dmyFull(it.d)+', '+it.type+' '+fAmt(it.amt)+') and all its products? It will also disappear from the sales reports. This cannot be undone.'))return;
-          res=await db.rpc('delete_sales_entry',{p_id:it.id});
-          if(res.error&&isMissingFn(res.error)){const a1=await db.from('sales_items').delete().eq('sales_entry_id',it.id);if(a1.error)return msg($('crMsg'),a1.error.message);res=await db.from('sales_entries').delete().eq('id',it.id)}
+          if(!confirm('Delete this entry from the CREDIT REPORT only ('+dmyFull(it.d)+', '+it.type+' '+fAmt(it.amt)+')?\n\nThe sales entry itself stays in Sales and in all sales reports. You can restore it from this panel.'))return;
+          res=await db.from('credit_hidden').insert({sales_entry_id:String(it.id)});
         }else if(it.src==='open'){
           const last=it.asOf===A&&od.filter(o=>o.as_of===A).length===1;
           if(!confirm('Delete this opening due of '+fAmt(it.amt)+' dated '+dmyFull(it.d)+'?'+(last?'\n\nWARNING: it is the only row with the latest opening date. After deleting it the report counts sales again from an earlier opening date, which can double count old sales.':'')))return;
@@ -749,6 +753,8 @@ async function creditPage(){
           if(!confirm('Delete this manual '+it.type.toLowerCase()+' of '+fAmt(it.amt)+' dated '+dmyFull(it.d)+'?'))return;
           res=await db.from('credit_manual').delete().eq('id',it.id);
         }
+      }else if(t.dataset.e==='restore'){
+        res=await db.from('credit_hidden').delete().eq('sales_entry_id',String(it.id));
       }else{
         const row=it.raw;
         const a1=prompt('Amount (Tk):',String(row.amount));if(a1===null)return;
