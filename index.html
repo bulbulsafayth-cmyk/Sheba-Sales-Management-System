@@ -214,6 +214,14 @@ table.crt tr.cr-offrow td,table.crt tr.cr-grand td{color:#000;font-weight:800;fo
 .crsheet:has(.cr-credit) table.crt tr.cr-grand td{background:#b7dee8;font-size:14px}
 table.crt tr.crdone td{color:#6b7280;text-decoration:line-through}
 table.crt td.cract{text-decoration:none}
+#crLandBox{position:fixed;inset:0;z-index:9999;background:#0b1220;overflow:hidden}
+#crLandBox .crl-wrap{position:absolute;left:0;top:0;display:flex;flex-direction:column;background:#fff}
+#crLandBox .crl-bar{display:flex;gap:8px;padding:6px 8px;background:#0b1220;flex:none}
+#crLandBox .crl-bar button{width:auto;padding:6px 12px}
+#crLandBox .crl-body{flex:1;overflow:auto;padding:6px;-webkit-overflow-scrolling:touch}
+#crLandBox .noprint{display:none!important}
+#crLandBox .crsheet{border-radius:0;border:0}
+@media print{#crLandBox{display:none!important}}
 table.crt td.cract button{display:block;width:100%;margin:0 0 3px;padding:3px 4px;font-size:11px}
 .crsheet .cr-credit-foot{display:none}
 @media print{.crsheet{border:0;border-radius:0;overflow:visible}.crsheet .cr-credit-foot{display:block;text-align:center;font-size:9pt;font-weight:600;margin-top:8px;color:#000}table.crt th,table.crt td{font-size:10px;padding:3px 4px}.crsheet .cr-title{font-size:22px}.crsheet .cr-date{font-size:16px}.crsheet .cr-road{font-size:15px}}
@@ -378,7 +386,7 @@ async function creditPage(){
   const tok=navToken,isAdmin=userMode==='admin';
   const SHARE_SVG='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-4.2M8.6 13.4l6.8 4.2"/></svg>';
   const DL_SVG='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg>';
-  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Credit &amp; Cheque Report</h1><div class="sub">Daily verbal-due (credit) list and retailer cheque list. <b style="opacity:.75">Version: 20-Nov-2026 · Manual due / recovery / delete any entry</b></div><div class="panel"><div class="rtypes" id="crTypes"><button data-k="credit" class="on">Credit report (verbal due)</button><button data-k="cheque">Cheque report</button></div><div class="form-grid" style="margin-top:14px"><div><label>Date</label><input type="date" id="crDate"></div><div><label>Road</label><select id="crRoad"><option value="">All roads</option></select></div><div><label>Brand</label><select id="crBrand"><option value="">All brands</option></select></div>${isAdmin?'<div><label>DSO</label><select id="crDso"><option value="">All DSOs</option></select></div>':''}<div><label>View by</label><select id="crView"><option value="road">Road-wise</option><option value="dso">DSO-wise</option><option value="brand">Brand-wise</option></select></div></div><div class="form-actions"><button id="crRun">Generate</button>${isAdmin?'<button class="secondary" id="crNew">+ New Cheque</button>':''}<button class="secondary" id="crPrint">Print / PDF</button><button class="secondary" id="crImg">${SHARE_SVG}Share</button><button class="secondary" id="crSave">${DL_SVG}Save image</button><button class="secondary" id="crXlsx">Excel</button><button class="secondary" id="crBack">← Reports</button></div><div id="crMsg"></div></div></div><div id="crForm" class="noprint"></div><div id="crOut"></div>`;
+  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Credit &amp; Cheque Report</h1><div class="sub">Daily verbal-due (credit) list and retailer cheque list. <b style="opacity:.75">Version: 20-Nov-2026 · Manual due / recovery / delete any entry · One row per shop</b></div><div class="panel"><div class="rtypes" id="crTypes"><button data-k="credit" class="on">Credit report (verbal due)</button><button data-k="cheque">Cheque report</button></div><div class="form-grid" style="margin-top:14px"><div><label>Date</label><input type="date" id="crDate"></div><div><label>Road</label><select id="crRoad"><option value="">All roads</option></select></div><div><label>Brand</label><select id="crBrand"><option value="">All brands</option></select></div>${isAdmin?'<div><label>DSO</label><select id="crDso"><option value="">All DSOs</option></select></div>':''}<div><label>View by</label><select id="crView"><option value="road">Road-wise</option><option value="dso">DSO-wise</option><option value="brand">Brand-wise</option></select></div><div><label>One row per shop</label><select id="crMerge"><option value="1">Yes</option><option value="0">No</option></select></div></div><div class="form-actions"><button id="crRun">Generate</button>${isAdmin?'<button class="secondary" id="crNew">+ New Cheque</button>':''}<button class="secondary" id="crLand">Landscape view</button><button class="secondary" id="crPrint">Print / PDF</button><button class="secondary" id="crImg">${SHARE_SVG}Share</button><button class="secondary" id="crSave">${DL_SVG}Save image</button><button class="secondary" id="crXlsx">Excel</button><button class="secondary" id="crBack">← Reports</button></div><div id="crMsg"></div></div></div><div id="crForm" class="noprint"></div><div id="crOut"></div>`;
   const [brands,dsos,roads]=await Promise.all(['brands','dsos','roads'].map(queryAll));
   if(tok!==navToken)return;
   const by1=a=>Object.fromEntries(a.map(x=>[x.id,x]));
@@ -400,7 +408,7 @@ async function creditPage(){
   const cmp=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});
   const roadName=id=>L.road[id]?.name||'—';
   const VOPT={credit:[['road','Road-wise'],['dso','DSO-wise'],['brand','Brand-wise']],cheque:[['road','Road-wise'],['retailer','Retailer-wise']]};
-  const setViews=()=>{const nb=$('crNew');if(nb)nb.textContent=kind==='credit'?'+ New Due':'+ New Cheque';const el=$('crView');if(!el)return;const cur=el.value;el.innerHTML=VOPT[kind].map(o=>`<option value="${o[0]}">${o[1]}</option>`).join('');el.value=VOPT[kind].some(o=>o[0]===cur)?cur:'road'};
+  const setViews=()=>{const mg=$('crMerge');if(mg)mg.parentElement.style.display=kind==='credit'?'':'none';const nb=$('crNew');if(nb)nb.textContent=kind==='credit'?'+ New Due':'+ New Cheque';const el=$('crView');if(!el)return;const cur=el.value;el.innerHTML=VOPT[kind].map(o=>`<option value="${o[0]}">${o[1]}</option>`).join('');el.value=VOPT[kind].some(o=>o[0]===cur)?cur:'road'};
   const vmode=()=>{const v=$('crView')?.value||'road';return VOPT[kind].some(o=>o[0]===v)?v:'road'};
   setViews();
   const filt=rows=>{
@@ -408,7 +416,7 @@ async function creditPage(){
     return rows.filter(x=>(!br||x.brand_id===br)&&(!ds||x.dso_id===ds)&&(!mb||mb.includes(x.brand_id)));
   };
   /* ----- verbal credit: due balance per retailer + brand, oldest dues paid first (FIFO) ----- */
-  let CM=[];
+  let CM=[],SHOPPARTS={};
   const loadHiddenSales=async()=>{try{return await fetchAll(()=>db.from('credit_hidden').select('*').order('id'))}catch(e){return []}};
   const loadManual=async()=>{try{return await fetchAll(()=>db.from('credit_manual').select('*').order('entry_date').order('id'))}catch(e){return null}};
   async function buildCredit(D){
@@ -482,9 +490,25 @@ async function creditPage(){
       const dp=left>0&&old?daysBetween(old,D):'';
       out.push({road:g.road,dso:g.dso,brand:g.brand,list:g.list,rid:g.rid,bid:g.bid,did:g.did,left,age:dp===''?-1:dp,c:[g.shop,g.brand,g.dso,prev,g.td,rec,left,dp]});
     });
+    /* One row per shop: brands and DSOs are listed in their cells, amounts are added up. Single-brand shops stay as they are. */
+    SHOPPARTS={};
+    let list2=out;
+    if($('crMerge')?.value!=='0'&&['road','retailer'].includes(vmode())){
+      const mm=new Map();
+      out.forEach(r=>{const k=(r.list||'')+'|'+r.rid;let o=mm.get(k);if(!o){o=[];mm.set(k,o)}o.push(r)});
+      list2=[];
+      mm.forEach((parts,k)=>{
+        if(parts.length===1){list2.push(parts[0]);return}
+        SHOPPARTS[k]=parts;
+        const uniq=a=>[...new Set(a.filter(x=>x&&x!=='—'))].join(', ')||'—';
+        const sm=i=>parts.reduce((t,r)=>t+(Number(r.c[i])||0),0);
+        const age=Math.max(...parts.map(r=>r.age)),p0=parts[0];
+        list2.push({road:p0.road,dso:uniq(parts.map(r=>r.dso)),brand:uniq(parts.map(r=>r.brand)),list:p0.list,rid:p0.rid,bid:null,did:null,left:sm(6),key:k,parts:parts.length,age,c:[p0.c[0],uniq(parts.map(r=>r.brand)),uniq(parts.map(r=>r.dso)),sm(3),sm(4),sm(5),sm(6),age<0?'':age]});
+      });
+    }
     return {title:'Retailer Credit Data ('+dmy(D).replace(/\./g,'-')+')',cls:'cr-credit',date:null,
       head:['Shop Name','Brand Name','Responsible person','Previous Due Amount','Todays Due Amount','Recovery Amount','Amount Left','Day Pass'],
-      sum:[3,4,5,6],txt:[0,1,2],widths:[22,11,14,13,12,11,13,6],groups:groupRoad(out,false,vmode())};
+      sum:[3,4,5,6],txt:[0,1,2],widths:[22,11,14,13,12,11,13,6],groups:groupRoad(list2,false,vmode())};
   }
   /* roads with the same "Report group" print as one section; with an Office set, the cheque list also gets an office total */
   function groupRoad(list,byOffice,mode){
@@ -573,6 +597,7 @@ async function creditPage(){
     const act=isAdmin;
     const actCell=r=>{
       if(v.cheque){const ids=r.ids.join(',');return `<td class="noprint cract">${r.left>0.005?`<button data-act="rec" data-ids="${ids}" data-lefts="${r.lefts.join(',')}">Recovery</button> `:''}${r.hasRec?`<button class="secondary" data-act="unrec" data-ids="${ids}">Undo last</button> `:''}<button class="secondary" data-act="rem" data-ids="${ids}" data-v="${esc(r.rem)}">Remarks</button> <button class="danger" data-act="del" data-ids="${ids}">Delete</button></td>`}
+      if(r.key)return `<td class="noprint cract"><button class="secondary" data-act="cshop" data-k="${esc(r.key)}">Brands (${r.parts})</button></td>`;
       const dd=`data-rid="${r.rid}" data-bid="${r.bid}" data-did="${r.did||''}" data-list="${esc(r.list||'')}"`;
       return `<td class="noprint cract">${r.left>0.005?`<button data-act="crec" ${dd} data-left="${r.left}">Recovery</button> `:''}<button class="secondary" data-act="cdue" ${dd}>+ Due</button> <button class="secondary" data-act="cent" ${dd}>Entries / Delete</button></td>`;
     };
@@ -634,7 +659,7 @@ async function creditPage(){
     $('ncRoad').focus();
   };
   if($('crNew'))$('crNew').onclick=()=>{if(kind==='credit')showNewDue();else showNewCheque()};
-  $('crRun').onclick=run;$('crView').onchange=run;$('crBack').onclick=()=>go('reports');
+  $('crLand').onclick=openLandscape;$('crRun').onclick=run;$('crView').onchange=run;$('crMerge').onchange=run;$('crBack').onclick=()=>go('reports');
   $('crPrint').onclick=()=>{if(!view)return msg($('crMsg'),'Generate the report first.');window.print()};
   $('crXlsx').onclick=()=>{
     if(!view)return msg($('crMsg'),'Generate the report first.');
@@ -678,6 +703,32 @@ async function creditPage(){
   };
   $('crImg').onclick=()=>picture($('crImg'),false);
   $('crSave').onclick=()=>picture($('crSave'),true);
+  /* Landscape view: shows the report full screen, turned sideways on a phone held upright */
+  function openLandscape(){
+    const sh=$('crOut').querySelector('.crsheet');
+    if(!sh)return msg($('crMsg'),'Generate the report first.');
+    document.getElementById('crLandBox')?.remove();
+    const box=document.createElement('div');box.id='crLandBox';
+    box.innerHTML='<div class="crl-wrap"><div class="crl-bar"><button class="secondary" id="crlClose">✕ Close</button><button class="secondary" id="crlMinus">A−</button><button class="secondary" id="crlPlus">A+</button></div><div class="crl-body" id="crlBody"></div></div>';
+    document.body.appendChild(box);
+    const body=document.getElementById('crlBody'),wrap=box.firstChild;
+    body.appendChild(sh.cloneNode(true));
+    let z=1;
+    document.getElementById('crlMinus').onclick=()=>{z=Math.max(.5,z-.1);body.style.zoom=z};
+    document.getElementById('crlPlus').onclick=()=>{z=Math.min(2,z+.1);body.style.zoom=z};
+    const layout=()=>{
+      const w=innerWidth,h=innerHeight;
+      if(h>w)wrap.style.cssText='width:'+h+'px;height:'+w+'px;transform-origin:0 0;transform:translateX('+w+'px) rotate(90deg)';
+      else wrap.style.cssText='width:100vw;height:100vh';
+    };
+    const key=e=>{if(e.key==='Escape')close()};
+    const close=()=>{removeEventListener('resize',layout);removeEventListener('keydown',key);try{screen.orientation?.unlock?.()}catch(e){}if(document.fullscreenElement)document.exitFullscreen?.().catch(()=>{});box.remove()};
+    document.getElementById('crlClose').onclick=close;
+    addEventListener('resize',layout);addEventListener('keydown',key);
+    layout();
+    /* a real landscape lock works on Android Chrome; iPhone cannot, so the turned layout above is used there */
+    (async()=>{try{await document.documentElement.requestFullscreen?.();await screen.orientation?.lock?.('landscape')}catch(e){}layout()})();
+  }
   /* ----- Admin: manual credit entries (new due / recovery / edit / delete) and cheque delete ----- */
   const dayOk=v=>/^\d{4}-\d{2}-\d{2}$/.test(v)&&!isNaN(Date.parse(v));
   const cmErr=e=>/credit_manual|credit_hidden|schema cache|relation|does not exist/i.test(e.message||'')?'Manual credit entries are not set up yet. Run credit-manual-setup.sql in Supabase, then try again.':(e.message||String(e));
@@ -768,8 +819,19 @@ async function creditPage(){
       await run();showEntries(base);
     };
   }
+  function showShopBrands(k){
+    const parts=SHOPPARTS[k],box=$('crForm');if(!parts||!box)return;
+    box.innerHTML=`<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 10px">${esc(parts[0].c[0])}: brand-wise due</h3><div style="overflow-x:auto"><table><thead><tr><th>Brand</th><th>DSO</th><th>Previous Due</th><th>Todays Due</th><th>Recovery</th><th>Amount Left</th><th>Action</th></tr></thead><tbody>${parts.map(r=>{const dd=`data-rid="${r.rid}" data-bid="${r.bid}" data-did="${r.did||''}" data-list="${esc(r.list||'')}"`;return `<tr><td>${esc(r.c[1])}</td><td>${esc(r.c[2])}</td><td>${fAmt(r.c[3])}</td><td>${fAmt(r.c[4])}</td><td>${fAmt(r.c[5])}</td><td>${fAmt(r.c[6])}</td><td>${r.left>0.005?`<button data-act="crec" ${dd} data-left="${r.left}">Recovery</button> `:''}<button class="secondary" data-act="cdue" ${dd}>+ Due</button> <button class="secondary" data-act="cent" ${dd}>Entries / Delete</button></td></tr>`}).join('')}</tbody></table></div><div class="form-actions"><button class="secondary" id="sbClose">Close</button></div></div>`;
+    box.onclick=async ev=>{
+      if(ev.target.closest('#sbClose')){box.innerHTML='';return}
+      const t=ev.target.closest('button[data-act]');if(!t)return;
+      const ok=await creditAction(t);
+      if(ok)box.innerHTML='';
+    };
+  }
   async function creditAction(b){
     const a=b.dataset.act,m=$('crMsg');m.innerHTML='';
+    if(a==='cshop')return showShopBrands(b.dataset.k);
     if(a==='del'){
       const ids=(b.dataset.ids||'').split(',').filter(Boolean);
       if(!confirm('Delete this cheque line permanently ('+ids.length+' cheque record'+(ids.length>1?'s':'')+' and all their recoveries)? This cannot be undone.'))return;
@@ -790,12 +852,12 @@ async function creditPage(){
     if(!dayOk(d))return alert('Use the format YYYY-MM-DD.');
     const r=await db.from('credit_manual').insert({...base,kind:isRec?'recovery':'due',amount:Math.round(amt*100)/100,entry_date:d});
     if(r.error)return msg(m,cmErr(r.error));
-    run();
+    run();return true;
   }
   /* Admin: mark a cheque as recovered / edit its remarks */
   $('crOut').onclick=async e=>{
     const b=e.target.closest('button[data-act]');if(!b||!isAdmin)return;
-    if(['crec','cdue','cent','del'].includes(b.dataset.act))return creditAction(b);
+    if(['crec','cdue','cent','del','cshop'].includes(b.dataset.act))return creditAction(b);
     const ids=(b.dataset.ids||'').split(',').filter(Boolean),act=b.dataset.act;let res=null;
     if(act==='rec'){
       /* one line can hold several cheques (different DSOs): the recovery is split across them, oldest first */
