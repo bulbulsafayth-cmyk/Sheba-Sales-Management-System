@@ -487,15 +487,16 @@ async function creditPage(){
     const ids=[...new Set(cq.filter(x=>x.sales_entry_id).map(x=>x.sales_entry_id))],ent={};
     for(let i=0;i<ids.length;i+=100){(await fetchAll(()=>scopedReport().in('id',ids.slice(i,i+100)))).forEach(x=>{ent[x.id]=x})}
     const RT=(isAdmin&&cq.some(c=>!c.sales_entry_id))?await needRet():{};
-    const rd=L.road[$('crRoad').value]?.name,out=[];
+    const rd=L.road[$('crRoad').value]?.name;
     const okIds=new Set(filt(Object.values(ent)).map(x=>x.id));
+    const items=[];
     cq.forEach(c=>{
-      let shop,who,recd,road;
+      let shop,who,recd,road,rid=null,dso='',brand='';
       if(c.sales_entry_id){
         const e=ent[c.sales_entry_id];if(!e||!okIds.has(e.id))return;
         if(rd&&e.road!==rd)return;
         if(A&&e.sale_date<=A)return;
-        recd=e.sale_date;shop=e.retailer||'—';who=(e.dso_name||'—')+' · '+(e.brand||'');road=e.road;
+        recd=e.sale_date;shop=e.retailer||'—';road=e.road;rid=e.retailer_id;dso=e.dso_name||'—';brand=e.brand||'';who=dso+' · '+brand;
       }else{
         /* opening cheques carry no brand or DSO link, so only the Admin sees them, and a brand/DSO filter hides them */
         if(!isAdmin||$('crBrand').value||$('crDso')?.value)return;
@@ -509,10 +510,20 @@ async function creditPage(){
       const today=rl.filter(r=>r.recovered_on===D).reduce((a,r)=>a+Number(r.amount||0),0);
       const all=rl.reduce((a,r)=>a+Number(r.amount||0),0);
       if(amt-before<=0.005)return;
-      const isNew=recd===D,open=amt-before,due=Math.max(0,open-today),age=daysBetween(recd,D);
-      const pd=c.payable_date?dmy(c.payable_date):'';
-      out.push({road,age,id:c.id,rem:c.remarks||'',left:Math.max(0,amt-all),hasRec:rl.length>0,done:due<=0.005,
-        c:[shop,who,dmy(recd),isNew?'':open,isNew?'':pd,isNew?amt:'',isNew?pd:'',today||'',due,age,c.remarks||'']});
+      /* cheques of one shop with the same receive date and payable date (different DSOs / brands) print as ONE line */
+      items.push({key:c.sales_entry_id?'E|'+rid+'|'+recd+'|'+(c.payable_date||''):'O|'+c.id,id:c.id,shop,who,dso,brand,road,recd,pd:c.payable_date||'',amt,open:amt-before,today,left:Math.max(0,amt-all),hasRec:rl.length>0,rem:c.remarks||''});
+    });
+    const grp=new Map();items.forEach(x=>{(grp.get(x.key)||grp.set(x.key,[]).get(x.key)).push(x)});
+    const out=[];
+    grp.forEach(ms=>{
+      ms.sort((a,b)=>String(a.id).localeCompare(String(b.id),undefined,{numeric:true}));
+      const f=ms[0],isNew=f.recd===D,sm=k=>ms.reduce((a,x)=>a+x[k],0);
+      const open=sm('open'),today=sm('today'),amt=sm('amt'),due=ms.reduce((a,x)=>a+Math.max(0,x.open-x.today),0);
+      const who=ms.length>1?ms.map(x=>x.dso+' '+x.brand+'-'+Math.round(isNew?x.amt:x.open)).join(' '):f.who;
+      const rem=[...new Set(ms.map(x=>x.rem).filter(Boolean))].join('; ');
+      const pd=f.pd?dmy(f.pd):'',age=daysBetween(f.recd,D);
+      out.push({road:f.road,age,ids:ms.map(x=>x.id),lefts:ms.map(x=>x.left),left:sm('left'),hasRec:ms.some(x=>x.hasRec),rem,done:due<=0.005,
+        c:[f.shop,who,dmy(f.recd),isNew?'':open,isNew?'':pd,isNew?amt:'',isNew?pd:'',today||'',due,age,rem]});
     });
     return {title:'Retailer Cheque Information List',cls:'cr-cheque',date:dmyFull(D),
       head:['Enterprise Name','Responsible Person','Cheque Receiving / Invoice Date','Opening Info (Cheque Amount)','Payable Date','Today Received (Cheque Amount)','Payable Date','Recovery Amount','Cheque Amount (Due)','Day Count','Remarks'],
@@ -528,7 +539,7 @@ async function creditPage(){
       const last=gi===G.length-1;let extra='';
       if(showOff&&(last||okey(G[gi+1])!==okey(g))){const o=okey(g);extra+=tot(G.filter(x=>okey(x)===o).flatMap(x=>x.rows),(o||'Other')+' Total','cr-offrow')}
       if(G.length>=2&&last)extra+=tot(allRows,'Grand Total','cr-grand');
-      return `<div class="cr-road">${esc(g.name)}</div><table class="crt"><thead><tr class="cr-h"><th>SL No.</th>${v.head.map(h=>`<th>${esc(h)}</th>`).join('')}${act?'<th class="noprint">Action</th>':''}</tr></thead><tbody>${g.rows.map((r,n)=>`<tr${r.done?' class="crdone"':''}><td>${n+1}</td>${r.c.map((_,i)=>cell(r,i)).join('')}${act?`<td class="noprint cract">${r.left>0.005?`<button data-act="rec" data-id="${r.id}" data-left="${r.left}">Recovery</button> `:''}${r.hasRec?`<button class="secondary" data-act="unrec" data-id="${r.id}">Undo last</button> `:''}<button class="secondary" data-act="rem" data-id="${r.id}" data-v="${esc(r.rem)}">Remarks</button></td>`:''}</tr>`).join('')}${tot(g.rows,'Total','crsum')}${extra}</tbody></table>`;
+      return `<div class="cr-road">${esc(g.name)}</div><table class="crt"><thead><tr class="cr-h"><th>SL No.</th>${v.head.map(h=>`<th>${esc(h)}</th>`).join('')}${act?'<th class="noprint">Action</th>':''}</tr></thead><tbody>${g.rows.map((r,n)=>`<tr${r.done?' class="crdone"':''}><td>${n+1}</td>${r.c.map((_,i)=>cell(r,i)).join('')}${act?`<td class="noprint cract">${r.left>0.005?`<button data-act="rec" data-ids="${r.ids.join(',')}" data-lefts="${r.lefts.join(',')}">Recovery</button> `:''}${r.hasRec?`<button class="secondary" data-act="unrec" data-ids="${r.ids.join(',')}">Undo last</button> `:''}<button class="secondary" data-act="rem" data-ids="${r.ids.join(',')}" data-v="${esc(r.rem)}">Remarks</button></td>`:''}</tr>`).join('')}${tot(g.rows,'Total','crsum')}${extra}</tbody></table>`;
     }).join('')||'<p class="muted" style="padding:14px;text-align:center;color:#000">Nothing to show for this date.</p>';
     $('crOut').innerHTML=`<div class="crsheet" id="crSheet"><div class="cr-title ${v.cls}">${esc(v.title)}</div>${v.date?`<div class="cr-date">Date :  ${esc(v.date)}</div>`:''}${body}<div class="cr-credit-foot">Developed By Safayth Hossen Bulbul</div></div>`;
   };
@@ -589,22 +600,29 @@ async function creditPage(){
   /* Admin: mark a cheque as recovered / edit its remarks */
   $('crOut').onclick=async e=>{
     const b=e.target.closest('button[data-act]');if(!b||!isAdmin)return;
-    const id=b.dataset.id,act=b.dataset.act;let res=null;
+    const ids=(b.dataset.ids||'').split(',').filter(Boolean),act=b.dataset.act;let res=null;
     if(act==='rec'){
-      const left=Number(b.dataset.left)||0;
-      const a=prompt('Recovery amount (Tk). Remaining on this cheque: '+fAmt(left),String(left));if(a===null)return;
+      /* one line can hold several cheques (different DSOs): the recovery is split across them, oldest first */
+      const lefts=(b.dataset.lefts||'').split(',').map(Number),left=lefts.reduce((a,x)=>a+x,0);
+      const a=prompt('Recovery amount (Tk). Remaining on this line: '+fAmt(left),String(left));if(a===null)return;
       const amt=Number(a);if(!(amt>0)||amt>left+0.005)return alert('Enter an amount between 1 and '+fAmt(left)+'.');
       const d=prompt('Recovered on (YYYY-MM-DD):',$('crDate').value);if(!d)return;
       if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return alert('Use the format YYYY-MM-DD.');
-      res=await db.from('cheque_recoveries').insert({cheque_id:id,amount:amt,recovered_on:d});
+      let rest=Math.round(amt*100)/100;const recs=[];
+      ids.forEach((id,i)=>{if(rest<=0)return;const take=Math.min(rest,lefts[i]);if(take>0){recs.push({cheque_id:id,amount:Math.round(take*100)/100,recovered_on:d});rest=Math.round((rest-take)*100)/100}});
+      if(!recs.length)return;
+      res=await db.from('cheque_recoveries').insert(recs);
     }else if(act==='unrec'){
-      const {data}=await db.from('cheque_recoveries').select('*').eq('cheque_id',id).order('id',{ascending:false}).limit(1);
+      /* removes the last recovery entry; when it was split across cheques, every part of it goes together */
+      const {data}=await db.from('cheque_recoveries').select('*').in('cheque_id',ids).order('created_at',{ascending:false}).order('id',{ascending:false}).limit(1);
       const last=data&&data[0];if(!last)return;
-      if(!confirm('Remove the last recovery ('+fAmt(last.amount)+' on '+last.recovered_on+')?'))return;
-      res=await db.from('cheque_recoveries').delete().eq('id',last.id);
+      const {data:parts}=await db.from('cheque_recoveries').select('*').in('cheque_id',ids).eq('created_at',last.created_at);
+      const rows=parts&&parts.length?parts:[last];
+      if(!confirm('Remove the last recovery ('+fAmt(rows.reduce((a,x)=>a+Number(x.amount||0),0))+' on '+last.recovered_on+')?'))return;
+      res=await db.from('cheque_recoveries').delete().in('id',rows.map(x=>x.id));
     }else{
-      const t=prompt('Remarks:',b.dataset.v||'');if(t===null)return;
-      res=await db.from('cheques').update({remarks:t.trim()||null}).eq('id',id);
+      const t=prompt('Remarks (applies to every cheque on this line):',b.dataset.v||'');if(t===null)return;
+      res=await db.from('cheques').update({remarks:t.trim()||null}).in('id',ids);
     }
     if(res&&res.error)return msg($('crMsg'),res.error.message);
     run();
@@ -688,6 +706,14 @@ async function openingPage(){
         const retM=byName(M.ret),brandM=byName(M.brands),dsoM=byName(M.dsos);
         const roadId=n=>(M.roads.find(x=>obN(x.name)===obN(n))||{}).id;
         const pick=(m,name,road)=>{let c=m.get(obN(name))||[];if(c.length>1)c=act(c).length?act(c):c;if(c.length>1&&road){const id=roadId(road);if(id)c=c.filter(x=>x.road_id===id)}return c};
+        const alias={};
+        const findBrand=t=>{
+          const e=pick(brandM,t);if(e.length)return {b:e[0]};
+          const a=alias[obN(t)],ab=a&&M.brands.find(x=>x.id===a);if(ab)return {b:ab,warn:'brand "'+t+'" mapped to '+ab.name};
+          const n=obN(t),c=n?M.brands.filter(x=>{const f=obN(x.name);return f&&(f.includes(n)||n.includes(f))}):[];
+          return c.length===1?{b:c[0],warn:'brand "'+t+'" matched to '+c[0].name}:null;
+        };
+        const build=()=>{
         const out=[],ix=mp.ix;
         for(let i=mp.start;i<rows.length;i++){
           const r=rows[i]||[];if(!r.some(c=>String(c??'').trim()!==''))continue;
@@ -701,8 +727,8 @@ async function openingPage(){
           else o.ret=c[0];
           if(kind==='due'){
             o.brandTxt=g('brand');o.dsoTxt=g('dso');o.list=g('list');
-            const b=pick(brandM,o.brandTxt);
-            if(!o.brandTxt)o.errs.push('brand is empty');else if(!b.length)o.errs.push('brand "'+o.brandTxt+'" not found');else o.brand=b[0];
+            const fb=o.brandTxt?findBrand(o.brandTxt):null;
+            if(!o.brandTxt)o.errs.push('brand is empty');else if(!fb)o.errs.push('brand "'+o.brandTxt+'" not found');else{o.brand=fb.b;if(fb.warn)o.warns.push(fb.warn)}
             if(o.dsoTxt){const d=pick(dsoM,o.dsoTxt);let dd=d;if(!dd.length){const n=obN(o.dsoTxt);dd=M.dsos.filter(x=>{const f=obN(x.full_name);return f.startsWith(n+' ')||n.startsWith(f+' ')})}if(dd.length===1)o.dso=dd[0];else o.warns.push(dd.length?'DSO "'+o.dsoTxt+'" matches '+dd.length+' DSOs; left blank':'DSO "'+o.dsoTxt+'" not found; left blank')}
             if(!Number.isFinite(o.amt)||o.amt===0)o.errs.push('due amount is missing or not a number');
             const dt=g('date'),dy=g('days');
@@ -720,7 +746,11 @@ async function openingPage(){
         if(!out.length)throw new Error('No data rows found in that file.');
         const ok=out.filter(x=>!x.errs.length),bad=out.length-ok.length,sum=ok.reduce((a,x)=>a+x.amt,0);
         const rowsHtml=out.slice(0,500).map(x=>`<tr><td>${x.n}</td><td>${esc(x.shop)}</td><td>${esc(kind==='due'?x.brandTxt+(x.dsoTxt?' · '+x.dsoTxt:''):x.person)}</td><td class="n">${Number.isFinite(x.amt)?fAmt(x.amt):esc(String(x.amt))}</td><td>${esc(kind==='due'?(x.due||''):(x.recv||''))}</td><td style="color:${x.errs.length?'#b91c1c':(x.warns.length?'#b45309':'#0f9d72')}">${x.errs.length?esc(x.errs.join('; ')):(x.warns.length?'OK · '+esc(x.warns.join('; ')):'OK')}</td></tr>`).join('');
-        $('obPrev').innerHTML=`<div class="notice ${bad?'error':''}">${ok.length} ready to save (total ${fAmt(sum)}) · ${bad} with problems (these will be skipped)${out.length>500?' · showing the first 500 rows':''}</div><div class="table-wrap"><table><thead><tr><th>Row</th><th>Shop</th><th>${kind==='due'?'Brand · DSO':'Responsible person'}</th><th>Amount</th><th>${kind==='due'?'Due since':'Received'}</th><th>Status</th></tr></thead><tbody>${rowsHtml}</tbody></table></div><div class="form-actions"><button id="obSave" ${ok.length?'':'disabled'}>Save ${ok.length} ${lbl} rows</button></div>`;
+        const missB={};
+        out.forEach(x=>{if(kind==='due'&&x.brandTxt&&!x.brand){const k=obN(x.brandTxt);const v=missB[k]||(missB[k]={t:x.brandTxt,n:0,a:0});v.n++;v.a+=Number.isFinite(x.amt)?x.amt:0}});
+        const fixHtml=Object.keys(missB).length?`<div class="notice error" style="margin-top:10px"><b>These brand names are not in the software.</b> Choose the matching brand for each one. If the brand does not exist yet, add it on the Brands page, reload this page and upload again.${Object.entries(missB).map(([k,v])=>`<div style="margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span><b>"${esc(v.t)}"</b> · ${v.n} rows · ${fAmt(v.a)}</span><select data-bn="${esc(k)}" style="max-width:260px"><option value="">— choose brand —</option>${M.brands.filter(x=>x.is_active!==false).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></div>`).join('')}<div class="muted" style="margin-top:8px;font-size:12px">Brands in the software: ${esc(M.brands.map(x=>x.name).join(', ')||'none')}</div></div>`:'';
+        $('obPrev').innerHTML=`<div class="notice ${bad?'error':''}">${ok.length} ready to save (total ${fAmt(sum)}) · ${bad} with problems (these will be skipped)${out.length>500?' · showing the first 500 rows':''}</div>${fixHtml}<div class="table-wrap"><table><thead><tr><th>Row</th><th>Shop</th><th>${kind==='due'?'Brand · DSO':'Responsible person'}</th><th>Amount</th><th>${kind==='due'?'Due since':'Received'}</th><th>Status</th></tr></thead><tbody>${rowsHtml}</tbody></table></div><div class="form-actions"><button id="obSave" ${ok.length?'':'disabled'}>Save ${ok.length} ${lbl} rows</button></div>`;
+        document.querySelectorAll('#obPrev select[data-bn]').forEach(s=>s.onchange=()=>{if(s.value){alias[s.dataset.bn]=s.value;build()}});
         $('obSave').onclick=async()=>{
           const b=$('obSave');
           if(ex.rows.length&&!confirm(ex.rows.length+' '+lbl+' rows were uploaded earlier. Saving again ADDS these rows on top. Continue?'))return;
@@ -734,6 +764,8 @@ async function openingPage(){
           }
           await show();msg($('obMsg'),recs.length+' '+lbl+' rows saved. Open Reports › Credit & Cheque Report to see them.','success');
         };
+        };
+        build();
       }catch(err){$('obPrev').innerHTML='';msg($('obMsg'),err.message||String(err))}
     };
   };
