@@ -213,20 +213,20 @@ body::after{inset:-300px;background-size:300px 300px;opacity:.5;animation:phDrif
 .crsheet .cr-road{font-weight:800;font-size:21px;padding:4px 10px;border:1px solid #000;margin-top:12px}
 .crsheet:has(.cr-cheque) .cr-road{background:#92d050;text-align:center}
 .crsheet:has(.cr-credit) .cr-road{background:#ffc000;display:inline-block;min-width:240px;margin-left:0}
-table.crt{border-collapse:collapse;width:100%;min-width:0}
-table.crt th,table.crt td{border:1px solid #000;padding:6px 7px;text-align:center;font-size:13px;background:#fff;color:#e00000;font-weight:700;text-transform:none;letter-spacing:0;vertical-align:middle}
-table.crt tr.cr-h th{color:#000;font-weight:800;background:#fff;font-size:13px}
+table.crt{border-collapse:collapse;width:100%;min-width:0;table-layout:fixed}
+table.crt th,table.crt td{border:1px solid #000;padding:5px 4px;white-space:normal;overflow-wrap:anywhere;text-align:center;font-size:12px;background:#fff;color:#e00000;font-weight:700;text-transform:none;letter-spacing:0;vertical-align:middle}
+table.crt tr.cr-h th{color:#000;font-weight:800;background:#fff;font-size:12px}
 .crsheet:has(.cr-credit) table.crt tr.cr-h th{background:#bfbfbf}
 table.crt td.l{text-align:left}
-table.crt td.n{font-variant-numeric:tabular-nums}
+table.crt td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
 table.crt tr.crsum td{color:#000;font-weight:800;background:#f1f1f1}
 .crsheet:has(.cr-cheque) table.crt tr.crsum td{background:#ffff00}
 .crsheet:has(.cr-credit) table.crt tr.crsum td{background:#ffc000}
-table.crt tr.cr-offrow td,table.crt tr.cr-grand td{color:#000;font-weight:800;font-size:15px;background:#92d050}
-.crsheet:has(.cr-credit) table.crt tr.cr-grand td{background:#b7dee8;font-size:17px}
+table.crt tr.cr-offrow td,table.crt tr.cr-grand td{color:#000;font-weight:800;font-size:13px;background:#92d050}
+.crsheet:has(.cr-credit) table.crt tr.cr-grand td{background:#b7dee8;font-size:14px}
 table.crt tr.crdone td{color:#6b7280;text-decoration:line-through}
-table.crt td.cract{white-space:nowrap;text-decoration:none}
-table.crt td.cract button{padding:4px 9px;font-size:12px}
+table.crt td.cract{text-decoration:none}
+table.crt td.cract button{display:block;width:100%;margin:0 0 3px;padding:3px 4px;font-size:11px}
 .crsheet .cr-credit-foot{display:none}
 @media print{.crsheet{border:0;border-radius:0;overflow:visible}.crsheet .cr-credit-foot{display:block;text-align:center;font-size:9pt;font-weight:600;margin-top:8px;color:#000}table.crt th,table.crt td{font-size:10px;padding:3px 4px}.crsheet .cr-title{font-size:22px}.crsheet .cr-date{font-size:16px}.crsheet .cr-road{font-size:15px}}
 </style></head>
@@ -456,7 +456,7 @@ async function creditPage(){
     });
     return {title:'Retailer Credit Data ('+dmy(D).replace(/\./g,'-')+')',cls:'cr-credit',date:null,
       head:['Shop Name','Brand Name','Responsible person','Previous Due Amount','Todays Due Amount','Recovery Amount','Amount Left','Day Pass'],
-      sum:[3,4,5,6],txt:[0,1,2],groups:groupRoad(out,false)};
+      sum:[3,4,5,6],txt:[0,1,2],widths:[22,11,14,13,12,11,13,6],groups:groupRoad(out,false)};
   }
   /* roads with the same "Report group" print as one section; with an Office set, the cheque list also gets an office total */
   function groupRoad(list,byOffice){
@@ -527,19 +527,20 @@ async function creditPage(){
     });
     return {title:'Retailer Cheque Information List',cls:'cr-cheque',date:dmyFull(D),
       head:['Enterprise Name','Responsible Person','Cheque Receiving / Invoice Date','Opening Info (Cheque Amount)','Payable Date','Today Received (Cheque Amount)','Payable Date','Recovery Amount','Cheque Amount (Due)','Day Count','Remarks'],
-      sum:[3,5,7,8],groups:groupRoad(out,true),cheque:true,offices:true};
+      sum:[3,5,7,8],widths:[12,17,7,8,7,8,7,7,8,5,9],groups:groupRoad(out,true),cheque:true,offices:true};
   }
   const render=()=>{
     const v=view;if(!v)return;
     const act=v.cheque&&isAdmin;
     const cell=(r,i)=>{const val=r.c[i];const isAmt=(v.sum||[]).includes(i);return `<td class="${isAmt?'n':(i===0?'l':'')}">${isAmt?fAmt(val):esc(val===''||val==null?'':val)}</td>`};
-    const tot=(rows,label,cls)=>`<tr class="${cls}"><td></td>${v.head.map((h,i)=>i===0?`<td style="text-align:right">${esc(label)}</td>`:(v.sum.includes(i)?`<td class="n">${fAmt(rows.reduce((x,r)=>x+Number(r.c[i]||0),0))}</td>`:'<td></td>')).join('')}${act?'<td class="noprint"></td>':''}</tr>`;
+    const tot=(rows,label,cls)=>`<tr class="${cls}"><td colspan="4" style="text-align:right">${esc(label)}</td>${v.head.map((h,i)=>i<3?'':(v.sum.includes(i)?`<td class="n">${fAmt(rows.reduce((x,r)=>x+Number(r.c[i]||0),0))}</td>`:'<td></td>')).join('')}${act?'<td class="noprint"></td>':''}</tr>`;
+    const ws=[4,...v.widths,...(act?[11]:[])],wt=ws.reduce((a,x)=>a+x,0),cg='<colgroup>'+ws.map(w=>`<col style="width:${(w*100/wt).toFixed(2)}%">`).join('')+'</colgroup>';
     const G=v.groups,okey=g=>g.office||'',showOff=v.offices&&new Set(G.map(okey)).size>=2,allRows=G.flatMap(g=>g.rows);
     const body=G.map((g,gi)=>{
       const last=gi===G.length-1;let extra='';
       if(showOff&&(last||okey(G[gi+1])!==okey(g))){const o=okey(g);extra+=tot(G.filter(x=>okey(x)===o).flatMap(x=>x.rows),(o||'Other')+' Total','cr-offrow')}
       if(G.length>=2&&last)extra+=tot(allRows,'Grand Total','cr-grand');
-      return `<div class="cr-road">${esc(g.name)}</div><table class="crt"><thead><tr class="cr-h"><th>SL No.</th>${v.head.map(h=>`<th>${esc(h)}</th>`).join('')}${act?'<th class="noprint">Action</th>':''}</tr></thead><tbody>${g.rows.map((r,n)=>`<tr${r.done?' class="crdone"':''}><td>${n+1}</td>${r.c.map((_,i)=>cell(r,i)).join('')}${act?`<td class="noprint cract">${r.left>0.005?`<button data-act="rec" data-ids="${r.ids.join(',')}" data-lefts="${r.lefts.join(',')}">Recovery</button> `:''}${r.hasRec?`<button class="secondary" data-act="unrec" data-ids="${r.ids.join(',')}">Undo last</button> `:''}<button class="secondary" data-act="rem" data-ids="${r.ids.join(',')}" data-v="${esc(r.rem)}">Remarks</button></td>`:''}</tr>`).join('')}${tot(g.rows,'Total','crsum')}${extra}</tbody></table>`;
+      return `<div class="cr-road">${esc(g.name)}</div><table class="crt">${cg}<thead><tr class="cr-h"><th>SL No.</th>${v.head.map(h=>`<th>${esc(h)}</th>`).join('')}${act?'<th class="noprint">Action</th>':''}</tr></thead><tbody>${g.rows.map((r,n)=>`<tr${r.done?' class="crdone"':''}><td>${n+1}</td>${r.c.map((_,i)=>cell(r,i)).join('')}${act?`<td class="noprint cract">${r.left>0.005?`<button data-act="rec" data-ids="${r.ids.join(',')}" data-lefts="${r.lefts.join(',')}">Recovery</button> `:''}${r.hasRec?`<button class="secondary" data-act="unrec" data-ids="${r.ids.join(',')}">Undo last</button> `:''}<button class="secondary" data-act="rem" data-ids="${r.ids.join(',')}" data-v="${esc(r.rem)}">Remarks</button></td>`:''}</tr>`).join('')}${tot(g.rows,'Total','crsum')}${extra}</tbody></table>`;
     }).join('')||'<p class="muted" style="padding:14px;text-align:center;color:#000">Nothing to show for this date.</p>';
     $('crOut').innerHTML=`<div class="crsheet" id="crSheet"><div class="cr-title ${v.cls}">${esc(v.title)}</div>${v.date?`<div class="cr-date">Date :  ${esc(v.date)}</div>`:''}${body}<div class="cr-credit-foot">Developed By Safayth Hossen Bulbul</div></div>`;
   };
