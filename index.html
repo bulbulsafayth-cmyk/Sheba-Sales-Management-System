@@ -681,6 +681,43 @@ async function creditPage(){
   /* picture of the report: Share (phone share menu) or Save image.
      A long report is cut into several pictures (at row edges), because a phone cannot draw one very tall picture and then sends a blank file. */
   let pend=null;
+  /* last-resort picture: drawn straight on a canvas from the report data (no html2canvas), works on phones where the page-to-picture method gives a blank file */
+  const drawPlain=async(base)=>{
+    const v=view,W=1400,pad=16,fs=15,lh=20;
+    const ws=[4,...v.widths],wt=ws.reduce((a,x)=>a+x,0),cw=ws.map(x=>Math.floor((W-2*pad)*x/wt));
+    const mx=document.createElement('canvas').getContext('2d');mx.font=fs+'px Arial,sans-serif';
+    const wrap=(t,w)=>{const out=[];let cur='';String(t==null?'':t).split(/\s+/).forEach(word=>{const ts=cur?cur+' '+word:word;if(mx.measureText(ts).width<=w-8){cur=ts;return}if(cur)out.push(cur);cur=word;while(mx.measureText(cur).width>w-8&&cur.length>1){let k=cur.length-1;while(k>1&&mx.measureText(cur.slice(0,k)).width>w-8)k--;out.push(cur.slice(0,k));cur=cur.slice(k)}});out.push(cur);return out};
+    const items=[];
+    const text=(t,size,bold,align,bg)=>items.push({h:size+14,d:(c,y)=>{if(bg){c.fillStyle=bg;c.fillRect(pad,y,W-2*pad,size+14)}c.fillStyle='#000';c.font=(bold?'bold ':'')+size+'px Arial,sans-serif';c.textBaseline='middle';c.textAlign=align;c.fillText(t,align==='center'?W/2:pad+6,y+(size+14)/2)}});
+    const row=(cells,o)=>{o=o||{};const ls=cells.map((t,i)=>wrap(t,cw[i])),n=Math.max(1,...ls.map(l=>l.length)),h=n*lh+8;
+      items.push({h,d:(c,y)=>{let x=pad;c.textBaseline='middle';cells.forEach((_,i)=>{if(o.bg){c.fillStyle=o.bg;c.fillRect(x,y,cw[i],h)}c.strokeStyle='#000';c.lineWidth=1;c.strokeRect(x+.5,y+.5,cw[i],h);c.fillStyle='#000';c.font=(o.bold?'bold ':'')+fs+'px Arial,sans-serif';const num=o.num&&o.num[i];c.textAlign=num?'right':'left';ls[i].forEach((ln,k)=>c.fillText(ln,num?x+cw[i]-5:x+5,y+4+lh*k+lh/2));x+=cw[i]})}})};
+    const isNum=Array(v.head.length+1).fill(false);(v.sum||[]).forEach(i=>{isNum[i+1]=true});
+    const totRow=(label,rows,bg)=>row(['','',...v.head.slice(1).map(()=>'')].map((_,j)=>j===1?label:(j>=2&&isNum[j]?fAmt(rows.reduce((a,r)=>a+Number(r.c[j-1]||0),0)):'')),{bold:true,bg,num:isNum});
+    text(v.title,22,true,'center');
+    if(v.date)text('Date :  '+v.date,16,true,'center');
+    const G=v.groups,okey=g=>g.office||'',showOff=v.offices&&new Set(G.map(okey)).size>=2;
+    G.forEach((g,gi)=>{
+      text(g.name,17,true,'left','#e6e6e6');
+      row(['SL No.',...v.head],{bold:true,bg:'#d9e2f3'});
+      g.rows.forEach((r,n)=>row([String(n+1),...r.c.map((x,i)=>isNum[i+1]?fAmt(x):(x==null?'':String(x)))],{num:isNum}));
+      totRow('Total',g.rows,'#f2f2f2');
+      const last=gi===G.length-1;
+      if(showOff&&(last||okey(G[gi+1])!==okey(g))){const o=okey(g);totRow((o||'Other')+' Total',G.filter(x=>okey(x)===o).flatMap(x=>x.rows),'#fff2cc')}
+      if(G.length>=2&&last)totRow('Grand Total',G.flatMap(x=>x.rows),'#c6e0b4');
+      items.push({h:12,d:()=>{}});
+    });
+    text('Developed By Safayth Hossen Bulbul',12,false,'center');
+    const pages=[];let cur=[],hh=0;items.forEach(it=>{if(hh+it.h>2800&&cur.length){pages.push(cur);cur=[];hh=0}cur.push(it);hh+=it.h});if(cur.length)pages.push(cur);
+    const out=[];
+    for(let p=0;p<pages.length;p++){
+      const H=pages[p].reduce((a,x)=>a+x.h,0)+2*pad,cv=document.createElement('canvas');cv.width=W;cv.height=H;
+      const c=cv.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,W,H);let y=pad;pages[p].forEach(it=>{it.d(c,y);y+=it.h});
+      const blob=await new Promise(ok=>cv.toBlob(ok,'image/png'));cv.width=cv.height=0;
+      if(!blob||blob.size<500)throw new Error('blank picture');
+      out.push(new File([blob],base+(pages.length>1?'_part'+(p+1)+'of'+pages.length:'')+'.png',{type:'image/png'}));
+    }
+    return out;
+  };
   const picture=async(btnEl,saveOnly)=>{
     if(!view)return msg($('crMsg'),'Generate the report first.');
     const old=btnEl.innerHTML;
@@ -719,6 +756,7 @@ async function creditPage(){
           okAll=true;break;
         }catch(e){lastErr=e;files=[];document.querySelectorAll('.crShotTmp').forEach(x=>{if(x!==w)x.remove()})}
       }
+      if(!okAll){try{files=await drawPlain(base);okAll=true}catch(e2){lastErr=e2}}
       if(!okAll)throw new Error('This phone could not draw the picture even in small size ('+((lastErr&&lastErr.message)||'unknown')+'). Close other apps/tabs and try again, or use Print / PDF or Excel.');
       w.remove();
       if(!saveOnly&&navigator.canShare&&navigator.canShare({files}))await navigator.share({files,title:view.title});
