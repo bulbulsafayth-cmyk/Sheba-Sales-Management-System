@@ -191,18 +191,6 @@ body::after{inset:-300px;background-size:300px 300px;opacity:.5;animation:phDrif
 .rtypes button:hover{background:#1d4ed8;color:#fff}
 .rtypes button.on{background:#1e3a8a;color:#fff;border-color:#172554}
 .mprice{font-size:12px;color:var(--muted);font-weight:600;margin-top:1px}
-#brandFloat{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
-#brandFloat .bf{position:absolute;animation:bfFloat var(--d,30s) ease-in-out infinite alternate;animation-delay:var(--dl,0s);will-change:transform}
-#brandFloat .bb{display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;color:#fff;font-weight:800;letter-spacing:.03em;text-shadow:0 1px 4px #000c;background:radial-gradient(circle at 30% 25%,#ffffff45,#ffffff14 60%,#ffffff0a);border:2px solid #ffffff5c;box-shadow:inset 0 0 16px #ffffff26,0 6px 20px #0006}
-#brandFloat .bb img{height:22px;width:auto;border-radius:5px;flex:none}
-#brandFloat .s0{border-radius:50%;aspect-ratio:1;padding:12px;flex-direction:column;gap:5px}
-#brandFloat .s1{border-radius:999px;padding:12px 26px}
-#brandFloat .s2{border-radius:30px;padding:18px 24px}
-#brandFloat .s3{border-radius:58% 42% 55% 45%/48% 56% 44% 52%;padding:24px 30px}
-#brandFloat .s4{border-radius:50%;padding:22px 40px}
-@keyframes bfFloat{from{transform:translate(0,0) rotate(var(--r0,-6deg))}to{transform:translate(var(--dx,40px),var(--dy,-60px)) rotate(var(--r1,6deg))}}
-@media (prefers-reduced-motion:reduce){#brandFloat .bf{animation:none}}
-@media print{#brandFloat{display:none!important}}
 /* credit & cheque report */
 @page cr{size:A4 landscape;margin:8mm}
 .crsheet{background:#fff;color:#000;border:1px solid #cfd8e6;border-radius:10px;overflow:auto;page:cr;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -411,7 +399,10 @@ async function creditPage(){
   let kind='credit',view=null;
   const cmp=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});
   const roadName=id=>L.road[id]?.name||'—';
-  const vmode=()=>$('crView')?.value||'road';
+  const VOPT={credit:[['road','Road-wise'],['dso','DSO-wise'],['brand','Brand-wise']],cheque:[['road','Road-wise'],['retailer','Retailer-wise']]};
+  const setViews=()=>{const el=$('crView');if(!el)return;const cur=el.value;el.innerHTML=VOPT[kind].map(o=>`<option value="${o[0]}">${o[1]}</option>`).join('');el.value=VOPT[kind].some(o=>o[0]===cur)?cur:'road'};
+  const vmode=()=>{const v=$('crView')?.value||'road';return VOPT[kind].some(o=>o[0]===v)?v:'road'};
+  setViews();
   const filt=rows=>{
     const rd=$('crRoad').value,br=$('crBrand').value,ds=$('crDso')?.value,mb=myBrandIds();
     return rows.filter(x=>(!br||x.brand_id===br)&&(!ds||x.dso_id===ds)&&(!mb||mb.includes(x.brand_id)));
@@ -472,7 +463,7 @@ async function creditPage(){
     mode=mode||'road';
     if(mode!=='road'){
       const g=new Map();
-      list.forEach(r=>{const nm=(mode==='dso'?r.dso:r.brand)||'—';let o=g.get(nm);if(!o){o={name:(mode==='dso'?'DSO: ':'Brand: ')+nm,office:'',ord:0,rows:[]};g.set(nm,o)}o.rows.push(r)});
+      list.forEach(r=>{const nm=(mode==='dso'?r.dso:mode==='retailer'?r.c[0]:r.brand)||'—';let o=g.get(nm);if(!o){o={name:(mode==='dso'?'DSO: ':mode==='retailer'?'Retailer: ':'Brand: ')+nm,office:'',ord:0,rows:[]};g.set(nm,o)}o.rows.push(r)});
       const arr=[...g.values()];arr.sort((a,b)=>cmp(a.name,b.name));
       arr.forEach(o=>o.rows.sort((a,b)=>cmp(a.road||'',b.road||'')||(b.age-a.age)||cmp(a.c[0],b.c[0])||cmp(a.c[1],b.c[1])));
       return arr;
@@ -531,7 +522,7 @@ async function creditPage(){
       const all=rl.reduce((a,r)=>a+Number(r.amount||0),0);
       if(amt-before<=0.005)return;
       /* cheques of one shop with the same receive date and payable date (different DSOs / brands) print as ONE line */
-      items.push({key:c.sales_entry_id?'E|'+rid+'|'+recd+'|'+(c.payable_date||'')+(md==='dso'?'|'+dso:md==='brand'?'|'+brand:''):'O|'+c.id,id:c.id,shop,who,dso,brand,road,recd,pd:c.payable_date||'',amt,open:amt-before,today,left:Math.max(0,amt-all),hasRec:rl.length>0,rem:c.remarks||''});
+      items.push({key:c.sales_entry_id?'E|'+rid+'|'+recd+'|'+(c.payable_date||''):'O|'+c.id,id:c.id,shop,who,dso,brand,road,recd,pd:c.payable_date||'',amt,open:amt-before,today,left:Math.max(0,amt-all),hasRec:rl.length>0,rem:c.remarks||''});
     });
     const grp=new Map();items.forEach(x=>{(grp.get(x.key)||grp.set(x.key,[]).get(x.key)).push(x)});
     const out=[];
@@ -573,7 +564,7 @@ async function creditPage(){
       if(tok!==navToken)return;view=v;render();
     }catch(e){$('crOut').innerHTML='';msg(m,/cheque/i.test(e.message||'')&&/does not exist|schema cache|relation/i.test(e.message||'')?'Cheque tracking is not set up yet. Run cheque-setup.sql in Supabase.':(e.message||String(e)))}
   };
-  $('crTypes').onclick=e=>{const b=e.target.closest('button[data-k]');if(!b)return;kind=b.dataset.k;document.querySelectorAll('#crTypes button').forEach(x=>x.classList.toggle('on',x===b));if($('crForm'))$('crForm').innerHTML='';view=null;$('crOut').innerHTML='';run()};
+  $('crTypes').onclick=e=>{const b=e.target.closest('button[data-k]');if(!b)return;kind=b.dataset.k;setViews();document.querySelectorAll('#crTypes button').forEach(x=>x.classList.toggle('on',x===b));if($('crForm'))$('crForm').innerHTML='';view=null;$('crOut').innerHTML='';run()};
   /* manual cheque entry (Admin): a cheque that did not come from a sales entry */
   const showNewCheque=async()=>{
     const box=$('crForm');if(!box)return;
@@ -1831,29 +1822,25 @@ async function sheetPage(){
   await run();
 }
 
-/* floating brand logos in the background (brands without a saved logo float as a name tag) */
+/* brand logos sit inside the floating phones (no bubbles): the phone tile is rebuilt with a brand logo on every phone screen */
 function buildBrandFloat(names){
-  let box=document.getElementById('brandFloat');
-  if(!box){box=document.createElement('div');box.id='brandFloat';document.body.prepend(box)}
-  const cap=k=>k.length<=3?k.toUpperCase():k.charAt(0).toUpperCase()+k.slice(1);
-  const list=(names&&names.length)?names:Object.keys(BRAND_LOGOS).map(cap);
-  const rnd=(a,b)=>a+Math.random()*(b-a),COPIES=list.length<=6?3:2;
-  box.innerHTML='';
-  list.forEach(n=>{for(let c=0;c<COPIES;c++){
-    const d=document.createElement('div');d.className='bf';
-    d.style.cssText='left:'+rnd(2,88).toFixed(1)+'%;top:'+rnd(3,86).toFixed(1)+'%;--d:'+rnd(18,40).toFixed(0)+'s;--dl:-'+rnd(0,30).toFixed(0)+'s;--dx:'+rnd(-90,90).toFixed(0)+'px;--dy:'+rnd(-110,110).toFixed(0)+'px;--r0:'+rnd(-8,0).toFixed(0)+'deg;--r1:'+rnd(0,8).toFixed(0)+'deg';
-    const sh=Math.floor(rnd(0,5)),bb=document.createElement('div');
-    bb.className='bb s'+sh;
-    bb.style.fontSize=rnd(14,20).toFixed(0)+'px';
-    if(sh===0)bb.style.width=rnd(104,150).toFixed(0)+'px';
-    const k=brandKey(n);
-    if(k){const i=document.createElement('img');i.src=BRAND_LOGOS[k];i.alt='';bb.appendChild(i)}
-    const t=document.createElement('span');t.textContent=n;bb.appendChild(t);
-    d.appendChild(bb);box.appendChild(d);
-  }});
+  const old=document.getElementById('brandFloat');if(old)old.remove();
+  let keys=[];
+  (names||[]).forEach(n=>{const k=brandKey(n);if(k&&!keys.includes(k))keys.push(k)});
+  if(!keys.length)keys=Object.keys(BRAND_LOGOS);
+  const P=[[70,80,-14,.8,.55],[300,60,12,.55,.45],[200,250,-6,.95,.55],[40,340,10,.5,.4],[370,330,-18,.7,.45],[130,380,14,.45,.35],[380,170,6,.5,.4]];
+  let g='';
+  P.forEach((p,i)=>{
+    const tr='translate('+p[0]+' '+p[1]+') rotate('+p[2]+') scale('+p[3]+')',k=keys[i%keys.length];
+    g+='<g transform="'+tr+'" opacity="'+p[4]+'" fill="none" stroke="#5fb4ff" stroke-width="3" stroke-linecap="round"><rect x="-30" y="-56" width="60" height="112" rx="10"/><rect x="-24" y="-46" width="48" height="84" rx="3" fill="#2f8cff" fill-opacity=".18"/><rect x="-8" y="-52" width="16" height="3" rx="1.5" fill="#5fb4ff"/><circle cx="0" cy="47" r="4"/></g>';
+    g+='<g transform="'+tr+'" opacity="'+Math.min(.95,p[4]+.35).toFixed(2)+'"><rect x="-22" y="-14" width="44" height="28" rx="4" fill="#fff" fill-opacity=".9"/><image href="'+BRAND_LOGOS[k]+'" x="-20" y="-12" width="40" height="24" preserveAspectRatio="xMidYMid meet"/></g>';
+  });
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="420" height="420" viewBox="0 0 420 420">'+g+'</svg>';
+  document.documentElement.style.setProperty('--phones','url("data:image/svg+xml,'+encodeURIComponent(svg)+'")');
 }
 async function addBrandNames(){try{const {data}=await db.from('brands').select('name').eq('is_active',true);if(data&&data.length)buildBrandFloat(data.map(x=>x.name))}catch(e){}}
 
+try{buildBrandFloat()}catch(e){}
 checkSession();
 </script>
 <script>
