@@ -390,7 +390,7 @@ async function creditPage(){
   const tok=navToken,isAdmin=userMode==='admin';
   const SHARE_SVG='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-4.2M8.6 13.4l6.8 4.2"/></svg>';
   const DL_SVG='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg>';
-  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Credit &amp; Cheque Report</h1><div class="sub">Daily verbal-due (credit) list and retailer cheque list. <b style="opacity:.75">Version: 20-Nov-2026 · New Cheque button</b></div><div class="panel"><div class="rtypes" id="crTypes"><button data-k="credit" class="on">Credit report (verbal due)</button><button data-k="cheque">Cheque report</button></div><div class="form-grid" style="margin-top:14px"><div><label>Date</label><input type="date" id="crDate"></div><div><label>Road</label><select id="crRoad"><option value="">All roads</option></select></div><div><label>Brand</label><select id="crBrand"><option value="">All brands</option></select></div>${isAdmin?'<div><label>DSO</label><select id="crDso"><option value="">All DSOs</option></select></div>':''}</div><div class="form-actions"><button id="crRun">Generate</button>${isAdmin?'<button class="secondary" id="crNew">+ New Cheque</button>':''}<button class="secondary" id="crPrint">Print / PDF</button><button class="secondary" id="crImg">${SHARE_SVG}Share</button><button class="secondary" id="crSave">${DL_SVG}Save image</button><button class="secondary" id="crXlsx">Excel</button><button class="secondary" id="crBack">← Reports</button></div><div id="crMsg"></div></div></div><div id="crForm" class="noprint"></div><div id="crOut"></div>`;
+  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Credit &amp; Cheque Report</h1><div class="sub">Daily verbal-due (credit) list and retailer cheque list. <b style="opacity:.75">Version: 20-Nov-2026 · New Cheque button</b></div><div class="panel"><div class="rtypes" id="crTypes"><button data-k="credit" class="on">Credit report (verbal due)</button><button data-k="cheque">Cheque report</button></div><div class="form-grid" style="margin-top:14px"><div><label>Date</label><input type="date" id="crDate"></div><div><label>Road</label><select id="crRoad"><option value="">All roads</option></select></div><div><label>Brand</label><select id="crBrand"><option value="">All brands</option></select></div>${isAdmin?'<div><label>DSO</label><select id="crDso"><option value="">All DSOs</option></select></div>':''}<div><label>View by</label><select id="crView"><option value="road">Road-wise</option><option value="dso">DSO-wise</option><option value="brand">Brand-wise</option></select></div></div><div class="form-actions"><button id="crRun">Generate</button>${isAdmin?'<button class="secondary" id="crNew">+ New Cheque</button>':''}<button class="secondary" id="crPrint">Print / PDF</button><button class="secondary" id="crImg">${SHARE_SVG}Share</button><button class="secondary" id="crSave">${DL_SVG}Save image</button><button class="secondary" id="crXlsx">Excel</button><button class="secondary" id="crBack">← Reports</button></div><div id="crMsg"></div></div></div><div id="crForm" class="noprint"></div><div id="crOut"></div>`;
   const [brands,dsos,roads]=await Promise.all(['brands','dsos','roads'].map(queryAll));
   if(tok!==navToken)return;
   const by1=a=>Object.fromEntries(a.map(x=>[x.id,x]));
@@ -411,6 +411,7 @@ async function creditPage(){
   let kind='credit',view=null;
   const cmp=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});
   const roadName=id=>L.road[id]?.name||'—';
+  const vmode=()=>$('crView')?.value||'road';
   const filt=rows=>{
     const rd=$('crRoad').value,br=$('crBrand').value,ds=$('crDso')?.value,mb=myBrandIds();
     return rows.filter(x=>(!br||x.brand_id===br)&&(!ds||x.dso_id===ds)&&(!mb||mb.includes(x.brand_id)));
@@ -435,12 +436,20 @@ async function creditPage(){
       const RT=await needRet(),br=$('crBrand').value,ds=$('crDso')?.value,mb=myBrandIds();
       od.forEach(x=>{
         if(!(x.as_of<D))return;
-        if(userMode==='dso'&&currentDso&&x.dso_id!==currentDso.id)return;
+        if(userMode==='dso'&&currentDso){
+          /* own dues, plus dues with no DSO set that belong to this DSO's brand + road */
+          const mine=x.dso_id===currentDso.id;
+          if(!mine){
+            if(x.dso_id)return;
+            const r0=RT[x.retailer_id],bi=currentDso.brandIds||[],ri=currentDso.roadIds||[];
+            if(!r0||(bi.length&&!bi.includes(x.brand_id))||(ri.length&&!ri.includes(r0.road_id)))return;
+          }
+        }
         if((br&&x.brand_id!==br)||(ds&&x.dso_id!==ds)||(mb&&!mb.includes(x.brand_id)))return;
         const rt=RT[x.retailer_id];if(!rt)return;
         const k=(x.list_name?'L|'+x.list_name+'|':'')+x.retailer_id+'|'+x.brand_id;
         let g=m.get(k);
-        if(!g){g={shop:rt.name,brand:L.brand[x.brand_id]?.name||'—',road:L.road[rt.road_id]?.name,dso:DSOM[x.dso_id]?.full_name||'—',pn:0,pr:0,tn:0,tr:0,td:0,paid:0,ch:[],list:x.list_name||''};m.set(k,g)}
+        if(!g){g={shop:rt.name,brand:L.brand[x.brand_id]?.name||'—',road:L.road[rt.road_id]?.name,dso:DSOM[x.dso_id]?.full_name||(userMode==='dso'&&currentDso?(currentDso.full_name||currentDso.name):null)||'—',pn:0,pr:0,tn:0,tr:0,td:0,paid:0,ch:[],list:x.list_name||''};m.set(k,g)}
         g.pn+=Number(x.amount||0);g.ch.push({d:x.due_date||x.as_of,net:Number(x.amount||0)});
       });
       m.forEach(g=>g.ch.sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0));
@@ -452,14 +461,22 @@ async function creditPage(){
       if(!(prev>0||g.td>0||rec>0))return;
       let cum=0,old=null;for(const c of g.ch){cum+=c.net;if(cum>g.paid+0.5){old=c.d;break}}
       const dp=left>0&&old?daysBetween(old,D):'';
-      out.push({road:g.road,list:g.list,age:dp===''?-1:dp,c:[g.shop,g.brand,g.dso,prev,g.td,rec,left,dp]});
+      out.push({road:g.road,dso:g.dso,brand:g.brand,list:g.list,age:dp===''?-1:dp,c:[g.shop,g.brand,g.dso,prev,g.td,rec,left,dp]});
     });
     return {title:'Retailer Credit Data ('+dmy(D).replace(/\./g,'-')+')',cls:'cr-credit',date:null,
       head:['Shop Name','Brand Name','Responsible person','Previous Due Amount','Todays Due Amount','Recovery Amount','Amount Left','Day Pass'],
-      sum:[3,4,5,6],txt:[0,1,2],widths:[22,11,14,13,12,11,13,6],groups:groupRoad(out,false)};
+      sum:[3,4,5,6],txt:[0,1,2],widths:[22,11,14,13,12,11,13,6],groups:groupRoad(out,false,vmode())};
   }
   /* roads with the same "Report group" print as one section; with an Office set, the cheque list also gets an office total */
-  function groupRoad(list,byOffice){
+  function groupRoad(list,byOffice,mode){
+    mode=mode||'road';
+    if(mode!=='road'){
+      const g=new Map();
+      list.forEach(r=>{const nm=(mode==='dso'?r.dso:r.brand)||'—';let o=g.get(nm);if(!o){o={name:(mode==='dso'?'DSO: ':'Brand: ')+nm,office:'',ord:0,rows:[]};g.set(nm,o)}o.rows.push(r)});
+      const arr=[...g.values()];arr.sort((a,b)=>cmp(a.name,b.name));
+      arr.forEach(o=>o.rows.sort((a,b)=>cmp(a.road||'',b.road||'')||(b.age-a.age)||cmp(a.c[0],b.c[0])||cmp(a.c[1],b.c[1])));
+      return arr;
+    }
     const g=new Map();
     list.forEach(r=>{
       const nm=r.list||grpOf(r.road),k=(r.list?'L|':'G|')+nm,ord=r.list?2e9:ordOf(r.road);
@@ -486,7 +503,8 @@ async function creditPage(){
     const A=cq.reduce((a,c)=>c.opening_as_of&&c.opening_as_of>a?c.opening_as_of:a,'');
     const ids=[...new Set(cq.filter(x=>x.sales_entry_id).map(x=>x.sales_entry_id))],ent={};
     for(let i=0;i<ids.length;i+=100){(await fetchAll(()=>scopedReport().in('id',ids.slice(i,i+100)))).forEach(x=>{ent[x.id]=x})}
-    const RT=(isAdmin&&cq.some(c=>!c.sales_entry_id))?await needRet():{};
+    const RT=cq.some(c=>!c.sales_entry_id)?await needRet():{};
+    const md=vmode(),myName=(userMode==='dso'&&currentDso)?String(currentDso.full_name||currentDso.name||'').trim().toLowerCase():'';
     const rd=L.road[$('crRoad').value]?.name;
     const okIds=new Set(filt(Object.values(ent)).map(x=>x.id));
     const items=[];
@@ -499,10 +517,12 @@ async function creditPage(){
         recd=e.sale_date;shop=e.retailer||'—';road=e.road;rid=e.retailer_id;dso=e.dso_name||'—';brand=e.brand||'';who=dso+' · '+brand;
       }else{
         /* opening cheques carry no brand or DSO link, so only the Admin sees them, and a brand/DSO filter hides them */
-        if(!isAdmin||$('crBrand').value||$('crDso')?.value)return;
+        /* DSO sees an opening cheque only when its Responsible-person text names them */
+        if($('crBrand').value||$('crDso')?.value)return;
+        if(!isAdmin&&!(myName&&String(c.resp_text||'').toLowerCase().includes(myName)))return;
         const rt=RT[c.retailer_id];if(!rt)return;
         road=L.road[c.road_id||rt.road_id]?.name;if(rd&&road!==rd)return;
-        recd=c.received_on;shop=rt.name;who=c.resp_text||'—';
+        recd=c.received_on;shop=rt.name;who=c.resp_text||'—';dso=(!isAdmin&&myName)?(currentDso.full_name||currentDso.name):'—';brand='—';
       }
       if(!recd||recd>D)return;
       const amt=Number(c.amount||0),rl=rbyc[c.id]||[];
@@ -511,7 +531,7 @@ async function creditPage(){
       const all=rl.reduce((a,r)=>a+Number(r.amount||0),0);
       if(amt-before<=0.005)return;
       /* cheques of one shop with the same receive date and payable date (different DSOs / brands) print as ONE line */
-      items.push({key:c.sales_entry_id?'E|'+rid+'|'+recd+'|'+(c.payable_date||''):'O|'+c.id,id:c.id,shop,who,dso,brand,road,recd,pd:c.payable_date||'',amt,open:amt-before,today,left:Math.max(0,amt-all),hasRec:rl.length>0,rem:c.remarks||''});
+      items.push({key:c.sales_entry_id?'E|'+rid+'|'+recd+'|'+(c.payable_date||'')+(md==='dso'?'|'+dso:md==='brand'?'|'+brand:''):'O|'+c.id,id:c.id,shop,who,dso,brand,road,recd,pd:c.payable_date||'',amt,open:amt-before,today,left:Math.max(0,amt-all),hasRec:rl.length>0,rem:c.remarks||''});
     });
     const grp=new Map();items.forEach(x=>{(grp.get(x.key)||grp.set(x.key,[]).get(x.key)).push(x)});
     const out=[];
@@ -522,12 +542,12 @@ async function creditPage(){
       const who=ms.length>1?ms.map(x=>x.dso+' '+x.brand+'-'+Math.round(isNew?x.amt:x.open)).join(' '):f.who;
       const rem=[...new Set(ms.map(x=>x.rem).filter(Boolean))].join('; ');
       const pd=f.pd?dmy(f.pd):'',age=daysBetween(f.recd,D);
-      out.push({road:f.road,age,ids:ms.map(x=>x.id),lefts:ms.map(x=>x.left),left:sm('left'),hasRec:ms.some(x=>x.hasRec),rem,done:due<=0.005,
+      out.push({road:f.road,dso:[...new Set(ms.map(x=>x.dso))].join(', '),brand:[...new Set(ms.map(x=>x.brand))].join(', '),age,ids:ms.map(x=>x.id),lefts:ms.map(x=>x.left),left:sm('left'),hasRec:ms.some(x=>x.hasRec),rem,done:due<=0.005,
         c:[f.shop,who,dmy(f.recd),isNew?'':open,isNew?'':pd,isNew?amt:'',isNew?pd:'',today||'',due,age,rem]});
     });
     return {title:'Retailer Cheque Information List',cls:'cr-cheque',date:dmyFull(D),
       head:['Enterprise Name','Responsible Person','Cheque Receiving / Invoice Date','Opening Info (Cheque Amount)','Payable Date','Today Received (Cheque Amount)','Payable Date','Recovery Amount','Cheque Amount (Due)','Day Count','Remarks'],
-      sum:[3,5,7,8],widths:[12,17,7,8,7,8,7,7,8,5,9],groups:groupRoad(out,true),cheque:true,offices:true};
+      sum:[3,5,7,8],widths:[12,17,7,8,7,8,7,7,8,5,9],groups:groupRoad(out,true,md),cheque:true,offices:md==='road'};
   }
   const render=()=>{
     const v=view;if(!v)return;
@@ -563,28 +583,34 @@ async function creditPage(){
     const list=Object.values(RT).filter(r=>r.is_active!==false).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
     const map=new Map(list.map(r=>[lab(r),r]));
     if(tok!==navToken)return;
-    box.innerHTML=`<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 10px">New cheque entry</h3><div class="form-grid"><div><label>Shop (type to search)</label><input id="ncShop" list="ncShops" autocomplete="off" placeholder="Shop name"><datalist id="ncShops">${list.map(r=>`<option value="${esc(lab(r))}"></option>`).join('')}</datalist></div><div><label>Responsible person (DSO · brand · amount)</label><input id="ncWho" placeholder="e.g. Jashim Vivo-50000 Hamid ZTE-20000"></div><div><label>Receive date</label><input type="date" id="ncRecv"></div><div><label>Cheque amount (Tk)</label><input type="number" id="ncAmt" min="1" step="any"></div><div><label>Payable date (optional)</label><input type="date" id="ncPay"></div><div><label>Remarks (optional)</label><input id="ncRem"></div></div><div class="form-actions"><button id="ncSave">Save cheque</button><button class="secondary" id="ncCancel">Cancel</button></div><div id="ncMsg"></div></div>`;
+    box.innerHTML=`<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 10px">New cheque entry</h3><div class="form-grid"><div><label>Road *</label><select id="ncRoad"><option value="">Select road…</option>${roads.filter(x=>x.is_active!==false).sort((a,b)=>cmp(a.name,b.name)).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></div><div><label>Shop (type to search)</label><input id="ncShop" list="ncShops" autocomplete="off" placeholder="Select road first"><datalist id="ncShops"></datalist></div><div><label>Responsible person (DSO · brand · amount)</label><input id="ncWho" placeholder="e.g. Jashim Vivo-50000 Hamid ZTE-20000"></div><div><label>Receive date</label><input type="date" id="ncRecv"></div><div><label>Cheque amount (Tk)</label><input type="number" id="ncAmt" min="1" step="any"></div><div><label>Payable date (optional)</label><input type="date" id="ncPay"></div><div><label>Remarks (optional)</label><input id="ncRem"></div></div><div class="form-actions"><button id="ncSave">Save cheque</button><button class="secondary" id="ncCancel">Cancel</button></div><div id="ncMsg"></div></div>`;
     $('ncRecv').value=$('crDate').value;
+    const curList=()=>list.filter(r=>$('ncRoad').value&&r.road_id===$('ncRoad').value);
+    const fillShops=()=>{$('ncShops').innerHTML=curList().map(r=>`<option value="${esc(lab(r))}"></option>`).join('');$('ncShop').value='';$('ncShop').placeholder=$('ncRoad').value?'Shop name':'Select road first'};
+    $('ncRoad').onchange=fillShops;
+    if($('crRoad').value){$('ncRoad').value=$('crRoad').value;fillShops()}
     $('ncCancel').onclick=()=>{box.innerHTML=''};
     $('ncSave').onclick=async()=>{
       const m=$('ncMsg'),name=$('ncShop').value.trim();
-      let rt=map.get(name);
-      if(!rt){const c=list.filter(r=>obN(r.name)===obN(name));if(c.length===1)rt=c[0];else return msg(m,c.length?'Several shops have this name. Pick one from the list (it shows the road).':'Shop not found. Pick one from the list.')}
+      const roadId=$('ncRoad').value;
+      if(!roadId)return msg(m,'Select the road first.');
+      let rt=map.get(name);if(rt&&rt.road_id!==roadId)rt=null;
+      if(!rt){const c=curList().filter(r=>obN(r.name)===obN(name));if(c.length===1)rt=c[0];else return msg(m,c.length?'Several shops have this name. Pick one from the list (it shows the road).':'Shop not found on this road. Pick one from the list.')}
       const amt=Number($('ncAmt').value),recv=$('ncRecv').value,pay=$('ncPay').value;
       if(!(amt>0))return msg(m,'Enter the cheque amount.');
       if(!recv)return msg(m,'Choose the receive date.');
       const b=$('ncSave');b.disabled=true;
-      const r=await db.from('cheques').insert({retailer_id:rt.id,road_id:rt.road_id||null,received_on:recv,amount:amt,payable_date:pay||null,resp_text:$('ncWho').value.trim()||null,remarks:$('ncRem').value.trim()||null});
+      const r=await db.from('cheques').insert({retailer_id:rt.id,road_id:roadId,received_on:recv,amount:amt,payable_date:pay||null,resp_text:$('ncWho').value.trim()||null,remarks:$('ncRem').value.trim()||null});
       b.disabled=false;
       if(r.error)return msg(m,/check constraint|cheques_source_chk|column|schema cache/i.test(r.error.message)?'Run the updated opening-setup.sql in Supabase first, then try again. ('+r.error.message+')':r.error.message);
       box.innerHTML='';
       await run();
       msg($('crMsg'),recv>$('crDate').value?'Cheque saved. It shows on the report from '+dmy(recv)+'.':'Cheque saved.','success');
     };
-    $('ncShop').focus();
+    $('ncRoad').focus();
   };
   if($('crNew'))$('crNew').onclick=()=>{if(kind!=='cheque')document.querySelector('#crTypes button[data-k=cheque]').click();showNewCheque()};
-  $('crRun').onclick=run;$('crBack').onclick=()=>go('reports');
+  $('crRun').onclick=run;$('crView').onchange=run;$('crBack').onclick=()=>go('reports');
   $('crPrint').onclick=()=>{if(!view)return msg($('crMsg'),'Generate the report first.');window.print()};
   $('crXlsx').onclick=()=>{
     if(!view)return msg($('crMsg'),'Generate the report first.');
