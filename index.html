@@ -378,7 +378,7 @@ async function creditPage(){
   const tok=navToken,isAdmin=userMode==='admin';
   const SHARE_SVG='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-4.2M8.6 13.4l6.8 4.2"/></svg>';
   const DL_SVG='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg>';
-  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Credit &amp; Cheque Report</h1><div class="sub">Daily verbal-due (credit) list and retailer cheque list. <b style="opacity:.75">Version: 20-Nov-2026 · Manual due / recovery / delete</b></div><div class="panel"><div class="rtypes" id="crTypes"><button data-k="credit" class="on">Credit report (verbal due)</button><button data-k="cheque">Cheque report</button></div><div class="form-grid" style="margin-top:14px"><div><label>Date</label><input type="date" id="crDate"></div><div><label>Road</label><select id="crRoad"><option value="">All roads</option></select></div><div><label>Brand</label><select id="crBrand"><option value="">All brands</option></select></div>${isAdmin?'<div><label>DSO</label><select id="crDso"><option value="">All DSOs</option></select></div>':''}<div><label>View by</label><select id="crView"><option value="road">Road-wise</option><option value="dso">DSO-wise</option><option value="brand">Brand-wise</option></select></div></div><div class="form-actions"><button id="crRun">Generate</button>${isAdmin?'<button class="secondary" id="crNew">+ New Cheque</button>':''}<button class="secondary" id="crPrint">Print / PDF</button><button class="secondary" id="crImg">${SHARE_SVG}Share</button><button class="secondary" id="crSave">${DL_SVG}Save image</button><button class="secondary" id="crXlsx">Excel</button><button class="secondary" id="crBack">← Reports</button></div><div id="crMsg"></div></div></div><div id="crForm" class="noprint"></div><div id="crOut"></div>`;
+  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Credit &amp; Cheque Report</h1><div class="sub">Daily verbal-due (credit) list and retailer cheque list. <b style="opacity:.75">Version: 20-Nov-2026 · Manual due / recovery / delete any entry</b></div><div class="panel"><div class="rtypes" id="crTypes"><button data-k="credit" class="on">Credit report (verbal due)</button><button data-k="cheque">Cheque report</button></div><div class="form-grid" style="margin-top:14px"><div><label>Date</label><input type="date" id="crDate"></div><div><label>Road</label><select id="crRoad"><option value="">All roads</option></select></div><div><label>Brand</label><select id="crBrand"><option value="">All brands</option></select></div>${isAdmin?'<div><label>DSO</label><select id="crDso"><option value="">All DSOs</option></select></div>':''}<div><label>View by</label><select id="crView"><option value="road">Road-wise</option><option value="dso">DSO-wise</option><option value="brand">Brand-wise</option></select></div></div><div class="form-actions"><button id="crRun">Generate</button>${isAdmin?'<button class="secondary" id="crNew">+ New Cheque</button>':''}<button class="secondary" id="crPrint">Print / PDF</button><button class="secondary" id="crImg">${SHARE_SVG}Share</button><button class="secondary" id="crSave">${DL_SVG}Save image</button><button class="secondary" id="crXlsx">Excel</button><button class="secondary" id="crBack">← Reports</button></div><div id="crMsg"></div></div></div><div id="crForm" class="noprint"></div><div id="crOut"></div>`;
   const [brands,dsos,roads]=await Promise.all(['brands','dsos','roads'].map(queryAll));
   if(tok!==navToken)return;
   const by1=a=>Object.fromEntries(a.map(x=>[x.id,x]));
@@ -570,7 +570,7 @@ async function creditPage(){
     const actCell=r=>{
       if(v.cheque){const ids=r.ids.join(',');return `<td class="noprint cract">${r.left>0.005?`<button data-act="rec" data-ids="${ids}" data-lefts="${r.lefts.join(',')}">Recovery</button> `:''}${r.hasRec?`<button class="secondary" data-act="unrec" data-ids="${ids}">Undo last</button> `:''}<button class="secondary" data-act="rem" data-ids="${ids}" data-v="${esc(r.rem)}">Remarks</button> <button class="danger" data-act="del" data-ids="${ids}">Delete</button></td>`}
       const dd=`data-rid="${r.rid}" data-bid="${r.bid}" data-did="${r.did||''}" data-list="${esc(r.list||'')}"`;
-      return `<td class="noprint cract">${r.left>0.005?`<button data-act="crec" ${dd} data-left="${r.left}">Recovery</button> `:''}<button class="secondary" data-act="cdue" ${dd}>+ Due</button> <button class="secondary" data-act="cent" ${dd}>Entries</button></td>`;
+      return `<td class="noprint cract">${r.left>0.005?`<button data-act="crec" ${dd} data-left="${r.left}">Recovery</button> `:''}<button class="secondary" data-act="cdue" ${dd}>+ Due</button> <button class="secondary" data-act="cent" ${dd}>Entries / Delete</button></td>`;
     };
     const cell=(r,i)=>{const val=r.c[i];const isAmt=(v.sum||[]).includes(i);return `<td class="${isAmt?'n':(i===0?'l':'')}">${isAmt?fAmt(val):esc(val===''||val==null?'':val)}</td>`};
     const tot=(rows,label,cls)=>`<tr class="${cls}"><td colspan="4" style="text-align:right">${esc(label)}</td>${v.head.map((h,i)=>i<3?'':(v.sum.includes(i)?`<td class="n">${fAmt(rows.reduce((x,r)=>x+Number(r.c[i]||0),0))}</td>`:'<td></td>')).join('')}${act?'<td class="noprint"></td>':''}</tr>`;
@@ -715,27 +715,50 @@ async function creditPage(){
   };
   async function showEntries(base){
     const box=$('crForm');box.innerHTML='<div class="notice" style="margin-top:12px">Loading…</div>';
-    const q=await db.from('credit_manual').select('*').eq('retailer_id',base.retailer_id).eq('brand_id',base.brand_id).order('entry_date').order('id');
-    if(q.error){box.innerHTML='';return msg($('crMsg'),cmErr(q.error))}
-    const RT=await needRet(),sh=RT[base.retailer_id]?.name||'—',bn=L.brand[base.brand_id]?.name||'—',rows=q.data||[];
-    box.innerHTML=`<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 10px">Manual entries: ${esc(sh)} · ${esc(bn)}</h3>${rows.length?`<table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Remarks</th><th>Action</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc(dmyFull(x.entry_date))}</td><td>${x.kind==='due'?'Due':'Recovery'}</td><td>${fAmt(x.amount)}</td><td>${esc(x.remarks||'')}</td><td><button class="secondary" data-e="edit" data-id="${x.id}">Edit</button> <button class="danger" data-e="del" data-id="${x.id}">Delete</button></td></tr>`).join('')}</tbody></table>`:'<p class="muted">No manual entries for this shop and brand yet.</p>'}<p class="muted" style="margin:10px 0 0">Dues that come from sales entries or the opening list are not listed here. Remove those from the Sales or Opening page.</p><div class="form-actions"><button class="secondary" data-e="close">Close</button></div></div>`;
+    const [qm,qs,qo,od]=await Promise.all([
+      db.from('credit_manual').select('*').eq('retailer_id',base.retailer_id).eq('brand_id',base.brand_id).order('entry_date').order('id'),
+      db.from('sales_report').select('*').eq('retailer_id',base.retailer_id).eq('brand_id',base.brand_id).order('sale_date').order('id'),
+      db.from('opening_dues').select('*').eq('retailer_id',base.retailer_id).eq('brand_id',base.brand_id).order('as_of').order('id'),
+      loadOpeningDues()]);
+    if(qs.error){box.innerHTML='';return msg($('crMsg'),qs.error.message)}
+    if(qm.error&&!/credit_manual|schema cache|relation|does not exist/i.test(qm.error.message||'')){box.innerHTML='';return msg($('crMsg'),qm.error.message)}
+    const RT=await needRet(),sh=RT[base.retailer_id]?.name||'—',bn=L.brand[base.brand_id]?.name||'—',lst=base.list_name||'';
+    const A=od.reduce((m0,x)=>x.as_of>m0?x.as_of:m0,'');
+    const items=[];
+    (qs.data||[]).forEach(x=>{const due=isDueRow(x);items.push({src:'sale',id:x.id,d:x.sale_date,src_l:'Sales entry',type:due?'Recovery':'Sale',amt:due?Number(x.received_amount||0):Number(x.net_sales||0),rec:due?'':Number(x.received_amount||0),note:A&&x.sale_date<=A?'Before opening date: not counted in the report':''})});
+    (qo.data||[]).filter(x=>(x.list_name||'')===lst).forEach(x=>items.push({src:'open',id:x.id,d:x.as_of,src_l:'Opening list'+(lst?' ('+lst+')':''),type:'Opening due',amt:Number(x.amount||0),rec:'',note:x.due_date?'Due date '+dmyFull(x.due_date):'',asOf:x.as_of}));
+    (qm.data||[]).filter(x=>(x.list_name||'')===lst).forEach(x=>items.push({src:'manual',id:x.id,d:x.entry_date,src_l:'Manual',type:x.kind==='due'?'Due':'Recovery',amt:Number(x.amount||0),rec:'',note:x.remarks||'',raw:x}));
+    items.sort((p1,p2)=>p1.d<p2.d?-1:p1.d>p2.d?1:0);
+    const key=(x)=>x.src+':'+x.id;
+    box.innerHTML=`<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 10px">All entries: ${esc(sh)} · ${esc(bn)}</h3>${items.length?`<div style="overflow-x:auto"><table><thead><tr><th>Date</th><th>Source</th><th>Type</th><th>Amount</th><th>Received</th><th>Note</th><th>Action</th></tr></thead><tbody>${items.map(x=>`<tr><td>${esc(dmyFull(x.d))}</td><td>${esc(x.src_l)}</td><td>${esc(x.type)}</td><td>${fAmt(x.amt)}</td><td>${fAmt(x.rec)}</td><td>${esc(x.note)}</td><td>${x.src==='manual'?`<button class="secondary" data-e="edit" data-k="${esc(key(x))}">Edit</button> `:''}<button class="danger" data-e="del" data-k="${esc(key(x))}">Delete</button></td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">No entries found for this shop and brand.</p>'}<p class="muted" style="margin:10px 0 0">Deleting a <b>Sales entry</b> removes the whole sale (all its products) from every sales report too. Deleting an <b>Opening list</b> row or a <b>Manual</b> entry only changes the credit report.</p><div class="form-actions"><button class="secondary" data-e="close">Close</button></div></div>`;
     box.onclick=async ev=>{
       const t=ev.target.closest('button[data-e]');if(!t)return;
       if(t.dataset.e==='close'){box.innerHTML='';return}
-      const row=rows.find(x=>String(x.id)===t.dataset.id);if(!row)return;
+      const it=items.find(x=>key(x)===t.dataset.k);if(!it)return;
       let res;
       if(t.dataset.e==='del'){
-        if(!confirm('Delete this manual '+(row.kind==='due'?'due':'recovery')+' of '+fAmt(row.amount)+' dated '+dmyFull(row.entry_date)+'?'))return;
-        res=await db.from('credit_manual').delete().eq('id',row.id);
+        if(it.src==='sale'){
+          if(!confirm('Delete this SALES ENTRY ('+dmyFull(it.d)+', '+it.type+' '+fAmt(it.amt)+') and all its products? It will also disappear from the sales reports. This cannot be undone.'))return;
+          res=await db.rpc('delete_sales_entry',{p_id:it.id});
+          if(res.error&&isMissingFn(res.error)){const a1=await db.from('sales_items').delete().eq('sales_entry_id',it.id);if(a1.error)return msg($('crMsg'),a1.error.message);res=await db.from('sales_entries').delete().eq('id',it.id)}
+        }else if(it.src==='open'){
+          const last=it.asOf===A&&od.filter(o=>o.as_of===A).length===1;
+          if(!confirm('Delete this opening due of '+fAmt(it.amt)+' dated '+dmyFull(it.d)+'?'+(last?'\n\nWARNING: it is the only row with the latest opening date. After deleting it the report counts sales again from an earlier opening date, which can double count old sales.':'')))return;
+          res=await db.from('opening_dues').delete().eq('id',it.id);
+        }else{
+          if(!confirm('Delete this manual '+it.type.toLowerCase()+' of '+fAmt(it.amt)+' dated '+dmyFull(it.d)+'?'))return;
+          res=await db.from('credit_manual').delete().eq('id',it.id);
+        }
       }else{
-        const a=prompt('Amount (Tk):',String(row.amount));if(a===null)return;
-        const amt=Number(a);if(!(amt>0))return alert('Enter an amount greater than 0.');
+        const row=it.raw;
+        const a1=prompt('Amount (Tk):',String(row.amount));if(a1===null)return;
+        const amt=Number(a1);if(!(amt>0))return alert('Enter an amount greater than 0.');
         const d=prompt('Date (YYYY-MM-DD):',row.entry_date);if(!d)return;
         if(!dayOk(d))return alert('Use the format YYYY-MM-DD.');
         const rm=prompt('Remarks:',row.remarks||'');if(rm===null)return;
         res=await db.from('credit_manual').update({amount:Math.round(amt*100)/100,entry_date:d,remarks:rm.trim()||null}).eq('id',row.id);
       }
-      if(res.error)return msg($('crMsg'),cmErr(res.error));
+      if(res&&res.error)return msg($('crMsg'),cmErr(res.error));
       await run();showEntries(base);
     };
   }
