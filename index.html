@@ -690,15 +690,15 @@ async function creditPage(){
     const cleanup=()=>document.querySelectorAll('.crShotTmp').forEach(x=>x.remove());
     try{
       await loadH2C();
-      const w=document.createElement('div');w.className='crShotTmp';w.style.cssText='position:fixed;left:-20000px;top:0;background:#fff;padding:16px;width:max-content;min-width:1300px;box-sizing:border-box';
+      const w=document.createElement('div');w.className='crShotTmp';w.style.cssText='position:fixed;left:0;top:0;z-index:-2;visibility:hidden;background:#fff;padding:16px;width:max-content;min-width:1300px;box-sizing:border-box';
       const c=$('crSheet').cloneNode(true);c.querySelectorAll('.noprint').forEach(x=>x.remove());c.style.overflow='visible';w.appendChild(c);document.body.appendChild(w);
       const W=Math.ceil(w.offsetWidth),H=Math.ceil(w.offsetHeight),top0=w.getBoundingClientRect().top;
       const rows=[...w.querySelectorAll('tr')].map(t=>t.getBoundingClientRect().bottom-top0);
       const base=(kind==='credit'?'Retailer_Credit_':'Retailer_Cheque_')+$('crDate').value;
       /* try big sharp pictures first; if this phone cannot draw them, retry smaller (lower scale, shorter parts) */
-      const attempts=[[Math.min(2,3000/W),6e6],[Math.min(1.5,2400/W),3e6],[Math.min(1,1800/W),1.5e6],[Math.min(.7,1400/W),8e5]];
+      const attempts=[[Math.min(2,3000/W),6e6,0],[Math.min(1.5,2400/W),3e6,0],[Math.min(1,1800/W),1.5e6,0],[Math.min(1,1800/W),1.5e6,1],[Math.min(.7,1400/W),8e5,0]];
       let okAll=false,lastErr=null;
-      for(const [scale,area] of attempts){
+      for(const [scale,area,fo] of attempts){
         files=[];
         try{
           const maxH=Math.max(500,Math.floor(area/(W*scale*scale)));
@@ -707,10 +707,10 @@ async function creditPage(){
           cuts.push([y,H]);
           for(let i=0;i<cuts.length;i++){
             const [y0,y1]=cuts[i];
-            const o=document.createElement('div');o.className='crShotTmp';o.style.cssText='position:fixed;left:-20000px;top:0;background:#fff;overflow:hidden;width:'+W+'px;height:'+Math.ceil(y1-y0)+'px';
+            const o=document.createElement('div');o.className='crShotTmp';o.style.cssText='position:fixed;left:0;top:0;z-index:-1;background:#fff;overflow:hidden;width:'+W+'px;height:'+Math.ceil(y1-y0)+'px';
             const inner=w.cloneNode(true);inner.className='';inner.style.cssText='position:absolute;left:0;top:'+(-y0)+'px;width:'+W+'px;box-sizing:border-box;padding:16px;background:#fff';
             o.appendChild(inner);document.body.appendChild(o);
-            let cv;try{cv=await html2canvas(o,{scale,backgroundColor:'#ffffff',useCORS:true})}finally{o.remove()}
+            let cv;try{cv=await html2canvas(o,{scale,backgroundColor:'#ffffff',useCORS:true,windowWidth:W,windowHeight:Math.ceil(y1-y0),scrollX:0,scrollY:0,foreignObjectRendering:!!fo})}finally{o.remove()}
             const blob=await new Promise(ok=>cv.toBlob(ok,'image/png'));
             cv.width=cv.height=0;
             if(!blob||blob.size<500)throw new Error('blank picture');
