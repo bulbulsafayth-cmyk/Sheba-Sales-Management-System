@@ -694,23 +694,32 @@ async function creditPage(){
       const c=$('crSheet').cloneNode(true);c.querySelectorAll('.noprint').forEach(x=>x.remove());c.style.overflow='visible';w.appendChild(c);document.body.appendChild(w);
       const W=Math.ceil(w.offsetWidth),H=Math.ceil(w.offsetHeight),top0=w.getBoundingClientRect().top;
       const rows=[...w.querySelectorAll('tr')].map(t=>t.getBoundingClientRect().bottom-top0);
-      const scale=Math.min(2,3000/W);
-      const maxH=Math.max(800,Math.min(2600,Math.floor(8e6/(W*scale*scale))));
-      const cuts=[];let y=0;
-      while(H-y>maxH){const cand=rows.filter(v=>v>y+maxH*.5&&v<=y+maxH);const cut=cand.length?Math.max(...cand):y+maxH;cuts.push([y,cut]);y=cut}
-      cuts.push([y,H]);
       const base=(kind==='credit'?'Retailer_Credit_':'Retailer_Cheque_')+$('crDate').value;
-      for(let i=0;i<cuts.length;i++){
-        const [y0,y1]=cuts[i];
-        const o=document.createElement('div');o.className='crShotTmp';o.style.cssText='position:fixed;left:-20000px;top:0;background:#fff;overflow:hidden;width:'+W+'px;height:'+Math.ceil(y1-y0)+'px';
-        const inner=w.cloneNode(true);inner.className='';inner.style.cssText='position:absolute;left:0;top:'+(-y0)+'px;width:'+W+'px;box-sizing:border-box;padding:16px;background:#fff';
-        o.appendChild(inner);document.body.appendChild(o);
-        const cv=await html2canvas(o,{scale,backgroundColor:'#ffffff',useCORS:true});
-        o.remove();
-        const blob=await new Promise(ok=>cv.toBlob(ok,'image/png'));
-        if(!blob||blob.size<500)throw new Error('This phone could not draw the picture. Choose one road or brand and try again.');
-        files.push(new File([blob],base+(cuts.length>1?'_part'+(i+1)+'of'+cuts.length:'')+'.png',{type:'image/png'}));
+      /* try big sharp pictures first; if this phone cannot draw them, retry smaller (lower scale, shorter parts) */
+      const attempts=[[Math.min(2,3000/W),6e6],[Math.min(1.5,2400/W),3e6],[Math.min(1,1800/W),1.5e6],[Math.min(.7,1400/W),8e5]];
+      let okAll=false,lastErr=null;
+      for(const [scale,area] of attempts){
+        files=[];
+        try{
+          const maxH=Math.max(500,Math.floor(area/(W*scale*scale)));
+          const cuts=[];let y=0;
+          while(H-y>maxH){const cand=rows.filter(v=>v>y+maxH*.5&&v<=y+maxH);const cut=cand.length?Math.max(...cand):y+maxH;cuts.push([y,cut]);y=cut}
+          cuts.push([y,H]);
+          for(let i=0;i<cuts.length;i++){
+            const [y0,y1]=cuts[i];
+            const o=document.createElement('div');o.className='crShotTmp';o.style.cssText='position:fixed;left:-20000px;top:0;background:#fff;overflow:hidden;width:'+W+'px;height:'+Math.ceil(y1-y0)+'px';
+            const inner=w.cloneNode(true);inner.className='';inner.style.cssText='position:absolute;left:0;top:'+(-y0)+'px;width:'+W+'px;box-sizing:border-box;padding:16px;background:#fff';
+            o.appendChild(inner);document.body.appendChild(o);
+            let cv;try{cv=await html2canvas(o,{scale,backgroundColor:'#ffffff',useCORS:true})}finally{o.remove()}
+            const blob=await new Promise(ok=>cv.toBlob(ok,'image/png'));
+            cv.width=cv.height=0;
+            if(!blob||blob.size<500)throw new Error('blank picture');
+            files.push(new File([blob],base+(cuts.length>1?'_part'+(i+1)+'of'+cuts.length:'')+'.png',{type:'image/png'}));
+          }
+          okAll=true;break;
+        }catch(e){lastErr=e;files=[];document.querySelectorAll('.crShotTmp').forEach(x=>{if(x!==w)x.remove()})}
       }
+      if(!okAll)throw new Error('This phone could not draw the picture even in small size ('+((lastErr&&lastErr.message)||'unknown')+'). Close other apps/tabs and try again, or use Print / PDF or Excel.');
       w.remove();
       if(!saveOnly&&navigator.canShare&&navigator.canShare({files}))await navigator.share({files,title:view.title});
       else{files.forEach((f,i)=>setTimeout(()=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),8000)},i*500));msg($('crMsg'),(files.length>1?files.length+' pictures saved (the report was long, so it was split). ':'Picture saved. ')+'Open from Downloads or Gallery and send it in WeChat, WhatsApp or Viber.','success')}
