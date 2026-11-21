@@ -686,30 +686,32 @@ async function creditPage(){
   let pend=null;
   /* last-resort picture: drawn straight on a canvas from the report data (no html2canvas), works on phones where the page-to-picture method gives a blank file */
   const drawPlain=async(base)=>{
-    const v=view,W=1400,pad=16,fs=15,lh=20;
+    const v=view,W=1400,pad=16,fs=15,lh=20,chq=!!v.cheque;
     const ws=[4,...v.widths],wt=ws.reduce((a,x)=>a+x,0),cw=ws.map(x=>Math.floor((W-2*pad)*x/wt));
-    const mx=document.createElement('canvas').getContext('2d');mx.font=fs+'px Arial,sans-serif';
+    const mx=document.createElement('canvas').getContext('2d');mx.font='bold '+fs+'px Arial,sans-serif';
     const wrap=(t,w)=>{const out=[];let cur='';String(t==null?'':t).split(/\s+/).forEach(word=>{const ts=cur?cur+' '+word:word;if(mx.measureText(ts).width<=w-8){cur=ts;return}if(cur)out.push(cur);cur=word;while(mx.measureText(cur).width>w-8&&cur.length>1){let k=cur.length-1;while(k>1&&mx.measureText(cur.slice(0,k)).width>w-8)k--;out.push(cur.slice(0,k));cur=cur.slice(k)}});out.push(cur);return out};
     const items=[];
-    const text=(t,size,bold,align,bg)=>items.push({h:size+14,d:(c,y)=>{if(bg){c.fillStyle=bg;c.fillRect(pad,y,W-2*pad,size+14)}c.fillStyle='#000';c.font=(bold?'bold ':'')+size+'px Arial,sans-serif';c.textBaseline='middle';c.textAlign=align;c.fillText(t,align==='center'?W/2:pad+6,y+(size+14)/2)}});
-    const row=(cells,o)=>{o=o||{};const ls=cells.map((t,i)=>wrap(t,cw[i])),n=Math.max(1,...ls.map(l=>l.length)),h=n*lh+8;
-      items.push({h,d:(c,y)=>{let x=pad;c.textBaseline='middle';cells.forEach((_,i)=>{if(o.bg){c.fillStyle=o.bg;c.fillRect(x,y,cw[i],h)}c.strokeStyle='#000';c.lineWidth=1;c.strokeRect(x+.5,y+.5,cw[i],h);c.fillStyle='#000';c.font=(o.bold?'bold ':'')+fs+'px Arial,sans-serif';const num=o.num&&o.num[i];c.textAlign=num?'right':'left';ls[i].forEach((ln,k)=>c.fillText(ln,num?x+cw[i]-5:x+5,y+4+lh*k+lh/2));x+=cw[i]})}})};
+    const TW=cw.reduce((a,x)=>a+x,0),bar=(t,size,align,bg,fg)=>items.push({h:size+16,d:(c,y)=>{c.fillStyle=bg;c.fillRect(pad,y,TW,size+16);c.strokeStyle='#000';c.lineWidth=1;c.strokeRect(pad+.5,y+.5,TW,size+16);c.fillStyle=fg;c.font='bold '+size+'px Arial,sans-serif';c.textBaseline='middle';c.textAlign=align;c.fillText(t,align==='center'?pad+TW/2:pad+10,y+(size+16)/2)}});
+    const row=(cells,o)=>{o=o||{};const ls=cells.map((t,i)=>wrap(t,cw[i])),n=Math.max(1,...ls.map(l=>l.length)),h=n*lh+10;
+      items.push({h,d:(c,y)=>{let x=pad;c.textBaseline='middle';cells.forEach((_,i)=>{c.fillStyle=o.bg||'#fff';c.fillRect(x,y,cw[i],h);c.strokeStyle='#000';c.lineWidth=1;c.strokeRect(x+.5,y+.5,cw[i],h);c.fillStyle=o.fg||'#e00000';c.font='bold '+(o.fs||fs)+'px Arial,sans-serif';const al=o.left&&o.left[i]?'left':(o.num&&o.num[i]?'right':'center');c.textAlign=al;const tx=al==='left'?x+6:al==='right'?x+cw[i]-6:x+cw[i]/2;ls[i].forEach((ln,k)=>c.fillText(ln,tx,y+5+lh*k+lh/2));x+=cw[i]})}})};
     const isNum=Array(v.head.length+1).fill(false);(v.sum||[]).forEach(i=>{isNum[i+1]=true});
-    const totRow=(label,rows,bg)=>row(['','',...v.head.slice(1).map(()=>'')].map((_,j)=>j===1?label:(j>=2&&isNum[j]?fAmt(rows.reduce((a,r)=>a+Number(r.c[j-1]||0),0)):'')),{bold:true,bg,num:isNum});
-    text(v.title,22,true,'center');
-    if(v.date)text('Date :  '+v.date,16,true,'center');
+    const left=Array(v.head.length+1).fill(false);left[1]=true;
+    const totRow=(label,rows,bg)=>row(['',label,...v.head.slice(1).map(()=>'')].map((_,j)=>j===1?label:(j>=2&&isNum[j]?fAmt(rows.reduce((a,r)=>a+Number(r.c[j-1]||0),0)):'')),{fg:'#000',bg,num:isNum});
+    bar(v.title,26,'center',chq?'#ff0000':'#b7dee8',chq?'#fff':'#000');
+    if(v.date)bar('Date :  '+v.date,20,'center','#f79646','#000');
     const G=v.groups,okey=g=>g.office||'',showOff=v.offices&&new Set(G.map(okey)).size>=2;
     G.forEach((g,gi)=>{
-      text(g.name,17,true,'left','#e6e6e6');
-      row(['SL No.',...v.head],{bold:true,bg:'#d9e2f3'});
-      g.rows.forEach((r,n)=>row([String(n+1),...r.c.map((x,i)=>isNum[i+1]?fAmt(x):(x==null?'':String(x)))],{num:isNum}));
-      totRow('Total',g.rows,'#f2f2f2');
+      items.push({h:10,d:()=>{}});
+      bar(g.name,19,chq?'center':'left',chq?'#92d050':'#ffc000','#000');
+      row(['SL No.',...v.head],{fg:'#000',bg:chq?'#fff':'#bfbfbf'});
+      g.rows.forEach((r,n)=>row([String(n+1),...r.c.map((x,i)=>isNum[i+1]?fAmt(x):(x==null?'':String(x)))],{num:isNum,left:left,fg:r.done?'#6b7280':'#e00000'}));
+      totRow('Total',g.rows,chq?'#ffff00':'#ffc000');
       const last=gi===G.length-1;
-      if(showOff&&(last||okey(G[gi+1])!==okey(g))){const o=okey(g);totRow((o||'All other roads')+' Total',G.filter(x=>okey(x)===o).flatMap(x=>x.rows),'#fff2cc')}
-      if(G.length>=2&&last)totRow('Grand Total',G.flatMap(x=>x.rows),'#c6e0b4');
-      items.push({h:12,d:()=>{}});
+      if(showOff&&(last||okey(G[gi+1])!==okey(g))){const o=okey(g);totRow((o||'All other roads')+' Total',G.filter(x=>okey(x)===o).flatMap(x=>x.rows),'#92d050')}
+      if(G.length>=2&&last)totRow('Grand Total',G.flatMap(x=>x.rows),chq?'#92d050':'#b7dee8');
     });
-    text('Developed By Safayth Hossen Bulbul',12,false,'center');
+    items.push({h:8,d:()=>{}});
+    bar('Developed By Safayth Hossen Bulbul',12,'center','#fff','#000');
     const pages=[];let cur=[],hh=0;items.forEach(it=>{if(hh+it.h>2800&&cur.length){pages.push(cur);cur=[];hh=0}cur.push(it);hh+=it.h});if(cur.length)pages.push(cur);
     const out=[];
     for(let p=0;p<pages.length;p++){
@@ -729,6 +731,9 @@ async function creditPage(){
     let files=[];
     const cleanup=()=>document.querySelectorAll('.crShotTmp').forEach(x=>x.remove());
     try{
+      const base0=(kind==='credit'?'Retailer_Credit_':'Retailer_Cheque_')+$('crDate').value;
+      try{files=await drawPlain(base0)}catch(e0){files=[]}
+      if(!files.length){
       await loadH2C();
       const w=document.createElement('div');w.className='crShotTmp';w.style.cssText='position:fixed;left:0;top:0;z-index:-2;visibility:hidden;background:#fff;padding:16px;width:max-content;min-width:1300px;box-sizing:border-box';
       const c=$('crSheet').cloneNode(true);c.querySelectorAll('.noprint').forEach(x=>x.remove());c.style.overflow='visible';w.appendChild(c);document.body.appendChild(w);
@@ -762,6 +767,7 @@ async function creditPage(){
       if(!okAll){try{files=await drawPlain(base);okAll=true}catch(e2){lastErr=e2}}
       if(!okAll)throw new Error('This phone could not draw the picture even in small size ('+((lastErr&&lastErr.message)||'unknown')+'). Close other apps/tabs and try again, or use Print / PDF or Excel.');
       w.remove();
+      }
       if(!saveOnly&&navigator.canShare&&navigator.canShare({files}))await navigator.share({files,title:view.title});
       else{files.forEach((f,i)=>setTimeout(()=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),8000)},i*500));msg($('crMsg'),(files.length>1?files.length+' pictures saved (the report was long, so it was split). ':'Picture saved. ')+'Open from Downloads or Gallery and send it in WeChat, WhatsApp or Viber.','success')}
     }catch(e){
