@@ -398,6 +398,8 @@ async function creditPage(){
   const DSOM=by1(dsos);
   let RET=null;
   const needRet=async()=>{if(!RET)RET=by1(await queryAll('retailers'));return RET};
+  /* a report shows the retailer's CURRENT road (so moving a retailer to another road is reflected), falling back to the road saved on the entry */
+  const roadOfRet=(rid,fb)=>L.road[(RET||{})[rid]?.road_id]?.name||fb;
   const grpOf=n=>String(RM[n]?.report_group||'').trim()||n||'—';
   const offOf=n=>String(RM[n]?.office||'').trim();
   const ordOf=n=>{const o=RM[n]?.report_order;return o==null||o===''?1e9:Number(o)};
@@ -424,6 +426,7 @@ async function creditPage(){
   let OVR={};
   const loadOvr=async()=>{OVR={};try{(await fetchAll(()=>db.from('credit_overrides').select('*').order('id'))).forEach(x=>{OVR[x.retailer_id+'|'+x.brand_id+'|'+(x.list_name||'')]=x})}catch(e){}};
   async function buildCredit(D){
+    await needRet();
     let rows=filt(await fetchAll(()=>scopedReport().lte('sale_date',D).order('sale_date').order('id')));
     CM=(await loadManual())||[];await loadOvr();
     /* sales entries the Admin removed from the CREDIT report only (the sale itself is untouched) */
@@ -445,7 +448,7 @@ async function creditPage(){
     rows.forEach(x=>{
       const lst=noteList[x.id]||'',k=(lst?'L|'+lst+'|':'')+x.retailer_id+'|'+x.brand_id;let g=m.get(k);
       if(!g){g={shop:x.retailer||'—',brand:x.brand||'—',pn:0,pr:0,tn:0,tr:0,td:0,paid:0,ch:[],list:lst,rid:x.retailer_id,bid:x.brand_id,did:x.dso_id||null};m.set(k,g)}
-      g.shop=x.retailer||g.shop;g.road=x.road;g.dso=x.dso_name||g.dso||'—';
+      g.shop=x.retailer||g.shop;g.road=roadOfRet(x.retailer_id,x.road);g.dso=x.dso_name||g.dso||'—';
       const net=isDueRow(x)?0:Number(x.net_sales||0),rec=Number(x.received_amount||0);
       if(x.sale_date<D){g.pn+=net;g.pr+=rec}else{g.tn+=net;g.tr+=rec;if(!isDueRow(x))g.td+=Math.max(0,net-rec)}
       g.paid+=rec;g.ch.push({d:x.sale_date,net});
@@ -560,7 +563,7 @@ async function creditPage(){
     const A=cq.reduce((a,c)=>c.opening_as_of&&c.opening_as_of>a?c.opening_as_of:a,'');
     const ids=[...new Set(cq.filter(x=>x.sales_entry_id).map(x=>x.sales_entry_id))],ent={};
     for(let i=0;i<ids.length;i+=100){(await fetchAll(()=>scopedReport().in('id',ids.slice(i,i+100)))).forEach(x=>{ent[x.id]=x})}
-    const RT=cq.some(c=>!c.sales_entry_id)?await needRet():{};
+    const RT=await needRet();
     const md=vmode(),myName=(userMode==='dso'&&currentDso)?String(currentDso.full_name||currentDso.name||'').trim().toLowerCase():'';
     const rd=L.road[$('crRoad').value]?.name;
     const okIds=new Set(filt(Object.values(ent)).map(x=>x.id));
@@ -569,9 +572,10 @@ async function creditPage(){
       let shop,who,recd,road,rid=null,dso='',brand='';
       if(c.sales_entry_id){
         const e=ent[c.sales_entry_id];if(!e||!okIds.has(e.id))return;
-        if(rd&&e.road!==rd)return;
+        const cr=roadOfRet(e.retailer_id,e.road);
+        if(rd&&cr!==rd)return;
         if(A&&e.sale_date<=A)return;
-        recd=e.sale_date;shop=e.retailer||'—';road=e.road;rid=e.retailer_id;dso=e.dso_name||'—';brand=e.brand||'';who=dso+' · '+brand;
+        recd=e.sale_date;shop=e.retailer||'—';road=cr;rid=e.retailer_id;dso=e.dso_name||'—';brand=e.brand||'';who=dso+' · '+brand;
       }else{
         /* opening cheques carry no brand or DSO link, so only the Admin sees them, and a brand/DSO filter hides them */
         /* DSO sees an opening cheque only when its Responsible-person text names them */
@@ -579,7 +583,7 @@ async function creditPage(){
         if(c.dso_id){if($('crDso')?.value&&$('crDso').value!==c.dso_id)return;if(!isAdmin&&currentDso&&c.dso_id!==currentDso.id)return}
         else{if($('crDso')?.value)return;if(!isAdmin&&!(myName&&String(c.resp_text||'').toLowerCase().includes(myName)))return}
         const rt=RT[c.retailer_id];if(!rt)return;
-        road=L.road[c.road_id||rt.road_id]?.name;if(rd&&road!==rd)return;
+        road=L.road[rt.road_id]?.name||L.road[c.road_id]?.name;if(rd&&road!==rd)return;
         recd=c.received_on;shop=rt.name;who=c.resp_text||(c.dso_id?DSOM[c.dso_id]?.full_name:'')||'—';dso=c.dso_id?(DSOM[c.dso_id]?.full_name||'—'):((!isAdmin&&myName)?(currentDso.full_name||currentDso.name):'—');brand='—';
       }
       if(!recd||recd>D)return;
