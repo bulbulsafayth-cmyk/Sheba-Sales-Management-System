@@ -556,6 +556,9 @@ async function creditPage(){
     return arr;
   }
   /* ----- cheque list ----- */
+  /* brand names written inside an opening cheque's "Responsible person" text (e.g. "Mukit Oppo-77530 Hamid ZTE-45550") */
+  const brandsIn=t=>{const names=Object.values(L.brand||{}).map(b=>b&&b.name).filter(Boolean),hit=[];String(t||'').replace(/[A-Za-z0-9]+/g,(w,i)=>{const n=names.find(x=>x.toLowerCase()===w.toLowerCase());if(n&&!hit.includes(n))hit.push(n);return w});return hit};
+  const stripBrands=t=>{let o=String(t||'');brandsIn(o).forEach(n=>{o=o.replace(new RegExp('\\s*\\b'+n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','gi'),'')});return o.replace(/\s{2,}/g,' ').trim()};
   async function buildCheque(D){
     const cq=await fetchAll(()=>db.from('cheques').select('*').order('id'));
     let rcs=[];try{rcs=await fetchAll(()=>db.from('cheque_recoveries').select('*').order('id'))}catch(e){throw new Error('cheque_recoveries does not exist')}
@@ -576,7 +579,7 @@ async function creditPage(){
         const cr=roadOfRet(e.retailer_id,e.road);
         if(rd&&cr!==rd)return;
         if(A&&e.sale_date<=A)return;
-        recd=e.sale_date;shop=e.retailer||'—';road=cr;rid=e.retailer_id;dso=e.dso_name||'—';brand=e.brand||'';who=dso+' · '+brand;
+        recd=e.sale_date;shop=e.retailer||'—';road=cr;rid=e.retailer_id;dso=e.dso_name||'—';brand=e.brand||'';who=dso;
       }else{
         /* opening cheques carry no brand or DSO link, so only the Admin sees them, and a brand/DSO filter hides them */
         /* DSO sees an opening cheque only when its Responsible-person text names them */
@@ -585,7 +588,7 @@ async function creditPage(){
         else{if($('crDso')?.value)return;if(!isAdmin&&!(myName&&String(c.resp_text||'').toLowerCase().includes(myName)))return}
         const rt=RT[c.retailer_id];if(!rt)return;
         road=L.road[rt.road_id]?.name||L.road[c.road_id]?.name;if(rd&&road!==rd)return;
-        recd=c.received_on;shop=rt.name;who=c.resp_text||(c.dso_id?DSOM[c.dso_id]?.full_name:'')||'—';dso=c.dso_id?(DSOM[c.dso_id]?.full_name||'—'):((!isAdmin&&myName)?(currentDso.full_name||currentDso.name):'—');brand='—';
+        recd=c.received_on;shop=rt.name;who=stripBrands(c.resp_text)||(c.dso_id?DSOM[c.dso_id]?.full_name:'')||'—';dso=c.dso_id?(DSOM[c.dso_id]?.full_name||'—'):((!isAdmin&&myName)?(currentDso.full_name||currentDso.name):'—');brand=brandsIn(c.resp_text).join(', ')||'—';
       }
       if(!recd||recd>D)return;
       const amt=Number(c.amount||0),rl=rbyc[c.id]||[];
@@ -602,15 +605,17 @@ async function creditPage(){
       ms.sort((a,b)=>String(a.id).localeCompare(String(b.id),undefined,{numeric:true}));
       const f=ms[0],isNew=f.recd===D,sm=k=>ms.reduce((a,x)=>a+x[k],0);
       const open=sm('open'),today=sm('today'),amt=sm('amt'),due=ms.reduce((a,x)=>a+Math.max(0,x.open-x.today),0);
-      const who=ms.length>1?ms.map(x=>x.dso+' '+x.brand+'-'+Math.round(isNew?x.amt:x.open)).join(' '):f.who;
+      const dbm=new Map();ms.forEach(x=>{const k=x.dso+'|'+x.brand;dbm.set(k,{dso:x.dso,brand:x.brand,v:(dbm.get(k)?.v||0)+(isNew?x.amt:x.open)})});
+      const who=dbm.size>1?[...dbm.values()].map(x=>x.dso+'-'+Math.round(x.v)).join(', '):f.who;
+      const brandTxt=[...new Set(ms.map(x=>x.brand).filter(x=>x&&x!=='—'))].join(', ')||'—';
       const rem=[...new Set(ms.map(x=>x.rem).filter(Boolean))].join('; ');
       const pd=f.pd?dmy(f.pd):'',age=daysBetween(f.recd,D);
       out.push({road:f.road,dso:[...new Set(ms.map(x=>x.dso))].join(', '),brand:[...new Set(ms.map(x=>x.brand))].join(', '),age,ids:ms.map(x=>x.id),lefts:ms.map(x=>x.left),left:sm('left'),hasRec:ms.some(x=>x.hasRec),rem,done:due<=0.005,
-        c:[(ms.find(x=>x.so)||{}).so||f.shop,(ms.find(x=>x.wo)||{}).wo||who,dmy(f.recd),isNew?'':open,isNew?'':pd,isNew?amt:'',isNew?pd:'',today||'',due,age,rem]});
+        c:[(ms.find(x=>x.so)||{}).so||f.shop,(ms.find(x=>x.wo)||{}).wo||who,brandTxt,dmy(f.recd),isNew?'':open,isNew?'':pd,isNew?amt:'',isNew?pd:'',today||'',due,age,rem]});
     });
     return {title:'Retailer Cheque Information List',cls:'cr-cheque',date:dmyFull(D),
-      head:['Enterprise Name','Responsible Person','Cheque Receiving / Invoice Date','Opening Info (Cheque Amount)','Payable Date','Today Received (Cheque Amount)','Payable Date','Recovery Amount','Cheque Amount (Due)','Day Count','Remarks'],
-      sum:[3,5,7,8],widths:[12,17,7,8,7,8,7,7,8,5,9],groups:groupRoad(out,true,md),cheque:true,offices:md==='road'};
+      head:['Enterprise Name','Responsible Person','Brand Name','Cheque Receiving / Invoice Date','Opening Info (Cheque Amount)','Payable Date','Today Received (Cheque Amount)','Payable Date','Recovery Amount','Cheque Amount (Due)','Day Count','Remarks'],
+      sum:[4,6,8,9],widths:[12,16,8,7,8,7,8,7,7,8,5,9],groups:groupRoad(out,true,md),cheque:true,offices:md==='road'};
   }
   const render=()=>{
     const v=view;if(!v)return;
@@ -622,7 +627,7 @@ async function creditPage(){
       return `<td class="noprint cract">${r.left>0.005?`<button data-act="crec" ${dd} data-left="${r.left}">Recovery</button> `:''}<button class="secondary" data-act="cdue" ${dd}>+ Due</button> <button class="secondary" data-act="cent" ${dd}>Entries / Delete</button> <button class="secondary" data-act="cedit" ${dd} data-shop="${esc(r.c[0])}" data-dso="${esc(r.c[2])}">Edit</button></td>`;
     };
     const cell=(r,i)=>{const val=r.c[i];const isAmt=(v.sum||[]).includes(i);return `<td class="${isAmt?'n':(i===0?'l':'')}">${isAmt?fAmt(val):esc(val===''||val==null?'':val)}</td>`};
-    const tot=(rows,label,cls)=>`<tr class="${cls}"><td colspan="4" style="text-align:right">${esc(label)}</td>${v.head.map((h,i)=>i<3?'':(v.sum.includes(i)?`<td class="n">${fAmt(rows.reduce((x,r)=>x+Number(r.c[i]||0),0))}</td>`:'<td></td>')).join('')}${act?'<td class="noprint"></td>':''}</tr>`;
+    const tot=(rows,label,cls)=>`<tr class="${cls}"><td colspan="${v.cheque?5:4}" style="text-align:right">${esc(label)}</td>${v.head.map((h,i)=>i<(v.cheque?4:3)?'':(v.sum.includes(i)?`<td class="n">${fAmt(rows.reduce((x,r)=>x+Number(r.c[i]||0),0))}</td>`:'<td></td>')).join('')}${act?'<td class="noprint"></td>':''}</tr>`;
     const ws=[4,...v.widths,...(act?[11]:[])],wt=ws.reduce((a,x)=>a+x,0),cg='<colgroup>'+ws.map(w=>`<col style="width:${(w*100/wt).toFixed(2)}%">`).join('')+'</colgroup>';
     const G=v.groups,okey=g=>g.office||'',showOff=v.offices&&new Set(G.map(okey)).size>=2,allRows=G.flatMap(g=>g.rows);
     const body=G.map((g,gi)=>{
