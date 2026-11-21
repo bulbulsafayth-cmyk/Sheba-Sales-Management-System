@@ -532,8 +532,10 @@ async function creditPage(){
     });
     const arr=[...g.values()];
     if(byOffice){
-      const oo={};arr.forEach(o=>{oo[o.office]=Math.min(oo[o.office]??Infinity,o.ord)});
-      arr.sort((a,b)=>oo[a.office]-oo[b.office]||cmp(a.office,b.office)||a.ord-b.ord||cmp(a.name,b.name));
+      /* Lohagara office prints last with its own total; every other road is one block with one combined total; then the Grand Total */
+      const isLoh=o=>/loha/i.test(o.office||'')||/loha/i.test(o.name||'');
+      arr.forEach(o=>{o.loh=isLoh(o);o.office=o.loh?(/loha/i.test(o.office||'')?o.office:'Lohagara Office'):''});
+      arr.sort((a,b)=>(a.loh?1:0)-(b.loh?1:0)||a.ord-b.ord||cmp(a.name,b.name));
     }else arr.sort((a,b)=>a.ord-b.ord||cmp(a.name,b.name));
     arr.forEach(o=>o.rows.sort((a,b)=>(b.age-a.age)||cmp(a.c[0],b.c[0])||cmp(a.c[1],b.c[1])));
     return arr;
@@ -608,7 +610,7 @@ async function creditPage(){
     const G=v.groups,okey=g=>g.office||'',showOff=v.offices&&new Set(G.map(okey)).size>=2,allRows=G.flatMap(g=>g.rows);
     const body=G.map((g,gi)=>{
       const last=gi===G.length-1;let extra='';
-      if(showOff&&(last||okey(G[gi+1])!==okey(g))){const o=okey(g);extra+=tot(G.filter(x=>okey(x)===o).flatMap(x=>x.rows),(o||'Other')+' Total','cr-offrow')}
+      if(showOff&&(last||okey(G[gi+1])!==okey(g))){const o=okey(g);extra+=tot(G.filter(x=>okey(x)===o).flatMap(x=>x.rows),(o||'All other roads')+' Total','cr-offrow')}
       if(G.length>=2&&last)extra+=tot(allRows,'Grand Total','cr-grand');
       return `<div class="cr-road">${esc(g.name)}</div><table class="crt">${cg}<thead><tr class="cr-h"><th>SL No.</th>${v.head.map(h=>`<th>${esc(h)}</th>`).join('')}${act?'<th class="noprint">Action</th>':''}</tr></thead><tbody>${g.rows.map((r,n)=>`<tr${r.done?' class="crdone"':''}><td>${n+1}</td>${r.c.map((_,i)=>cell(r,i)).join('')}${act?actCell(r):''}</tr>`).join('')}${tot(g.rows,'Total','crsum')}${extra}</tbody></table>`;
     }).join('')||'<p class="muted" style="padding:14px;text-align:center;color:#000">Nothing to show for this date.</p>';
@@ -673,7 +675,7 @@ async function creditPage(){
       g.rows.forEach((r,n)=>aoa.push([n+1,...r.c]));
       aoa.push(tot('Total',g.rows));
       const last=gi===G.length-1;
-      if(showOff&&(last||okey(G[gi+1])!==okey(g))){const o=okey(g);aoa.push(tot((o||'Other')+' Total',G.filter(x=>okey(x)===o).flatMap(x=>x.rows)))}
+      if(showOff&&(last||okey(G[gi+1])!==okey(g))){const o=okey(g);aoa.push(tot((o||'All other roads')+' Total',G.filter(x=>okey(x)===o).flatMap(x=>x.rows)))}
       if(G.length>=2&&last)aoa.push(tot('Grand Total',G.flatMap(x=>x.rows)));
     });
     const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),kind==='credit'?'Credit':'Cheque');
@@ -703,7 +705,7 @@ async function creditPage(){
       g.rows.forEach((r,n)=>row([String(n+1),...r.c.map((x,i)=>isNum[i+1]?fAmt(x):(x==null?'':String(x)))],{num:isNum}));
       totRow('Total',g.rows,'#f2f2f2');
       const last=gi===G.length-1;
-      if(showOff&&(last||okey(G[gi+1])!==okey(g))){const o=okey(g);totRow((o||'Other')+' Total',G.filter(x=>okey(x)===o).flatMap(x=>x.rows),'#fff2cc')}
+      if(showOff&&(last||okey(G[gi+1])!==okey(g))){const o=okey(g);totRow((o||'All other roads')+' Total',G.filter(x=>okey(x)===o).flatMap(x=>x.rows),'#fff2cc')}
       if(G.length>=2&&last)totRow('Grand Total',G.flatMap(x=>x.rows),'#c6e0b4');
       items.push({h:12,d:()=>{}});
     });
@@ -1574,7 +1576,7 @@ async function salesPage(editId){
 <div class="totals sticky" id="totals"></div>
 <div class="panel sec secdet"><div class="sec-h"><span class="sec-n">1</span>Retailer, DSO &amp; Brand details</div><div class="form-grid"><div style="grid-column:1/-1"><label style="display:flex;gap:8px;align-items:center;margin:0 0 4px;font-size:13px;color:#182338;cursor:pointer"><input type="checkbox" id="sColl" style="width:auto"> Due collection only (no sale - just money received)</label></div><div><label>Date</label><input type="date" id="sDate"></div><div><label>Brand <span id="sBrandLogo" style="float:right"></span></label><select id="sBrand"></select></div><div><label>Road</label><select id="sRoad"></select></div><div><label>DSO</label><select id="sDso"></select></div><div><label>Retailer <a href="#" id="newRetLink" style="float:right;font-weight:700;color:#2563eb;text-decoration:none">＋ New retailer</a></label><select id="sRetailer"></select></div><div><label>Notes (optional)</label><input id="sNotes"></div><div id="newRetBox" class="hidden" style="grid-column:1/-1;background:#f8fafd;border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:4px"><div class="form-grid"><div><label style="margin-top:0">New retailer name</label><input id="nrName"></div><div><label style="margin-top:0">Phone (optional)</label><input id="nrPhone"></div><div style="grid-column:1/-1"><label style="margin-top:0">Address (optional)</label><input id="nrAddr"></div></div><p class="muted" style="margin:6px 0 0;font-size:12px">The retailer is added to the road selected above.</p><div class="form-actions"><button id="nrSave">Save retailer</button><button class="secondary" id="nrCancel">Cancel</button></div><div id="nrMsg"></div></div></div></div>
 <div class="panel sec" id="prodBox"><div class="sec-h"><span class="sec-n">2</span>Products<span class="prodtools">${userMode==='dso'&&!editing?'<button class="secondary" id="todayToggle">Today\'s entries</button>':''}<button class="secondary" id="addItem">＋ Add product</button> <a href="#" id="newModLink" style="font-weight:700;color:#2563eb;text-decoration:none;white-space:nowrap">＋ New model</a></span></div><div class="table-wrap itemscroll"><table class="items"><thead><tr><th>Product</th><th>Qty</th><th>Unit price</th><th>Line total</th><th></th></tr></thead><tbody id="itemRows"></tbody></table></div><div id="newModBox" class="hidden" style="background:#f8fafd;border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px"><div class="form-grid"><div><label style="margin-top:0">Product name</label><input id="nmName"></div><div><label style="margin-top:0">Model code (optional)</label><input id="nmModel"></div><div><label style="margin-top:0">Sale price (Tk)</label><input id="nmPrice" type="number" min="0" step="0.01"></div></div><p class="muted" style="margin:6px 0 0;font-size:12px">The model is added to the brand selected above and picked in the product list.</p><div class="form-actions"><button id="nmSave">Save model</button><button class="secondary" id="nmCancel">Cancel</button></div><div id="nmMsg"></div></div></div>
-<div class="panel sec"><div class="sec-h"><span class="sec-n">3</span>Receiving &amp; Trade promotion</div><div class="form-grid recvgrid"><div><label>Cash received</label><input type="number" min="0" step="0.01" id="sReceived" value="0"></div><div><label>Cheque amount <span class="muted" style="font-weight:500">(counts as collection)</span></label><input type="number" min="0" step="0.01" id="sCheque" value="0"></div><div><label>Trade promotion amount</label><input type="number" min="0" step="0.01" id="sTp" value="0"></div><div id="chequeBox" class="hidden" style="grid-column:1/-1"><div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))"><div><label>Cheque payable date</label><input type="date" id="sChqDate"></div></div></div><div class="saverow"><button id="saveSale">${editing?'Update sales entry':'Save sales entry'}</button>${editing?'<button class="secondary" id="cancelEdit">Cancel</button>':''}</div></div></div>
+<div class="panel sec"><div class="sec-h"><span class="sec-n">3</span>Receiving &amp; Trade promotion</div><div class="form-grid recvgrid"><div><label>Cash received</label><input type="number" min="0" step="0.01" id="sReceived" value="0"></div><div id="chqField" class="hidden"><label>Cheque amount <span class="muted" style="font-weight:500">(counts as collection)</span></label><input type="number" min="0" step="0.01" id="sCheque" value="0"></div><div><label>Trade promotion amount</label><input type="number" min="0" step="0.01" id="sTp" value="0"></div><div id="chequeBox" class="hidden" style="grid-column:1/-1"><div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))"><div><label>Cheque payable date</label><input type="date" id="sChqDate"></div></div></div><div class="saverow"><button id="saveSale">${editing?'Update sales entry':'Save sales entry'}</button>${editing?'<button class="secondary" id="cancelEdit">Cancel</button>':''}</div></div></div>
 <div id="saleMsg"></div></div>${userMode==='dso'&&!editing?'<div class="panel hidden" id="todayBox" style="margin-top:18px"><h3>Your entries today</h3><p class="muted">Loading…</p></div>':''}`;
   $('sBrand').innerHTML=opts(usable(b),'name');$('sRoad').innerHTML=opts(usable(r),'name');
   const fillDsos=()=>{
@@ -1641,7 +1643,7 @@ async function salesPage(editId){
   $('sDate').value=entry?.sale_date||today();
   if(entry){$('sBrand').value=entry.brand_id;$('sRoad').value=entry.road_id;$('sTp').value=Number(entry.trade_promotion_amount||0);$('sReceived').value=Number(entry.received_amount||0);$('sNotes').value=entry.notes||''}
   let oldChq=null;
-  if(editing){try{const {data:cq}=await db.from('cheques').select('*').eq('sales_entry_id',editId).order('id').limit(1);if(cq&&cq[0]){oldChq=cq[0];$('sCheque').value=Number(oldChq.amount||0);$('sReceived').value=Math.max(0,Number(entry.received_amount||0)-Number(oldChq.amount||0));$('sChqDate').value=oldChq.payable_date||'';showChq()}}catch(e){}}
+  if(editing){try{const {data:cq}=await db.from('cheques').select('*').eq('sales_entry_id',editId).order('id').limit(1);if(cq&&cq[0]){oldChq=cq[0];$('chqField').classList.remove('hidden');$('sCheque').value=Number(oldChq.amount||0);$('sReceived').value=Math.max(0,Number(entry.received_amount||0)-Number(oldChq.amount||0));$('sChqDate').value=oldChq.payable_date||'';showChq()}}catch(e){}}
   if(userMode==='dso'&&currentDso){
     const bi=currentDso.brandIds||(currentDso.brand_id?[currentDso.brand_id]:[]);
     if(bi.length){$('sBrand').innerHTML=opts(usable(b).filter(x=>bi.includes(x.id)),'name');if(entry)$('sBrand').value=entry.brand_id;if(bi.length===1)$('sBrand').disabled=true}
