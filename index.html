@@ -823,7 +823,7 @@ async function creditPage(){
     const list=Object.values(RT).filter(r=>r.is_active!==false).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
     const map=new Map(list.map(r=>[lab(r),r]));
     if(tok!==navToken)return;
-    box.innerHTML=`<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 10px">New due / recovery entry</h3><div class="form-grid"><div><label>Road *</label><select id="ndRoad"><option value="">Select road…</option>${roads.filter(x=>x.is_active!==false).sort((a,b)=>cmp(a.name,b.name)).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></div><div><label>Shop (type to search)</label><input id="ndShop" list="ndShops" autocomplete="off" placeholder="Select road first"><datalist id="ndShops"></datalist></div><div><label>Brand *</label><select id="ndBrand"><option value="">Select brand…</option>${brands.filter(x=>x.is_active!==false).sort((a,b)=>cmp(a.name,b.name)).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></div><div><label>DSO (responsible person)</label><select id="ndDso"><option value="">— none —</option>${dsos.filter(x=>x.is_active!==false).sort((a,b)=>cmp(a.full_name,b.full_name)).map(x=>`<option value="${x.id}">${esc(x.full_name)}</option>`).join('')}</select></div><div><label>Type</label><select id="ndKind"><option value="due">New due</option><option value="recovery">Recovery (payment received)</option></select></div><div><label>Amount (Tk)</label><input type="number" id="ndAmt" min="1" step="any"></div><div><label>Date</label><input type="date" id="ndDate"></div><div><label>Remarks (optional)</label><input id="ndRem"></div></div><div class="form-actions"><button id="ndSave">Save entry</button><button class="secondary" id="ndCancel">Cancel</button></div><div id="ndMsg"></div></div>`;
+    box.innerHTML=`<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 10px">New due / recovery entry</h3><div class="form-grid"><div><label>Road *</label><select id="ndRoad"><option value="">Select road…</option>${roads.filter(x=>x.is_active!==false).sort((a,b)=>cmp(a.name,b.name)).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></div><div><label>Shop (type to search)</label><input id="ndShop" list="ndShops" autocomplete="off" placeholder="Select road first"><datalist id="ndShops"></datalist></div><div><label>Brand *</label><select id="ndBrand"><option value="">Select brand…</option>${brands.filter(x=>x.is_active!==false).sort((a,b)=>cmp(a.name,b.name)).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></div><div><label>DSO (responsible person)</label><select id="ndDso"><option value="">— none —</option>${dsos.filter(x=>x.is_active!==false).sort((a,b)=>cmp(a.full_name,b.full_name)).map(x=>`<option value="${x.id}">${esc(x.full_name)}</option>`).join('')}</select></div><div><label>Type</label><select id="ndKind"><option value="due">New due</option><option value="recovery">Recovery (payment received)</option></select></div><div><label>Amount (Tk)</label><input type="number" id="ndAmt" min="1" step="any"></div><div><label>Date</label><input type="date" id="ndDate"></div><div><label>Remarks (optional)</label><input id="ndRem"></div></div><div id="ndDue" style="margin:10px 0"></div><div class="form-actions"><button id="ndSave">Save entry</button><button class="secondary" id="ndCancel">Cancel</button></div><div id="ndMsg"></div></div>`;
     $('ndDate').value=$('crDate').value;
     const curList=()=>list.filter(r=>$('ndRoad').value&&r.road_id===$('ndRoad').value);
     const fillShops=()=>{$('ndShops').innerHTML=curList().map(r=>`<option value="${esc(lab(r))}"></option>`).join('');$('ndShop').value='';$('ndShop').placeholder=$('ndRoad').value?'Shop name':'Select road first'};
@@ -832,6 +832,27 @@ async function creditPage(){
     if($('crBrand').value)$('ndBrand').value=$('crBrand').value;
     if($('crDso')&&$('crDso').value)$('ndDso').value=$('crDso').value;
     $('ndCancel').onclick=()=>{box.innerHTML=''};
+    /* show the shop's current due as soon as a shop is picked (all brands; the chosen brand is highlighted) */
+    let dueP=null;
+    const loadDue=()=>dueP||(dueP=(async()=>{
+      const ids=['crRoad','crBrand','crDso','crMerge'],old={};ids.forEach(i=>{const e=$(i);if(e){old[i]=e.value;e.value=i==='crMerge'?'0':''}});
+      const sp=SHOPPARTS;
+      try{const v=await buildCredit($('ndDate').value||$('crDate').value);return v.groups.flatMap(g=>g.rows)}
+      finally{ids.forEach(i=>{const e=$(i);if(e)e.value=old[i]});SHOPPARTS=sp}
+    })());
+    const curShop=()=>{const name=$('ndShop').value.trim();let rt=map.get(name);if(rt&&rt.road_id!==$('ndRoad').value)rt=null;if(!rt&&name){const c=curList().filter(r=>obN(r.name)===obN(name));if(c.length===1)rt=c[0]}return rt};
+    const showDue=async()=>{
+      const el=$('ndDue');if(!el)return;const rt=curShop();
+      if(!rt){el.innerHTML='';return}
+      el.innerHTML='<span class="muted">Checking current due…</span>';
+      let rows;try{rows=await loadDue()}catch(e){el.innerHTML='';return}
+      if(curShop()!==rt||!$('ndDue'))return;
+      const mine=rows.filter(r=>r.rid===rt.id&&Number(r.c[6])>0.005),bsel=$('ndBrand').value,tot=mine.reduce((t,r)=>t+Number(r.c[6]),0);
+      el.innerHTML=mine.length?`<div class="notice" style="margin:0"><b>${esc(rt.name)}</b> — current due: <b>${money(tot)}</b>${mine.map(r=>`<div style="margin-top:3px${r.bid&&r.bid===bsel?';font-weight:800;color:#b91c1c':''}">${esc(r.c[1])}${r.c[2]&&r.c[2]!=='—'?' ('+esc(r.c[2])+')':''}: ${money(r.c[6])}${r.c[7]!==''?' · '+r.c[7]+' days':''}</div>`).join('')}</div>`:`<div class="notice" style="margin:0"><b>${esc(rt.name)}</b> — no due.</div>`;
+    };
+    ['input','change'].forEach(ev=>{$('ndShop').addEventListener(ev,showDue)});
+    $('ndRoad').addEventListener('change',()=>{$('ndDue').innerHTML=''});
+    $('ndBrand').addEventListener('change',showDue);
     $('ndSave').onclick=async()=>{
       const m=$('ndMsg'),name=$('ndShop').value.trim(),roadId=$('ndRoad').value;
       if(!roadId)return msg(m,'Select the road first.');
