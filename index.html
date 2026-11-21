@@ -421,9 +421,11 @@ async function creditPage(){
   let CM=[],SHOPPARTS={};
   const loadHiddenSales=async()=>{try{return await fetchAll(()=>db.from('credit_hidden').select('*').order('id'))}catch(e){return []}};
   const loadManual=async()=>{try{return await fetchAll(()=>db.from('credit_manual').select('*').order('entry_date').order('id'))}catch(e){return null}};
+  let OVR={};
+  const loadOvr=async()=>{OVR={};try{(await fetchAll(()=>db.from('credit_overrides').select('*').order('id'))).forEach(x=>{OVR[x.retailer_id+'|'+x.brand_id+'|'+(x.list_name||'')]=x})}catch(e){}};
   async function buildCredit(D){
     let rows=filt(await fetchAll(()=>scopedReport().lte('sale_date',D).order('sale_date').order('id')));
-    CM=(await loadManual())||[];
+    CM=(await loadManual())||[];await loadOvr();
     /* sales entries the Admin removed from the CREDIT report only (the sale itself is untouched) */
     const HID=new Set(((await loadHiddenSales())||[]).map(x=>String(x.sales_entry_id)));
     rows=rows.filter(x=>!HID.has(String(x.id)));
@@ -498,7 +500,7 @@ async function creditPage(){
       if(!(prev>0||g.td>0||rec>0))return;
       let cum=0,old=null;for(const c of g.ch){cum+=c.net;if(cum>g.paid+0.5){old=c.d;break}}
       const dp=left>0&&old?daysBetween(old,D):'';
-      out.push({road:g.road,dso:g.dso,brand:g.brand,list:g.list,rid:g.rid,bid:g.bid,did:g.did,left,age:dp===''?-1:dp,c:[g.shop,g.brand,g.dso,prev,g.td,rec,left,dp]});
+      const ov=OVR[g.rid+'|'+g.bid+'|'+(g.list||'')],shopN=(ov&&ov.shop_name)||g.shop,dsoN=(ov&&ov.resp_name)||g.dso;out.push({road:g.road,dso:dsoN,brand:g.brand,list:g.list,rid:g.rid,bid:g.bid,did:g.did,left,age:dp===''?-1:dp,c:[shopN,g.brand,dsoN,prev,g.td,rec,left,dp]});
     });
     /* One row per shop: brands and DSOs are listed in their cells, amounts are added up. Single-brand shops stay as they are. */
     SHOPPARTS={};
@@ -610,9 +612,9 @@ async function creditPage(){
     const act=isAdmin;
     const actCell=r=>{
       if(v.cheque){const ids=r.ids.join(',');return `<td class="noprint cract">${r.left>0.005?`<button data-act="rec" data-ids="${ids}" data-lefts="${r.lefts.join(',')}">Recovery</button> `:''}${r.hasRec?`<button class="secondary" data-act="unrec" data-ids="${ids}">Undo last</button> `:''}<button class="secondary" data-act="rem" data-ids="${ids}" data-v="${esc(r.rem)}">Remarks</button> <button class="danger" data-act="del" data-ids="${ids}">Delete</button></td>`}
-      if(r.key)return `<td class="noprint cract"><button class="secondary" data-act="cshop" data-k="${esc(r.key)}">Brands (${r.parts})</button></td>`;
+      if(r.key)return `<td class="noprint cract"><button class="secondary" data-act="cshop" data-k="${esc(r.key)}">Brands (${r.parts})</button> <button class="secondary" data-act="cedit" data-k="${esc(r.key)}">Edit</button></td>`;
       const dd=`data-rid="${r.rid}" data-bid="${r.bid}" data-did="${r.did||''}" data-list="${esc(r.list||'')}"`;
-      return `<td class="noprint cract">${r.left>0.005?`<button data-act="crec" ${dd} data-left="${r.left}">Recovery</button> `:''}<button class="secondary" data-act="cdue" ${dd}>+ Due</button> <button class="secondary" data-act="cent" ${dd}>Entries / Delete</button></td>`;
+      return `<td class="noprint cract">${r.left>0.005?`<button data-act="crec" ${dd} data-left="${r.left}">Recovery</button> `:''}<button class="secondary" data-act="cdue" ${dd}>+ Due</button> <button class="secondary" data-act="cent" ${dd}>Entries / Delete</button> <button class="secondary" data-act="cedit" ${dd} data-shop="${esc(r.c[0])}" data-dso="${esc(r.c[2])}">Edit</button></td>`;
     };
     const cell=(r,i)=>{const val=r.c[i];const isAmt=(v.sum||[]).includes(i);return `<td class="${isAmt?'n':(i===0?'l':'')}">${isAmt?fAmt(val):esc(val===''||val==null?'':val)}</td>`};
     const tot=(rows,label,cls)=>`<tr class="${cls}"><td colspan="4" style="text-align:right">${esc(label)}</td>${v.head.map((h,i)=>i<3?'':(v.sum.includes(i)?`<td class="n">${fAmt(rows.reduce((x,r)=>x+Number(r.c[i]||0),0))}</td>`:'<td></td>')).join('')}${act?'<td class="noprint"></td>':''}</tr>`;
@@ -833,7 +835,7 @@ async function creditPage(){
   }
   /* ----- Admin: manual credit entries (new due / recovery / edit / delete) and cheque delete ----- */
   const dayOk=v=>/^\d{4}-\d{2}-\d{2}$/.test(v)&&!isNaN(Date.parse(v));
-  const cmErr=e=>/credit_manual|credit_hidden|schema cache|relation|does not exist/i.test(e.message||'')?'Manual credit entries are not set up yet. Run credit-manual-setup.sql in Supabase, then try again.':(e.message||String(e));
+  const cmErr=e=>/credit_manual|credit_hidden|credit_overrides|schema cache|relation|does not exist/i.test(e.message||'')?'Manual credit entries are not set up yet. Run credit-manual-setup.sql and credit-edit-setup.sql in Supabase, then try again.':(e.message||String(e));
   const showNewDue=async()=>{
     const box=$('crForm');if(!box)return;
     box.innerHTML='<div class="notice" style="margin-top:12px">Loading shops…</div>';
@@ -945,7 +947,7 @@ async function creditPage(){
   }
   function showShopBrands(k){
     const parts=SHOPPARTS[k],box=$('crForm');if(!parts||!box)return;
-    box.innerHTML=`<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 10px">${esc(parts[0].c[0])}: brand-wise due</h3><div style="overflow-x:auto"><table><thead><tr><th>Brand</th><th>DSO</th><th>Previous Due</th><th>Todays Due</th><th>Recovery</th><th>Amount Left</th><th>Action</th></tr></thead><tbody>${parts.map(r=>{const dd=`data-rid="${r.rid}" data-bid="${r.bid}" data-did="${r.did||''}" data-list="${esc(r.list||'')}"`;return `<tr><td>${esc(r.c[1])}</td><td>${esc(r.c[2])}</td><td>${fAmt(r.c[3])}</td><td>${fAmt(r.c[4])}</td><td>${fAmt(r.c[5])}</td><td>${fAmt(r.c[6])}</td><td>${r.left>0.005?`<button data-act="crec" ${dd} data-left="${r.left}">Recovery</button> `:''}<button class="secondary" data-act="cdue" ${dd}>+ Due</button> <button class="secondary" data-act="cent" ${dd}>Entries / Delete</button></td></tr>`}).join('')}</tbody></table></div><div class="form-actions"><button class="secondary" id="sbClose">Close</button></div></div>`;
+    box.innerHTML=`<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 10px">${esc(parts[0].c[0])}: brand-wise due</h3><div style="overflow-x:auto"><table><thead><tr><th>Brand</th><th>DSO</th><th>Previous Due</th><th>Todays Due</th><th>Recovery</th><th>Amount Left</th><th>Action</th></tr></thead><tbody>${parts.map(r=>{const dd=`data-rid="${r.rid}" data-bid="${r.bid}" data-did="${r.did||''}" data-list="${esc(r.list||'')}"`;return `<tr><td>${esc(r.c[1])}</td><td>${esc(r.c[2])}</td><td>${fAmt(r.c[3])}</td><td>${fAmt(r.c[4])}</td><td>${fAmt(r.c[5])}</td><td>${fAmt(r.c[6])}</td><td>${r.left>0.005?`<button data-act="crec" ${dd} data-left="${r.left}">Recovery</button> `:''}<button class="secondary" data-act="cdue" ${dd}>+ Due</button> <button class="secondary" data-act="cent" ${dd}>Entries / Delete</button> <button class="secondary" data-act="cedit" ${dd} data-shop="${esc(r.c[0])}" data-dso="${esc(r.c[2])}">Edit</button></td></tr>`}).join('')}</tbody></table></div><div class="form-actions"><button class="secondary" id="sbClose">Close</button></div></div>`;
     box.onclick=async ev=>{
       if(ev.target.closest('#sbClose')){box.innerHTML='';return}
       const t=ev.target.closest('button[data-act]');if(!t)return;
@@ -956,6 +958,24 @@ async function creditPage(){
   async function creditAction(b){
     const a=b.dataset.act,m=$('crMsg');m.innerHTML='';
     if(a==='cshop')return showShopBrands(b.dataset.k);
+    if(a==='cedit'){
+      let ts,curS,curR;
+      if(b.dataset.k){const ps=SHOPPARTS[b.dataset.k];if(!ps)return;ts=ps.map(r=>({rid:r.rid,bid:r.bid,list:r.list||''}));curS=String(ps[0].c[0]||'');curR=[...new Set(ps.map(r=>r.dso))].filter(x=>x&&x!=='—').join(', ')}
+      else{ts=[{rid:b.dataset.rid,bid:b.dataset.bid,list:b.dataset.list||''}];curS=b.dataset.shop||'';curR=b.dataset.dso==='—'?'':(b.dataset.dso||'')}
+      const s1=prompt('Enterprise (shop) name. Changes only this credit report. Clear it to restore the original:',curS);if(s1===null)return;
+      const r1=prompt('Responsible person name. Changes only this credit report. Clear it to restore the original:',curR);if(r1===null)return;
+      const sCh=s1.trim()!==curS,rCh=r1.trim()!==curR;
+      if(!sCh&&!rCh)return;
+      for(const t of ts){
+        const old=OVR[t.rid+'|'+t.bid+'|'+t.list]||{};
+        const shop_name=sCh?(s1.trim()||null):(old.shop_name||null),resp_name=rCh?(r1.trim()||null):(old.resp_name||null);
+        let res;
+        if(!shop_name&&!resp_name)res=await db.from('credit_overrides').delete().eq('retailer_id',t.rid).eq('brand_id',t.bid).eq('list_name',t.list);
+        else res=await db.from('credit_overrides').upsert({retailer_id:t.rid,brand_id:t.bid,list_name:t.list,shop_name,resp_name},{onConflict:'retailer_id,brand_id,list_name'});
+        if(res.error)return msg(m,cmErr(res.error));
+      }
+      await run();return true;
+    }
     if(a==='del'){
       const ids=(b.dataset.ids||'').split(',').filter(Boolean);
       if(!confirm('Delete this cheque line permanently ('+ids.length+' cheque record'+(ids.length>1?'s':'')+' and all their recoveries)? This cannot be undone.'))return;
@@ -981,7 +1001,7 @@ async function creditPage(){
   /* Admin: mark a cheque as recovered / edit its remarks */
   $('crOut').onclick=async e=>{
     const b=e.target.closest('button[data-act]');if(!b||!isAdmin)return;
-    if(['crec','cdue','cent','del','cshop'].includes(b.dataset.act))return creditAction(b);
+    if(['crec','cdue','cent','del','cshop','cedit'].includes(b.dataset.act))return creditAction(b);
     const ids=(b.dataset.ids||'').split(',').filter(Boolean),act=b.dataset.act;let res=null;
     if(act==='rec'){
       /* one line can hold several cheques (different DSOs): the recovery is split across them, oldest first */
