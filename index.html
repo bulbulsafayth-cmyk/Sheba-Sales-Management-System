@@ -1641,7 +1641,7 @@ async function salesPage(editId){
 <div class="totals sticky" id="totals"></div>
 <div class="panel sec secdet"><div class="sec-h"><span class="sec-n">1</span>Retailer, DSO &amp; Brand details</div><div class="form-grid"><div style="grid-column:1/-1"><label style="display:flex;gap:8px;align-items:center;margin:0 0 4px;font-size:13px;color:#182338;cursor:pointer"><input type="checkbox" id="sColl" style="width:auto"> Due collection only (no sale - just money received)</label></div><div><label>Date</label><input type="date" id="sDate"></div><div><label>Brand <span id="sBrandLogo" style="float:right"></span></label><select id="sBrand"></select></div><div><label>Road</label><select id="sRoad"></select></div><div><label>DSO</label><select id="sDso"></select></div><div><label>Retailer <a href="#" id="newRetLink" style="float:right;font-weight:700;color:#2563eb;text-decoration:none">＋ New retailer</a></label><select id="sRetailer"></select></div><div><label>Notes (optional)</label><input id="sNotes"></div><div id="collDue" style="grid-column:1/-1"></div><div id="newRetBox" class="hidden" style="grid-column:1/-1;background:#f8fafd;border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:4px"><div class="form-grid"><div><label style="margin-top:0">New retailer name</label><input id="nrName"></div><div><label style="margin-top:0">Phone (optional)</label><input id="nrPhone"></div><div style="grid-column:1/-1"><label style="margin-top:0">Address (optional)</label><input id="nrAddr"></div></div><p class="muted" style="margin:6px 0 0;font-size:12px">The retailer is added to the road selected above.</p><div class="form-actions"><button id="nrSave">Save retailer</button><button class="secondary" id="nrCancel">Cancel</button></div><div id="nrMsg"></div></div></div></div>
 <div class="panel sec" id="prodBox"><div class="sec-h"><span class="sec-n">2</span>Products<span class="prodtools">${userMode==='dso'&&!editing?'<button class="secondary" id="todayToggle">Today\'s entries</button>':''}<button class="secondary" id="addItem">＋ Add product</button> <a href="#" id="newModLink" style="font-weight:700;color:#2563eb;text-decoration:none;white-space:nowrap">＋ New model</a></span></div><div class="table-wrap itemscroll"><table class="items"><thead><tr><th>Product</th><th>Qty</th><th>Unit price</th><th>Line total</th><th></th></tr></thead><tbody id="itemRows"></tbody></table></div><div id="newModBox" class="hidden" style="background:#f8fafd;border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px"><div class="form-grid"><div><label style="margin-top:0">Product name</label><input id="nmName"></div><div><label style="margin-top:0">Model code (optional)</label><input id="nmModel"></div><div><label style="margin-top:0">Sale price (Tk)</label><input id="nmPrice" type="number" min="0" step="0.01"></div></div><p class="muted" style="margin:6px 0 0;font-size:12px">The model is added to the brand selected above and picked in the product list.</p><div class="form-actions"><button id="nmSave">Save model</button><button class="secondary" id="nmCancel">Cancel</button></div><div id="nmMsg"></div></div></div>
-<div class="panel sec"><div class="sec-h"><span class="sec-n">3</span>Receiving &amp; Trade promotion</div><div class="form-grid recvgrid"><div><label>Cash received</label><input type="number" min="0" step="0.01" id="sReceived" value="0"></div><div id="chqField"><label>Cheque recovery amount <span class="muted" style="font-weight:500">(old cheque money collected - reduces cheque due, counts as collection)</span></label><input type="number" min="0" step="0.01" id="sCheque" value="0"></div><div><label>Trade promotion amount</label><input type="number" min="0" step="0.01" id="sTp" value="0"></div><div id="chequeBox" class="hidden" style="grid-column:1/-1"><div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))"><div><label>Cheque payable date</label><input type="date" id="sChqDate"></div></div></div><div class="saverow"><button id="saveSale">${editing?'Update sales entry':'Save sales entry'}</button>${editing?'<button class="secondary" id="cancelEdit">Cancel</button>':''}</div></div></div>
+<div class="panel sec"><div class="sec-h"><span class="sec-n">3</span>Receiving &amp; Trade promotion</div><div class="form-grid recvgrid"><div><label>Cash received</label><input type="number" min="0" step="0.01" id="sReceived" value="0"></div><div id="chqField"><label id="chqLbl">Cheque received amount <span class="muted" style="font-weight:500">(counts as collection)</span></label><input type="number" min="0" step="0.01" id="sCheque" value="0"></div><div><label>Trade promotion amount</label><input type="number" min="0" step="0.01" id="sTp" value="0"></div><div id="chequeBox" class="hidden" style="grid-column:1/-1"><div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))"><div><label>Cheque payable date</label><input type="date" id="sChqDate"></div></div></div><div class="saverow"><button id="saveSale">${editing?'Update sales entry':'Save sales entry'}</button>${editing?'<button class="secondary" id="cancelEdit">Cancel</button>':''}</div></div></div>
 <div id="saleMsg"></div></div>${userMode==='dso'&&!editing?'<div class="panel hidden" id="todayBox" style="margin-top:18px"><h3>Your entries today</h3><p class="muted">Loading…</p></div>':''}`;
   $('sBrand').innerHTML=opts(usable(b),'name');$('sRoad').innerHTML=opts(usable(r),'name');
   const fillDsos=()=>{
@@ -1673,9 +1673,10 @@ async function salesPage(editId){
     const sq=rows.reduce((a,x)=>a+(Number(x.quantity)||0),0),sv=rows.reduce((a,x)=>a+(Number(x.quantity)||0)*(Number(x.unit_price)||0),0);
 
     const chq=Number($('sCheque').value)||0;
-    if(collOnly){$('totals').innerHTML=`<div><span class="muted">Collection received (reduces due)</span><b>${money((Number($('sReceived').value)||0)+chq)}</b></div>`;return}
+    const cashT=`<div><span class="muted">Cash received</span><b>${money(Number($('sReceived').value)||0).replace(/\.00$/,'')}</b></div><div><span class="muted">${collOnly?'Cheque recovery':'Cheque received'}</span><b>${money(chq).replace(/\.00$/,'')}</b></div>`;
+    if(collOnly){$('totals').innerHTML=cashT+`<div><span class="muted">Collection received (reduces due)</span><b>${money((Number($('sReceived').value)||0)+chq)}</b></div>`;return}
     const gross=rows.reduce((a,x)=>a+x.quantity*x.unit_price,0),tp=Number($('sTp').value)||0,rec=(Number($('sReceived').value)||0)+chq;
-    $('totals').innerHTML=`<div><span class="muted">Sales quantity</span><b>${sq.toLocaleString('en-US')}</b></div>`+[['Gross sales',gross],['Trade promotion',tp],['Net sales',gross-tp],['Outstanding',gross-tp-rec]].map(x=>`<div><span class="muted">${x[0]}</span><b>${money(x[1]).replace(/\.00$/,'')}</b></div>`).join('');
+    $('totals').innerHTML=`<div><span class="muted">Sales quantity</span><b>${sq.toLocaleString('en-US')}</b></div>`+cashT+[['Gross sales',gross],['Trade promotion',tp],['Net sales',gross-tp],['Outstanding',gross-tp-rec]].map(x=>`<div><span class="muted">${x[0]}</span><b>${money(x[1]).replace(/\.00$/,'')}</b></div>`).join('');
   };
   const fitItems=()=>{const el=document.querySelector('.itemscroll'),rc=document.querySelector('.recvgrid');if(!el||!rc||innerWidth<1000)return;const rp=rc.closest('.panel'),t=el.getBoundingClientRect().top;const h=innerHeight-t-rp.offsetHeight-52-($('newModBox')&&!$('newModBox').classList.contains('hidden')?$('newModBox').offsetHeight:0);el.style.maxHeight=Math.max(150,h)+'px'};
   window._fitItems=fitItems;
@@ -1693,7 +1694,7 @@ async function salesPage(editId){
   $('itemRows').addEventListener('input',onItem);$('itemRows').addEventListener('change',onItem);
   $('itemRows').addEventListener('click',e=>{const b=e.target.closest('button[data-rm]');if(!b||b.disabled)return;rows.splice(Number(b.dataset.rm),1);renderItems()});
   $('addItem').onclick=()=>{rows.push(newRow());renderItems()};
-  const applyColl=()=>{collOnly=$('sColl').checked;$('prodBox').classList.toggle('hidden',collOnly);$('sTp').disabled=collOnly;if(collOnly)$('sTp').value=0;totals()};
+  const applyColl=()=>{collOnly=$('sColl').checked;showChq();$('prodBox').classList.toggle('hidden',collOnly);$('sTp').disabled=collOnly;if(collOnly)$('sTp').value=0;totals()};
   $('sColl').onchange=()=>{applyColl();showCollDue()};
   /* Due collection only: show the retailer's current due per brand as soon as the retailer is chosen */
   let bnames=null,dueSeq=0;
@@ -1724,7 +1725,7 @@ async function salesPage(editId){
   }
   ['sRetailer','sBrand','sDate'].forEach(i=>$(i).addEventListener('change',showCollDue));
   ['sRoad','sDso'].forEach(i=>$(i).addEventListener('change',()=>setTimeout(showCollDue,60)));
-  const showChq=()=>{if(window._fitItems)window._fitItems()};
+  const showChq=()=>{const rc=$('sColl').checked;$('chequeBox').classList.toggle('hidden',rc||!(Number($('sCheque').value)>0));$('chqLbl').innerHTML=rc?'Cheque recovery amount <span class="muted" style="font-weight:500">(old cheque money collected - goes to Recovery in the cheque report)</span>':'Cheque received amount <span class="muted" style="font-weight:500">(new cheque - goes to Today Received in the cheque report)</span>';if(window._fitItems)window._fitItems()};
   $('sTp').oninput=totals;$('sReceived').oninput=totals;$('sCheque').oninput=()=>{showChq();totals()};
   let prevBrand='';
   const setBrandLogo=()=>{const o=$('sBrand').selectedOptions[0];$('sBrandLogo').innerHTML=o?brandLogo(o.textContent,22):''};
@@ -1814,6 +1815,7 @@ async function salesPage(editId){
     if(!head.sale_date||!head.brand_id||!head.road_id||!head.dso_id)return msg(m,'Please select date, brand, road and DSO.');
     if(!head.retailer_id)return msg(m,'Please select a retailer, or click + New retailer to add one.');
     if(!Number.isFinite(head.trade_promotion_amount)||!Number.isFinite(head.received_amount)||!Number.isFinite(cashAmt)||cashAmt<0||chqAmt<0||head.trade_promotion_amount<0||head.received_amount<0)return msg(m,'Check trade promotion, cash and cheque amounts.');
+    if(chqAmt>0&&!collOnly&&!$('sChqDate').value)return msg(m,'Enter the cheque payable date.');
     const used=rows.filter(x=>x.product_id||x.quantity>0);
     if(!collOnly&&!used.length)return msg(m,'Select at least one product and enter its quantity.');
     if(!collOnly&&used.some(x=>!x.product_id||!Number.isInteger(x.quantity)||x.quantity<1||!Number.isFinite(x.unit_price)||x.unit_price<0))return msg(m,'Every product line needs a product, a whole-number quantity of at least 1 and a valid price.');
@@ -1832,22 +1834,22 @@ async function salesPage(editId){
       }
     }
     if(chqAmt>0||oldChq){const t=await db.from('cheques').select('id').limit(1);if(t.error)return msg(m,'Cheque tracking is not set up yet. Run cheque-setup.sql in Supabase, then try again. Nothing was saved.')}
-    /* cheque money collected = RECOVERY of the retailer's open cheques (oldest first); it is not a new cheque */
+    /* Due collection only: cheque money = RECOVERY of the retailer's open cheques (oldest first), not a new cheque */
     let recPlan=[];
-    if(chqAmt>0&&!oldChq){
+    if(collOnly&&chqAmt>0&&!oldChq){
       btn.disabled=true;let open;try{open=await retailerChequeDue(head.retailer_id,head.sale_date)}catch(e){btn.disabled=false;return msg(m,'Could not read the cheque due: '+(e.message||e))}btn.disabled=false;
       const tot=open.reduce((a,x)=>a+x.left,0);
-      if(chqAmt>tot+0.005)return msg(m,'Cheque recovery '+money(chqAmt)+' is more than this retailer\'s cheque due ('+money(tot)+'). To record a NEW cheque use Credit & Cheque Report › + New Cheque. Nothing was saved.');
+      if(chqAmt>tot+0.005)return msg(m,'Cheque recovery '+money(chqAmt)+' is more than this retailer\'s cheque due ('+money(tot)+'). Nothing was saved.');
       let rest=chqAmt;open.forEach(x=>{if(rest<=0.005)return;const take=Math.min(rest,x.left);recPlan.push({cheque_id:x.id,amount:Math.round(take*100)/100,recovered_on:head.sale_date});rest=Math.round((rest-take)*100)/100});
     }
     btn.disabled=true;
     try{
       await saveEntry(editing?editId:null,head,collOnly?[]:used.map(x=>({product_id:x.product_id,quantity:x.quantity,unit_price:x.unit_price})));
       if(recPlan.length){const re=await db.from('cheque_recoveries').insert(recPlan);if(re.error)throw new Error('The entry was saved but the cheque recovery was not: '+re.error.message+'. Record it from Credit & Cheque Report › Recovery.')}
-      if(oldChq){
+      if((chqAmt>0&&!collOnly)||oldChq){
         let eid=editing?editId:null;
         if(!eid){const f=await db.from('sales_entries').select('id').eq('dso_id',head.dso_id).eq('retailer_id',head.retailer_id).eq('brand_id',head.brand_id).eq('sale_date',head.sale_date).order('id',{ascending:false}).limit(1);if(f.error||!f.data||!f.data[0])throw new Error('The entry was saved but the cheque could not be linked. Open today\'s entries, press Edit and add the cheque again.');eid=f.data[0].id}
-        const cv=chqAmt>0?{amount:chqAmt}:{amount:0};
+        const cv={amount:chqAmt,payable_date:$('sChqDate').value||null};
         let ce=null;
         if(oldChq&&chqAmt>0)ce=(await db.from('cheques').update(cv).eq('id',oldChq.id)).error;
         else if(oldChq)ce=(await db.from('cheques').delete().eq('id',oldChq.id)).error;
