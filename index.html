@@ -1074,7 +1074,9 @@ const retailerChequeDue=async(rid,D)=>{
   out.sort((a,b)=>a.recd<b.recd?-1:a.recd>b.recd?1:0);
   return out;
 };
-const chequeDueHtml=(list,bsel)=>{const t=list.reduce((a,x)=>a+x.left,0);return `<div style="margin-top:10px;padding-top:8px;border-top:1px solid #d5dce8"><b>Cheque due: ${money(t)}</b>${list.length?list.map(x=>`<div style="margin-top:3px${bsel&&x.bid===bsel?';font-weight:800;color:#b91c1c':''}">Received ${dmy(x.recd)}${x.pd?' · payable '+dmy(x.pd):''}${x.label?' · '+esc(x.label):''}: ${money(x.left)}</div>`).join(''):'<div style="margin-top:3px">No cheque due.</div>'}</div>`};
+const chequeDueHtml=(list,bsel,pick)=>{const t=list.reduce((a,x)=>a+x.left,0),ln=x=>`Received ${dmy(x.recd)}${x.pd?' · payable '+dmy(x.pd):''}${x.label?' · '+esc(x.label):''}: ${money(x.left)}`;
+  if(pick&&list.length)return `<div style="margin-top:10px;padding-top:8px;border-top:1px solid #d5dce8"><b>Cheque due: ${money(t)}</b><div class="muted" style="margin:3px 0 4px">Choose which cheque this recovery is taken from:</div><label style="display:flex;gap:8px;align-items:center;margin:3px 0;font-weight:600;cursor:pointer"><input type="radio" name="chqPick" value="" ${pick.cur?'':'checked'} style="width:auto;margin:0"> Auto (selected brand / DSO first, then oldest)</label>${list.map(x=>`<label style="display:flex;gap:8px;align-items:center;margin:3px 0;cursor:pointer${bsel&&x.bid===bsel?';font-weight:800;color:#b91c1c':''}"><input type="radio" name="chqPick" value="${x.id}" ${String(x.id)===pick.cur?'checked':''} style="width:auto;margin:0"> <span>${ln(x)}</span></label>`).join('')}</div>`;
+  return `<div style="margin-top:10px;padding-top:8px;border-top:1px solid #d5dce8"><b>Cheque due: ${money(t)}</b>${list.length?list.map(x=>`<div style="margin-top:3px${bsel&&x.bid===bsel?';font-weight:800;color:#b91c1c':''}">${ln(x)}</div>`).join(''):'<div style="margin-top:3px">No cheque due.</div>'}</div>`};
 const loadOpeningDues=async()=>{try{return await fetchAll(()=>db.from('opening_dues').select('*').order('id'))}catch(e){return []}};
 const OB_MON='jan feb mar apr may jun jul aug sep oct nov dec'.split(' ');
 function obDate(s){
@@ -1748,7 +1750,7 @@ async function salesPage(editId){
   const applyColl=()=>{collOnly=$('sColl').checked;showChq();$('prodBox').classList.toggle('hidden',collOnly);$('sTp').disabled=collOnly;if(collOnly)$('sTp').value=0;totals()};
   $('sColl').onchange=()=>{applyColl();showCollDue()};
   /* Due collection only: show the retailer's current due per brand as soon as the retailer is chosen */
-  let bnames=null,dnames=null,dueSeq=0;
+  let bnames=null,dnames=null,dueSeq=0,chqPick='';
   async function showCollDue(){
     const el=$('collDue');if(!el)return;
     const rid=$('sRetailer').value,D=$('sDate').value,bsel=$('sBrand').value,seq=++dueSeq;
@@ -1773,7 +1775,9 @@ async function salesPage(editId){
       const list=Object.entries(by).filter(([b,v])=>v>0.005).sort((a,b)=>b[1]-a[1]),tot=list.reduce((t,x)=>t+x[1],0);
       const cdue=await retailerChequeDue(rid,D);if(seq!==dueSeq)return;
       cdue.forEach(x=>{x.label=x.resp||[dnames[x.did],bnames[x.bid]].filter(Boolean).join(' · ')});
-      el.innerHTML=`<div class="notice" style="margin:0"><b>Verbal due: ${money(tot)}</b>${list.length?list.map(([b,v])=>`<div style="margin-top:3px${b===bsel?';font-weight:800;color:#b91c1c':''}">${esc(bnames[b]||'—')}: ${money(v)}</div>`).join(''):'<div style="margin-top:3px">No verbal due.</div>'}${chequeDueHtml(cdue,bsel)}</div>`;
+      el.innerHTML=`<div class="notice" style="margin:0"><b>Verbal due: ${money(tot)}</b>${list.length?list.map(([b,v])=>`<div style="margin-top:3px${b===bsel?';font-weight:800;color:#b91c1c':''}">${esc(bnames[b]||'—')}: ${money(v)}</div>`).join(''):'<div style="margin-top:3px">No verbal due.</div>'}${chequeDueHtml(cdue,bsel,{cur:chqPick})}</div>`;
+      if(!cdue.some(x=>String(x.id)===chqPick))chqPick='';
+      el.querySelectorAll('input[name=chqPick]').forEach(i=>{i.onchange=()=>{chqPick=i.value}});
     }catch(e){if(seq===dueSeq)el.innerHTML=''}
   }
   ['sRetailer','sBrand','sDate'].forEach(i=>$(i).addEventListener('change',showCollDue));
@@ -1894,8 +1898,10 @@ async function salesPage(editId){
       /* money is taken first from the cheques of the selected brand and DSO, then the same brand, then older cheques with no brand, then the rest (oldest first) */
       const rk=x=>x.bid&&x.bid===head.brand_id&&x.did===head.dso_id?0:x.bid&&x.bid===head.brand_id?1:(!x.bid&&(!x.did||x.did===head.dso_id))?2:3;
       open=[...open].sort((a,b)=>rk(a)-rk(b)||(a.recd<b.recd?-1:a.recd>b.recd?1:0));
+      /* a cheque ticked in the Cheque due box takes the whole recovery */
+      let picked=null;if(chqPick){picked=open.find(x=>String(x.id)===chqPick);if(!picked)return msg(m,'The cheque you selected is no longer due. Choose again. Nothing was saved.');open=[picked]}
       const tot=open.reduce((a,x)=>a+x.left,0);
-      if(chqAmt>tot+0.005)return msg(m,'Cheque recovery '+money(chqAmt)+' is more than this retailer\'s cheque due ('+money(tot)+'). Nothing was saved.');
+      if(chqAmt>tot+0.005)return msg(m,'Cheque recovery '+money(chqAmt)+' is more than '+(picked?'the selected cheque due':'this retailer\'s cheque due')+' ('+money(tot)+'). Nothing was saved.');
       let rest=chqAmt;open.forEach(x=>{if(rest<=0.005)return;const take=Math.min(rest,x.left);recPlan.push({cheque_id:x.id,amount:Math.round(take*100)/100,recovered_on:head.sale_date});rest=Math.round((rest-take)*100)/100});
     }
     /* cheque recovery goes ONLY to the cheque report: it is not cash, so it must not count in the daily (due) collection or reduce the verbal due */
@@ -1917,6 +1923,7 @@ async function salesPage(editId){
       }
       if(editing){go('reports');return}
       rows=[newRow()];$('sTp').value=0;$('sReceived').value=0;$('sCheque').value=0;$('sChqDate').value='';showChq();$('sNotes').value='';renderItems();
+      chqPick='';showCollDue();
       msg(m,chqOnly?'Cheque recovery saved (cheque report only'+(head.received_amount>0?'; the cash part is saved as due collection':'')+').':collOnly?'Collection saved successfully.':'Sales entry saved successfully.','success');loadToday();
     }catch(err){msg(m,err.message||String(err))}
     btn.disabled=false;
