@@ -523,7 +523,7 @@ async function creditPage(){
     }
     return {title:'Retailer Credit Data ('+dmy(D).replace(/\./g,'-')+')',cls:'cr-credit',date:null,
       head:['Shop Name','Brand Name','Responsible person','Previous Due Amount','Todays Due Amount','Recovery Amount','Amount Left','Day Pass'],
-      sum:[3,4,5,6],txt:[0,1,2],widths:[22,11,14,13,12,11,13,6],groups:groupRoad(list2,false,vmode())};
+      sum:[3,4,5,6],txt:[0,1,2],widths:[22,11,14,13,12,11,13,6],groups:groupRoad(list2,true,vmode()),offices:vmode()==='road'};
   }
   /* roads with the same "Report group" print as one section; with an Office set, the cheque list also gets an office total */
   function groupRoad(list,byOffice,mode){
@@ -632,7 +632,7 @@ async function creditPage(){
     const G=v.groups,okey=g=>g.office||'',showOff=v.offices&&new Set(G.map(okey)).size>=2,allRows=G.flatMap(g=>g.rows);
     const body=G.map((g,gi)=>{
       const last=gi===G.length-1;let extra='';
-      if(showOff&&(last||okey(G[gi+1])!==okey(g))){const o=okey(g);extra+=tot(G.filter(x=>okey(x)===o).flatMap(x=>x.rows),(o||'All other roads')+' Total','cr-offrow')}
+      if(showOff&&(last||okey(G[gi+1])!==okey(g))){const o=okey(g);extra+=tot(G.filter(x=>okey(x)===o).flatMap(x=>x.rows),(o||(v.cheque?'All other roads':"Cox's Bazar Office"))+' Total','cr-offrow')}
       if(G.length>=2&&last)extra+=tot(allRows,'Grand Total','cr-grand');
       return `<div class="cr-road">${esc(g.name)}</div><table class="crt">${cg}<thead><tr class="cr-h"><th>SL No.</th>${v.head.map(h=>`<th>${esc(h)}</th>`).join('')}${act?'<th class="noprint">Action</th>':''}</tr></thead><tbody>${g.rows.map((r,n)=>`<tr${r.done?' class="crdone"':''}><td>${n+1}</td>${r.c.map((_,i)=>cell(r,i)).join('')}${act?actCell(r):''}</tr>`).join('')}${tot(g.rows,'Total','crsum')}${extra}</tbody></table>`;
     }).join('')||'<p class="muted" style="padding:14px;text-align:center;color:#000">Nothing to show for this date.</p>';
@@ -698,7 +698,7 @@ async function creditPage(){
       g.rows.forEach((r,n)=>aoa.push([n+1,...r.c]));
       aoa.push(tot('Total',g.rows));
       const last=gi===G.length-1;
-      if(showOff&&(last||okey(G[gi+1])!==okey(g))){const o=okey(g);aoa.push(tot((o||'All other roads')+' Total',G.filter(x=>okey(x)===o).flatMap(x=>x.rows)))}
+      if(showOff&&(last||okey(G[gi+1])!==okey(g))){const o=okey(g);aoa.push(tot((o||(view.cheque?'All other roads':"Cox's Bazar Office"))+' Total',G.filter(x=>okey(x)===o).flatMap(x=>x.rows)))}
       if(G.length>=2&&last)aoa.push(tot('Grand Total',G.flatMap(x=>x.rows)));
     });
     const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),kind==='credit'?'Credit':'Cheque');
@@ -730,7 +730,7 @@ async function creditPage(){
       g.rows.forEach((r,n)=>row([String(n+1),...r.c.map((x,i)=>isNum[i+1]?fAmt(x):(x==null?'':String(x)))],{num:isNum,left:left,fg:r.done?'#6b7280':'#e00000'}));
       totRow('Total',g.rows,chq?'#ffff00':'#ffc000');
       const last=gi===G.length-1;
-      if(showOff&&(last||okey(G[gi+1])!==okey(g))){const o=okey(g);totRow((o||'All other roads')+' Total',G.filter(x=>okey(x)===o).flatMap(x=>x.rows),'#92d050')}
+      if(showOff&&(last||okey(G[gi+1])!==okey(g))){const o=okey(g);totRow((o||(v.cheque?'All other roads':"Cox's Bazar Office"))+' Total',G.filter(x=>okey(x)===o).flatMap(x=>x.rows),'#92d050')}
       if(G.length>=2&&last)totRow('Grand Total',G.flatMap(x=>x.rows),chq?'#92d050':'#b7dee8');
     });
     items.push({h:8,d:()=>{}});
