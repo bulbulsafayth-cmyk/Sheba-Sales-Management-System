@@ -780,11 +780,21 @@ async function creditPage(){
       }
       const mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
       let copied=false;
-      /* on a PC the share menu has no WeChat: copy the picture so it can be pasted (Ctrl+V) into WeChat, and also save it */
+      /* on a PC the share menu has no WeChat: also copy the picture so it can be pasted (Ctrl+V) into WeChat */
       if(!mobile&&!saveOnly&&files.length===1&&navigator.clipboard&&window.ClipboardItem){try{await navigator.clipboard.write([new ClipboardItem({'image/png':files[0]})]);copied=true}catch(e){}}
-      if(copied){files.forEach(f=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),8000)});msg($('crMsg'),'Picture copied. Open the WeChat chat and press Ctrl+V to paste it (a copy is also saved in Downloads).','success')}
-      else if(!saveOnly&&mobile&&navigator.canShare&&navigator.canShare({files}))await navigator.share({files,title:view.title});
-      else{files.forEach((f,i)=>setTimeout(()=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),8000)},i*500));msg($('crMsg'),(files.length>1?files.length+' pictures saved (the report was long, so it was split). ':'Picture saved. ')+'Open from Downloads or Gallery and send it in WeChat, WhatsApp or Viber.','success')}
+      const saveAll=()=>files.forEach((f,i)=>setTimeout(()=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),8000)},i*500));
+      /* Share opens the phone / computer share window. If the browser cannot share files, the picture is saved instead. */
+      let shared=false;
+      if(!saveOnly&&navigator.share){
+        let can=true;try{if(navigator.canShare)can=navigator.canShare({files})||mobile}catch(e){can=mobile}
+        if(can){
+          try{await navigator.share({files,title:view.title});shared=true}
+          catch(e){if(e&&(e.name==='AbortError'||e.name==='NotAllowedError'))throw e}
+        }
+      }
+      if(shared){if(copied)msg($('crMsg'),'Picture copied too: in WeChat on a PC press Ctrl+V to paste it.','success')}
+      else if(copied){saveAll();msg($('crMsg'),'This browser has no share window for pictures. Picture copied: open the WeChat chat and press Ctrl+V (a copy is also saved in Downloads).','success')}
+      else{saveAll();msg($('crMsg'),(saveOnly?'':'This browser cannot open a share window for pictures, so it was saved. ')+(files.length>1?files.length+' pictures saved (the report was long, so it was split). ':'Picture saved. ')+'Open from Downloads or Gallery and send it in WeChat, WhatsApp or Viber.','success')}
     }catch(e){
       if(e&&e.name==='NotAllowedError'&&files.length){cleanup();pend=files;btnEl.textContent='Tap again to share';btnEl.disabled=false;return}
       if(!e||e.name!=='AbortError')msg($('crMsg'),'Could not make the picture: '+(e.message||e));
