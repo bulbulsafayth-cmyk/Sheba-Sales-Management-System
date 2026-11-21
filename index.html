@@ -564,11 +564,12 @@ async function creditPage(){
       }else{
         /* opening cheques carry no brand or DSO link, so only the Admin sees them, and a brand/DSO filter hides them */
         /* DSO sees an opening cheque only when its Responsible-person text names them */
-        if($('crBrand').value||$('crDso')?.value)return;
-        if(!isAdmin&&!(myName&&String(c.resp_text||'').toLowerCase().includes(myName)))return;
+        if($('crBrand').value)return;
+        if(c.dso_id){if($('crDso')?.value&&$('crDso').value!==c.dso_id)return;if(!isAdmin&&currentDso&&c.dso_id!==currentDso.id)return}
+        else{if($('crDso')?.value)return;if(!isAdmin&&!(myName&&String(c.resp_text||'').toLowerCase().includes(myName)))return}
         const rt=RT[c.retailer_id];if(!rt)return;
         road=L.road[c.road_id||rt.road_id]?.name;if(rd&&road!==rd)return;
-        recd=c.received_on;shop=rt.name;who=c.resp_text||'—';dso=(!isAdmin&&myName)?(currentDso.full_name||currentDso.name):'—';brand='—';
+        recd=c.received_on;shop=rt.name;who=c.resp_text||(c.dso_id?DSOM[c.dso_id]?.full_name:'')||'—';dso=c.dso_id?(DSOM[c.dso_id]?.full_name||'—'):((!isAdmin&&myName)?(currentDso.full_name||currentDso.name):'—');brand='—';
       }
       if(!recd||recd>D)return;
       const amt=Number(c.amount||0),rl=rbyc[c.id]||[];
@@ -635,7 +636,7 @@ async function creditPage(){
     const list=Object.values(RT).filter(r=>r.is_active!==false).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
     const map=new Map(list.map(r=>[lab(r),r]));
     if(tok!==navToken)return;
-    box.innerHTML=`<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 10px">New cheque entry</h3><div class="form-grid"><div><label>Road *</label><select id="ncRoad"><option value="">Select road…</option>${roads.filter(x=>x.is_active!==false).sort((a,b)=>cmp(a.name,b.name)).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></div><div><label>Shop (type to search)</label><input id="ncShop" list="ncShops" autocomplete="off" placeholder="Select road first"><datalist id="ncShops"></datalist></div><div><label>Responsible person (DSO · brand · amount)</label><input id="ncWho" placeholder="e.g. Jashim Vivo-50000 Hamid ZTE-20000"></div><div><label>Receive date</label><input type="date" id="ncRecv"></div><div><label>Cheque amount (Tk)</label><input type="number" id="ncAmt" min="1" step="any"></div><div><label>Payable date (optional)</label><input type="date" id="ncPay"></div><div><label>Remarks (optional)</label><input id="ncRem"></div></div><div class="form-actions"><button id="ncSave">Save cheque</button><button class="secondary" id="ncCancel">Cancel</button></div><div id="ncMsg"></div></div>`;
+    box.innerHTML=`<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 10px">New cheque entry</h3><div class="form-grid"><div><label>Road *</label><select id="ncRoad"><option value="">Select road…</option>${roads.filter(x=>x.is_active!==false).sort((a,b)=>cmp(a.name,b.name)).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></div><div><label>DSO *</label><select id="ncDso"><option value="">Select DSO…</option>${dsos.filter(x=>x.is_active!==false).sort((a,b)=>cmp(a.full_name,b.full_name)).map(x=>`<option value="${x.id}">${esc(x.full_name)}</option>`).join('')}</select></div><div><label>Shop (type to search)</label><input id="ncShop" list="ncShops" autocomplete="off" placeholder="Select road first"><datalist id="ncShops"></datalist></div><div><label>Responsible person (DSO · brand · amount)</label><input id="ncWho" placeholder="e.g. Jashim Vivo-50000 Hamid ZTE-20000"></div><div><label>Receive date</label><input type="date" id="ncRecv"></div><div><label>Cheque amount (Tk)</label><input type="number" id="ncAmt" min="1" step="any"></div><div><label>Payable date (optional)</label><input type="date" id="ncPay"></div><div><label>Remarks (optional)</label><input id="ncRem"></div></div><div class="form-actions"><button id="ncSave">Save cheque</button><button class="secondary" id="ncCancel">Cancel</button></div><div id="ncMsg"></div></div>`;
     $('ncRecv').value=$('crDate').value;
     const curList=()=>list.filter(r=>$('ncRoad').value&&r.road_id===$('ncRoad').value);
     const fillShops=()=>{$('ncShops').innerHTML=curList().map(r=>`<option value="${esc(lab(r))}"></option>`).join('');$('ncShop').value='';$('ncShop').placeholder=$('ncRoad').value?'Shop name':'Select road first'};
@@ -646,15 +647,16 @@ async function creditPage(){
       const m=$('ncMsg'),name=$('ncShop').value.trim();
       const roadId=$('ncRoad').value;
       if(!roadId)return msg(m,'Select the road first.');
+      const dsoId=$('ncDso').value;if(!dsoId)return msg(m,'Select the DSO.');
       let rt=map.get(name);if(rt&&rt.road_id!==roadId)rt=null;
       if(!rt){const c=curList().filter(r=>obN(r.name)===obN(name));if(c.length===1)rt=c[0];else return msg(m,c.length?'Several shops have this name. Pick one from the list (it shows the road).':'Shop not found on this road. Pick one from the list.')}
       const amt=Number($('ncAmt').value),recv=$('ncRecv').value,pay=$('ncPay').value;
       if(!(amt>0))return msg(m,'Enter the cheque amount.');
       if(!recv)return msg(m,'Choose the receive date.');
       const b=$('ncSave');b.disabled=true;
-      const r=await db.from('cheques').insert({retailer_id:rt.id,road_id:roadId,received_on:recv,amount:amt,payable_date:pay||null,resp_text:$('ncWho').value.trim()||null,remarks:$('ncRem').value.trim()||null});
+      const r=await db.from('cheques').insert({retailer_id:rt.id,road_id:roadId,dso_id:dsoId,received_on:recv,amount:amt,payable_date:pay||null,resp_text:$('ncWho').value.trim()||(DSOM[dsoId]?.full_name||null),remarks:$('ncRem').value.trim()||null});
       b.disabled=false;
-      if(r.error)return msg(m,/check constraint|cheques_source_chk|column|schema cache/i.test(r.error.message)?'Run the updated opening-setup.sql in Supabase first, then try again. ('+r.error.message+')':r.error.message);
+      if(r.error)return msg(m,/check constraint|cheques_source_chk|column|schema cache/i.test(r.error.message)?'Run cheque-dso-setup.sql (adds the DSO column) in Supabase first, then try again. ('+r.error.message+')':r.error.message);
       box.innerHTML='';
       await run();
       msg($('crMsg'),recv>$('crDate').value?'Cheque saved. It shows on the report from '+dmy(recv)+'.':'Cheque saved.','success');
@@ -768,7 +770,12 @@ async function creditPage(){
       if(!okAll)throw new Error('This phone could not draw the picture even in small size ('+((lastErr&&lastErr.message)||'unknown')+'). Close other apps/tabs and try again, or use Print / PDF or Excel.');
       w.remove();
       }
-      if(!saveOnly&&navigator.canShare&&navigator.canShare({files}))await navigator.share({files,title:view.title});
+      const mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      let copied=false;
+      /* on a PC the share menu has no WeChat: copy the picture so it can be pasted (Ctrl+V) into WeChat, and also save it */
+      if(!mobile&&!saveOnly&&files.length===1&&navigator.clipboard&&window.ClipboardItem){try{await navigator.clipboard.write([new ClipboardItem({'image/png':files[0]})]);copied=true}catch(e){}}
+      if(copied){files.forEach(f=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),8000)});msg($('crMsg'),'Picture copied. Open the WeChat chat and press Ctrl+V to paste it (a copy is also saved in Downloads).','success')}
+      else if(!saveOnly&&mobile&&navigator.canShare&&navigator.canShare({files}))await navigator.share({files,title:view.title});
       else{files.forEach((f,i)=>setTimeout(()=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),8000)},i*500));msg($('crMsg'),(files.length>1?files.length+' pictures saved (the report was long, so it was split). ':'Picture saved. ')+'Open from Downloads or Gallery and send it in WeChat, WhatsApp or Viber.','success')}
     }catch(e){
       if(e&&e.name==='NotAllowedError'&&files.length){cleanup();pend=files;btnEl.textContent='Tap again to share';btnEl.disabled=false;return}
