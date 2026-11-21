@@ -229,7 +229,7 @@ table.crt td.cract button{display:block;width:100%;margin:0 0 3px;padding:3px 4p
 </style></head>
 <body>
 <div id="loginView" class="login-wrap"><div class="login"><h1>Distribution Sales</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
-<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Distribution Sales<small>MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
+<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Distribution Sales<small>MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
 <script>
 const SUPABASE_URL='https://nvnogsganemysvbqmcpo.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_tyWf1VnXMzNVBs22Qgs3wg_SBy6HegJ';
@@ -317,7 +317,7 @@ $('dsoContinueBtn').onclick=async()=>{
   await enterDso(d);
 };
 $('backLoginBtn').onclick=async()=>{await db.auth.signOut();store.del('dsoId');store.del('loggedDso');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
-$('logoutBtn').onclick=async()=>{currentDso=null;store.del('dsoId');store.del('loggedDso');await db.auth.signOut();$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
+$('logoutBtn').onclick=async()=>{stopLocTracking();currentDso=null;store.del('dsoId');store.del('loggedDso');await db.auth.signOut();$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
 const DSO_PAGES=['dashboard','sales','reports','sheet','credit'];
 function showApp(mode='admin'){
   userMode=mode;$('loginView').classList.add('hidden');$('appView').classList.remove('hidden');
@@ -325,10 +325,11 @@ function showApp(mode='admin'){
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('hidden',mode==='dso'&&!DSO_PAGES.includes(b.dataset.page)));
   $('sessionLabel').textContent=mode==='dso'?'DSO: '+(currentDso?.full_name||''):'Admin session';
   go(mode==='dso'?'sales':'dashboard');
+  if(mode==='dso')startLocTracking();else stopLocTracking();
 }
 $('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(b)go(b.dataset.page)});
-const titles={dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance'};
-const pages={dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage()};
+const titles={dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location'};
+const pages={dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage(),dsoloc:()=>dsoLocPage()};
 function go(p,arg){
   if(userMode==='dso'&&!DSO_PAGES.includes(p))p='sales';
   currentPage=p;navToken++;
@@ -2234,6 +2235,103 @@ function buildBrandFloat(names){
 }
 async function addBrandNames(){try{const {data}=await db.from('brands').select('name').eq('is_active',true);if(data&&data.length)buildBrandFloat(data.map(x=>x.name))}catch(e){}}
 
+
+/* ---------- DSO live location: while the DSO has the app open, the phone position is sent to Admin every few minutes ---------- */
+const LOC={timer:null,last:0,busy:false,vis:null,pill:null};
+const LOC_EVERY=3*60*1000;
+function locPill(txt,bad){
+  let p=LOC.pill;
+  if(!txt){if(p){p.remove();LOC.pill=null}return}
+  if(!p){p=document.createElement('div');p.className='noprint';p.style.cssText='position:fixed;left:10px;bottom:10px;z-index:50;max-width:80vw;padding:6px 12px;border-radius:99px;font:600 12px system-ui,sans-serif;box-shadow:0 2px 10px #0004';document.body.appendChild(p);LOC.pill=p}
+  p.style.background=bad?'#fee2e2':'#dcfce7';p.style.color=bad?'#991b1b':'#166534';p.textContent=txt;
+}
+async function locSend(force){
+  if(userMode!=='dso'||!currentDso||LOC.busy||document.hidden)return;
+  if(!navigator.geolocation)return locPill('This phone/browser has no location support',true);
+  if(!force&&Date.now()-LOC.last<LOC_EVERY-5000)return;
+  LOC.busy=true;
+  try{
+    const p=await new Promise((ok,no)=>navigator.geolocation.getCurrentPosition(ok,no,{enableHighAccuracy:true,timeout:25000,maximumAge:30000}));
+    const r=await db.from('dso_locations').insert({dso_id:currentDso.id,lat:+p.coords.latitude.toFixed(6),lng:+p.coords.longitude.toFixed(6),accuracy:Math.round(p.coords.accuracy||0)});
+    if(r.error)locPill(/relation|schema cache|does not exist/i.test(r.error.message||'')?'Location not saved: ask Admin to run dso-location-setup.sql':'Location not saved: '+r.error.message,true);
+    else{LOC.last=Date.now();locPill('📍 Location shared with Admin · '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}))}
+  }catch(e){
+    if(e&&e.code===1)locPill('Location is blocked. Allow location for this app so Admin can see your position.',true);
+    else locPill('Could not get location (turn on GPS). Will retry.',true);
+  }
+  LOC.busy=false;
+}
+function stopLocTracking(){
+  if(LOC.timer){clearInterval(LOC.timer);LOC.timer=null}
+  if(LOC.vis){document.removeEventListener('visibilitychange',LOC.vis);LOC.vis=null}
+  locPill('');
+}
+function startLocTracking(){
+  stopLocTracking();LOC.last=0;
+  LOC.timer=setInterval(()=>locSend(false),60000);
+  LOC.vis=()=>{if(!document.hidden)locSend(false)};
+  document.addEventListener('visibilitychange',LOC.vis);
+  locSend(true);
+}
+/* Admin page: map with each DSO's latest position and the day's trail */
+const loadLeaflet=()=>window.L?Promise.resolve():new Promise((ok,no)=>{
+  const c=document.createElement('link');c.rel='stylesheet';c.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';document.head.appendChild(c);
+  const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';sc.onload=ok;sc.onerror=()=>no(new Error('Could not load the map. Check the internet connection.'));document.head.appendChild(sc);
+});
+async function dsoLocPage(){
+  const tok=navToken;
+  if(userMode!=='admin'){$('page').innerHTML='<div class="notice error">Only Admin can see DSO locations.</div>';return}
+  const dsos=await queryAll('dsos');if(tok!==navToken)return;
+  const DN=Object.fromEntries(dsos.map(x=>[x.id,x.full_name]));
+  const td=new Date(),ymd=td.getFullYear()+'-'+String(td.getMonth()+1).padStart(2,'0')+'-'+String(td.getDate()).padStart(2,'0');
+  $('page').innerHTML=`<h1 class="page-title">DSO Location</h1><div class="sub">Position of each DSO while their app is open (updates about every 3 minutes). A DSO whose app is closed or phone is locked shows the last known position and time.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="dlDate" value="${ymd}"></div><div><label>Show trail of</label><select id="dlDso"><option value="">— latest position of everyone —</option>${dsos.filter(x=>x.is_active!==false).sort((a,b)=>String(a.full_name).localeCompare(String(b.full_name))).map(x=>`<option value="${x.id}">${esc(x.full_name)}</option>`).join('')}</select></div></div><div class="form-actions"><button id="dlRefresh">Refresh</button><button class="secondary" id="dlClean">Delete locations older than 30 days</button></div><div id="dlMsg"></div></div><div class="panel" style="margin-top:12px"><div id="dlMap" style="height:440px;border-radius:12px;overflow:hidden;background:#e5e7eb"></div></div><div class="panel" style="margin-top:12px"><div id="dlList"></div></div>`;
+  try{await loadLeaflet()}catch(e){return msg($('dlMsg'),e.message)}
+  if(tok!==navToken)return;
+  const map=L.map('dlMap').setView([22.3,91.8],8);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+  let layer=L.layerGroup().addTo(map),first=true;
+  const ago=t=>{const m=Math.max(0,Math.round((Date.now()-new Date(t))/60000));return m<1?'just now':m<60?m+' min ago':m<1440?Math.floor(m/60)+' h '+(m%60)+' min ago':Math.floor(m/1440)+' day ago'};
+  const hm=t=>new Date(t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  const color=t=>{const m=(Date.now()-new Date(t))/60000;return m<10?'#16a34a':m<60?'#f59e0b':'#6b7280'};
+  const load=async(keepView)=>{
+    const d=$('dlDate').value;if(!d)return;
+    const a=new Date(d+'T00:00:00'),b=new Date(a.getTime()+864e5);
+    let rows;
+    try{rows=await fetchAll(()=>db.from('dso_locations').select('*').gte('recorded_at',a.toISOString()).lt('recorded_at',b.toISOString()).order('recorded_at',{ascending:false}).order('id',{ascending:false}))}
+    catch(e){return msg($('dlMsg'),/relation|schema cache|does not exist/i.test(e.message||'')?'Location is not set up yet. Run dso-location-setup.sql in Supabase (SQL Editor), then reload.':(e.message||String(e)))}
+    if(tok!==navToken||!$('dlMap'))return;
+    $('dlMsg').innerHTML='';
+    const sel=$('dlDso').value,last=new Map(),cnt={};
+    rows.forEach(x=>{if(!last.has(x.dso_id))last.set(x.dso_id,x);cnt[x.dso_id]=(cnt[x.dso_id]||0)+1});
+    layer.clearLayers();const pts=[];
+    last.forEach((x,id)=>{
+      if(sel&&id!==sel)return;
+      const ll=[x.lat,x.lng];pts.push(ll);
+      L.circleMarker(ll,{radius:9,color:'#fff',weight:2,fillColor:color(x.recorded_at),fillOpacity:1}).addTo(layer).bindTooltip(esc(DN[id]||'—'),{permanent:true,direction:'top',offset:[0,-8]}).bindPopup(`<b>${esc(DN[id]||'—')}</b><br>${hm(x.recorded_at)} · ${ago(x.recorded_at)}<br>Accuracy ~${x.accuracy||'?'} m`);
+    });
+    if(sel){
+      const trail=rows.filter(x=>x.dso_id===sel).reverse().map(x=>[x.lat,x.lng]);
+      if(trail.length>1)L.polyline(trail,{color:'#2563eb',weight:4,opacity:.8}).addTo(layer);
+      trail.forEach((ll,i)=>{if(i<trail.length-1)L.circleMarker(ll,{radius:3,color:'#2563eb',weight:1,fillColor:'#fff',fillOpacity:1}).addTo(layer)});
+    }
+    if(pts.length&&(first||!keepView)){map.fitBounds(pts.length>1?pts:[pts[0],pts[0]],{padding:[40,40],maxZoom:16});first=false}
+    const list=[...last.entries()].filter(([id])=>!sel||id===sel).sort((p,q)=>String(q[1].recorded_at).localeCompare(String(p[1].recorded_at)));
+    const never=dsos.filter(x=>x.is_active!==false&&!last.has(x.id)&&!sel);
+    $('dlList').innerHTML=`<div class="table-wrap"><table><thead><tr><th>DSO</th><th>Last seen</th><th>Accuracy</th><th>Points</th><th></th></tr></thead><tbody>${list.map(([id,x])=>`<tr><td><b>${esc(DN[id]||'—')}</b></td><td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color(x.recorded_at)};margin-right:6px"></span>${hm(x.recorded_at)} · ${ago(x.recorded_at)}</td><td>${x.accuracy?'~'+x.accuracy+' m':''}</td><td>${cnt[id]}</td><td><button class="secondary" data-trail="${id}">Trail</button> <a href="https://www.google.com/maps?q=${x.lat},${x.lng}" target="_blank" rel="noopener">Google Maps</a></td></tr>`).join('')}${never.map(x=>`<tr><td>${esc(x.full_name)}</td><td colspan="4" class="muted">No location on this date</td></tr>`).join('')}</tbody></table></div>`;
+  };
+  $('dlRefresh').onclick=()=>{first=true;load(false)};
+  $('dlDate').onchange=()=>{first=true;load(false)};
+  $('dlDso').onchange=()=>{first=true;load(false)};
+  $('dlList').onclick=e=>{const b=e.target.closest('button[data-trail]');if(!b)return;$('dlDso').value=b.dataset.trail;first=true;load(false)};
+  $('dlClean').onclick=async()=>{
+    if(!confirm('Delete every saved location older than 30 days?'))return;
+    const c=new Date(Date.now()-30*864e5).toISOString();
+    const r=await db.from('dso_locations').delete().lt('recorded_at',c).select('id');
+    msg($('dlMsg'),r.error?r.error.message:'Deleted '+(r.data||[]).length+' old location points.',r.error?undefined:'success');
+  };
+  await load(false);
+  const iv=setInterval(()=>{if(tok!==navToken||!$('dlMap')){clearInterval(iv);return}load(true)},60000);
+}
 try{buildBrandFloat()}catch(e){}
 checkSession();
 </script>
