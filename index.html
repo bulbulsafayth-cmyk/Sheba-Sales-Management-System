@@ -426,7 +426,7 @@ async function creditPage(){
   let OVR={};
   const loadOvr=async()=>{OVR={};try{(await fetchAll(()=>db.from('credit_overrides').select('*').order('id'))).forEach(x=>{OVR[x.retailer_id+'|'+x.brand_id+'|'+(x.list_name||'')]=x})}catch(e){}};
   async function buildCredit(D){
-    await needRet();
+    try{await needRet()}catch(e){}
     let rows=filt(await fetchAll(()=>scopedReport().lte('sale_date',D).order('sale_date').order('id')));
     CM=(await loadManual())||[];await loadOvr();
     /* sales entries the Admin removed from the CREDIT report only (the sale itself is untouched) */
@@ -567,25 +567,28 @@ async function creditPage(){
     const A=cq.reduce((a,c)=>c.opening_as_of&&c.opening_as_of>a?c.opening_as_of:a,'');
     const ids=[...new Set(cq.filter(x=>x.sales_entry_id).map(x=>x.sales_entry_id))],ent={};
     for(let i=0;i<ids.length;i+=100){(await fetchAll(()=>scopedReport().in('id',ids.slice(i,i+100)))).forEach(x=>{ent[x.id]=x})}
-    const RT=await needRet();
+    let RT={};try{RT=await needRet()}catch(e){}
     const md=vmode(),myName=(userMode==='dso'&&currentDso)?String(currentDso.full_name||currentDso.name||'').trim().toLowerCase():'';
     const rd=L.road[$('crRoad').value]?.name;
     const okIds=new Set(filt(Object.values(ent)).map(x=>x.id));
-    const items=[];
+    const items=[],hidA={n:0,amt:0};
     cq.forEach(c=>{
       let shop,who,recd,road,rid=null,dso='',brand='';
       if(c.sales_entry_id){
         const e=ent[c.sales_entry_id];if(!e||!okIds.has(e.id))return;
         const cr=roadOfRet(e.retailer_id,e.road);
         if(rd&&cr!==rd)return;
-        if(A&&e.sale_date<=A)return;
+        if(A&&e.sale_date<=A){hidA.n++;hidA.amt+=Number(c.amount||0);return}
         recd=e.sale_date;shop=e.retailer||'—';road=cr;rid=e.retailer_id;dso=e.dso_name||'—';brand=e.brand||'';who=dso;
       }else{
         /* opening cheques carry no brand or DSO link, so only the Admin sees them, and a brand/DSO filter hides them */
         /* DSO sees an opening cheque only when its Responsible-person text names them */
-        if($('crBrand').value)return;
-        if(c.dso_id){if($('crDso')?.value&&$('crDso').value!==c.dso_id)return;if(!isAdmin&&currentDso&&c.dso_id!==currentDso.id)return}
-        else{if($('crDso')?.value)return;if(!isAdmin&&!(myName&&String(c.resp_text||'').toLowerCase().includes(myName)))return}
+        /* an opening cheque has no DSO / brand columns, only the Responsible-person text: the DSO and Brand filters look for the name in that text */
+        const fb=$('crBrand').value;
+        if(fb&&!brandsIn(c.resp_text).includes(L.brand[fb]?.name))return;
+        const fd=$('crDso')?.value;
+        if(c.dso_id){if(fd&&fd!==c.dso_id)return;if(!isAdmin&&currentDso&&c.dso_id!==currentDso.id)return}
+        else{if(fd&&!nameHit(c.resp_text,DSOM[fd]?.full_name))return;if(!isAdmin&&!(myName&&nameHit(c.resp_text,myName)))return}
         const rt=RT[c.retailer_id];if(!rt)return;
         road=L.road[rt.road_id]?.name||L.road[c.road_id]?.name;if(rd&&road!==rd)return;
         recd=c.received_on;shop=rt.name;who=stripBrands(c.resp_text)||(c.dso_id?DSOM[c.dso_id]?.full_name:'')||'—';dso=c.dso_id?(DSOM[c.dso_id]?.full_name||'—'):((!isAdmin&&myName)?(currentDso.full_name||currentDso.name):'—');brand=brandsIn(c.resp_text).join(', ')||'—';
@@ -615,7 +618,7 @@ async function creditPage(){
     });
     return {title:'Retailer Cheque Information List',cls:'cr-cheque',date:dmyFull(D),
       head:['Enterprise Name','Responsible Person','Brand Name','Cheque Receiving / Invoice Date','Opening Info (Cheque Amount)','Payable Date','Today Received (Cheque Amount)','Payable Date','Recovery Amount','Cheque Amount (Due)','Day Count','Remarks'],
-      sum:[4,6,8,9],widths:[12,16,8,7,8,7,8,7,7,8,5,9],groups:groupRoad(out,true,md),cheque:true,offices:md==='road'};
+      sum:[4,6,8,9],widths:[12,16,8,7,8,7,8,7,7,8,5,9],groups:groupRoad(out,true,md),cheque:true,offices:md==='road',note:hidA.n?hidA.n+' sales-entry cheque'+(hidA.n>1?'s':'')+' (Tk '+Math.round(hidA.amt).toLocaleString('en-US')+') dated on or before '+dmy(A)+' are not listed: an opening cheque list as of '+dmy(A)+' was uploaded, and sales cheques up to that date are assumed to be inside it. If a cheque of this filter is missing from the opening upload, it will not show here.':''};
   }
   const render=()=>{
     const v=view;if(!v)return;
@@ -636,7 +639,7 @@ async function creditPage(){
       if(G.length>=2&&last)extra+=tot(allRows,'Grand Total','cr-grand');
       return `<div class="cr-road">${esc(g.name)}</div><table class="crt">${cg}<thead><tr class="cr-h"><th>SL No.</th>${v.head.map(h=>`<th>${esc(h)}</th>`).join('')}${act?'<th class="noprint">Action</th>':''}</tr></thead><tbody>${g.rows.map((r,n)=>`<tr${r.done?' class="crdone"':''}><td>${n+1}</td>${r.c.map((_,i)=>cell(r,i)).join('')}${act?actCell(r):''}</tr>`).join('')}${tot(g.rows,'Total','crsum')}${extra}</tbody></table>`;
     }).join('')||'<p class="muted" style="padding:14px;text-align:center;color:#000">Nothing to show for this date.</p>';
-    $('crOut').innerHTML=`<div class="crsheet" id="crSheet"><div class="cr-title ${v.cls}">${esc(v.title)}</div>${v.date?`<div class="cr-date">Date :  ${esc(v.date)}</div>`:''}${body}<div class="cr-credit-foot">Developed By Safayth Hossen Bulbul</div></div>`;
+    $('crOut').innerHTML=`${v.note?`<div class="notice noprint" style="margin-bottom:10px">${esc(v.note)}</div>`:''}<div class="crsheet" id="crSheet"><div class="cr-title ${v.cls}">${esc(v.title)}</div>${v.date?`<div class="cr-date">Date :  ${esc(v.date)}</div>`:''}${body}<div class="cr-credit-foot">Developed By Safayth Hossen Bulbul</div></div>`;
   };
   const run=async()=>{
     const D=$('crDate').value,m=$('crMsg');m.innerHTML='';
@@ -1054,29 +1057,38 @@ async function creditPage(){
 
 /* ---------- Opening balance: dues and cheques that already existed before the software was used ---------- */
 /* cheque due of one retailer as of date D: every cheque not fully recovered yet (sales-entry cheques and manual cheques) */
+/* does a free-text "Responsible person" (e.g. "Mukit Oppo-77530 Hamid ZTE-45550") name this DSO? Matches the full name or any real word of it, so "Mukit" finds "Imran Ullah Mukit" */
+const nameHit=(txt,nm)=>{
+  txt=String(txt||'').toLowerCase();nm=String(nm||'').trim().toLowerCase();if(!nm||!txt)return false;
+  if(txt.includes(nm))return true;
+  const stop=new Set(['md','mohammad','muhammad','mohammed','mohd','mst','mrs','mr','ullah','islam','uddin','hossain','hossen','hasan','rahman','abu','sheikh']);
+  return nm.split(/[\s.]+/).filter(w=>w.length>=3&&!stop.has(w)).some(w=>new RegExp('(^|[^a-z0-9])'+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'([^a-z0-9]|$)').test(txt));
+};
 const retailerChequeDue=async(rid,D)=>{
   const dso=userMode==='dso'&&currentDso?currentDso:null,myName=dso?String(dso.full_name||dso.name||'').trim().toLowerCase():'';
-  let cq=await fetchAll(()=>db.from('cheques').select('*').eq('retailer_id',rid).order('id')).catch(()=>[]);
+  let cq=await fetchAll(()=>db.from('cheques').select('*').eq('retailer_id',rid).order('id'));
   const ents=await fetchAll(()=>{let q=db.from('sales_entries').select('id,sale_date,dso_id,brand_id').eq('retailer_id',rid).lte('sale_date',D);if(dso)q=q.eq('dso_id',dso.id);return q.order('id')}).catch(()=>[]),eb={};ents.forEach(e=>{eb[e.id]=e});
   const ids=ents.map(e=>e.id);
   for(let i=0;i<ids.length;i+=100){const part=await fetchAll(()=>db.from('cheques').select('*').in('sales_entry_id',ids.slice(i,i+100)).order('id')).catch(()=>[]);part.forEach(c=>{if(!cq.some(x=>x.id===c.id))cq.push(c)})}
   const ar=await db.from('cheques').select('opening_as_of').not('opening_as_of','is',null).order('opening_as_of',{ascending:false}).limit(1),A=(ar.data&&ar.data[0]&&ar.data[0].opening_as_of)||'';
-  const out=[];
+  const out=[],dg={read:cq.length,n:0,amt:0};
+  const hide=c=>{dg.n++;dg.amt+=Number(c.amount||0);return false};
   cq=cq.filter(c=>{
-    if(c.sales_entry_id){const e=eb[c.sales_entry_id];if(!e)return false;if(A&&e.sale_date<=A)return false;c._recd=e.sale_date;c._bid=e.brand_id;c._did=e.dso_id;return true}
+    if(c.sales_entry_id){const e=eb[c.sales_entry_id];if(!e)return dso?hide(c):false;if(A&&e.sale_date<=A)return false;c._recd=e.sale_date;c._bid=e.brand_id;c._did=e.dso_id;return true}
     if(!c.received_on||c.received_on>D)return false;c._recd=c.received_on;c._did=c.dso_id||null;c._resp=c.resp_text||'';
-    if(dso){if(c.dso_id)return c.dso_id===dso.id;return !!myName&&String(c.resp_text||'').toLowerCase().includes(myName)}
+    if(dso){if(c.dso_id)return c.dso_id===dso.id||hide(c);return (!!myName&&nameHit(c.resp_text,myName))||hide(c)}
     return true;
   });
   const rec={};
   for(let i=0;i<cq.length;i+=100){(await fetchAll(()=>db.from('cheque_recoveries').select('*').in('cheque_id',cq.slice(i,i+100).map(c=>c.id)).order('id')).catch(()=>[])).forEach(r=>{if(r.recovered_on<=D)rec[r.cheque_id]=(rec[r.cheque_id]||0)+Number(r.amount||0)})}
   cq.forEach(c=>{const left=Number(c.amount||0)-(rec[c.id]||0);if(left>0.005)out.push({id:c.id,recd:c._recd,pd:c.payable_date||'',left,bid:c._bid||null,did:c._did||null,resp:c._resp||''})});
   out.sort((a,b)=>a.recd<b.recd?-1:a.recd>b.recd?1:0);
+  out.diag=dso?dg:null;
   return out;
 };
 const chequeDueHtml=(list,bsel,pick)=>{const t=list.reduce((a,x)=>a+x.left,0),ln=x=>`Received ${dmy(x.recd)}${x.pd?' · payable '+dmy(x.pd):''}${x.label?' · '+esc(x.label):''}: ${money(x.left)}`;
   if(pick&&list.length)return `<div style="margin-top:10px;padding-top:8px;border-top:1px solid #d5dce8"><b>Cheque due: ${money(t)}</b><div class="muted" style="margin:3px 0 4px">Choose which cheque this recovery is taken from:</div><label style="display:flex;gap:8px;align-items:center;margin:3px 0;font-weight:600;cursor:pointer"><input type="radio" name="chqPick" value="" ${pick.cur?'':'checked'} style="width:auto;margin:0"> Auto (selected brand / DSO first, then oldest)</label>${list.map(x=>`<label style="display:flex;gap:8px;align-items:center;margin:3px 0;cursor:pointer${bsel&&x.bid===bsel?';font-weight:800;color:#b91c1c':''}"><input type="radio" name="chqPick" value="${x.id}" ${String(x.id)===pick.cur?'checked':''} style="width:auto;margin:0"> <span>${ln(x)}</span></label>`).join('')}</div>`;
-  return `<div style="margin-top:10px;padding-top:8px;border-top:1px solid #d5dce8"><b>Cheque due: ${money(t)}</b>${list.length?list.map(x=>`<div style="margin-top:3px${bsel&&x.bid===bsel?';font-weight:800;color:#b91c1c':''}">${ln(x)}</div>`).join(''):'<div style="margin-top:3px">No cheque due.</div>'}</div>`};
+  return `<div style="margin-top:10px;padding-top:8px;border-top:1px solid #d5dce8"><b>Cheque due: ${money(t)}</b>${list.length?list.map(x=>`<div style="margin-top:3px${bsel&&x.bid===bsel?';font-weight:800;color:#b91c1c':''}">${ln(x)}</div>`).join(''):'<div style="margin-top:3px">No cheque due.</div>'}${list.diag?`<div class="muted" style="margin-top:5px;font-size:12px">${list.diag.read===0?'No cheque of this retailer could be read for this login.':list.diag.n?list.diag.n+' cheque'+(list.diag.n>1?'s':'')+' (Tk '+Math.round(list.diag.amt).toLocaleString('en-US')+') of this retailer are hidden: they belong to another DSO, or the Responsible person text does not name you.':''}</div>`:''}</div>`};
 const loadOpeningDues=async()=>{try{return await fetchAll(()=>db.from('opening_dues').select('*').order('id'))}catch(e){return []}};
 const OB_MON='jan feb mar apr may jun jul aug sep oct nov dec'.split(' ');
 function obDate(s){
@@ -1778,7 +1790,7 @@ async function salesPage(editId){
       el.innerHTML=`<div class="notice" style="margin:0"><b>Verbal due: ${money(tot)}</b>${list.length?list.map(([b,v])=>`<div style="margin-top:3px${b===bsel?';font-weight:800;color:#b91c1c':''}">${esc(bnames[b]||'—')}: ${money(v)}</div>`).join(''):'<div style="margin-top:3px">No verbal due.</div>'}${chequeDueHtml(cdue,bsel,{cur:chqPick})}</div>`;
       if(!cdue.some(x=>String(x.id)===chqPick))chqPick='';
       el.querySelectorAll('input[name=chqPick]').forEach(i=>{i.onchange=()=>{chqPick=i.value}});
-    }catch(e){if(seq===dueSeq)el.innerHTML=''}
+    }catch(e){if(seq===dueSeq)el.innerHTML=`<div class="notice error" style="margin:0">Due could not be loaded: ${esc(e&&e.message||String(e))}</div>`}
   }
   ['sRetailer','sBrand','sDate'].forEach(i=>$(i).addEventListener('change',showCollDue));
   ['sRoad','sDso'].forEach(i=>$(i).addEventListener('change',()=>setTimeout(showCollDue,60)));
