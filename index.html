@@ -364,13 +364,16 @@ async function dashboard(){
     });
   }
   if(isAdmin){
-    $('apvSw').closest('.panel').insertAdjacentHTML('afterend','<div class="panel" id="ntfyBox"><b>Phone notification (works when the phone is locked)</b><div class="muted" style="margin:4px 0 10px">1) Install the free <b>ntfy</b> app on your phone. 2) In it, subscribe to the secret topic below. 3) Press Save, then Send test. Every DSO login request will then ring on your phone; tap it to open this app and approve.</div><div class="form-grid"><div><label>Secret topic name</label><input id="ntfyTopic" placeholder="e.g. sheba-8k2x9q4mzt" autocomplete="off"></div></div><div class="form-actions"><button id="ntfySave">Save</button><button class="secondary" id="ntfyGen">Make a random topic</button><button class="secondary" id="ntfyTest">Send test</button></div><div id="ntfyMsg"></div></div>');
+    $('apvSw').closest('.panel').insertAdjacentHTML('afterend','<div class="panel" id="ntfyBox"><button class="secondary" id="ntfyToggle" style="width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center"><b>Phone notification (works when the phone is locked)</b><span id="ntfyArrow">Show ▾</span></button><div id="ntfyBody" style="display:none"><div class="muted" style="margin:10px 0 10px">1) Install the free <b>ntfy</b> app on your phone. 2) In it, subscribe to the secret topic below. 3) Press Save, then Send test. Every DSO login request will then ring on your phone; tap it to open this app and approve.</div><div class="form-grid"><div><label>Secret topic name</label><input id="ntfyTopic" placeholder="e.g. sheba-8k2x9q4mzt" autocomplete="off"></div></div><div class="form-actions"><button id="ntfySave">Save</button><button class="secondary" id="ntfyGen">Make a random topic</button><button class="secondary" id="ntfyTest">Send test</button></div><div id="ntfyMsg"></div></div></div>');
+    const nOpen=on=>{$('ntfyBody').style.display=on?'block':'none';$('ntfyArrow').textContent=on?'Hide ▴':'Show ▾';try{localStorage.setItem('ntfyOpen',on?'1':'0')}catch(e){}};
+    let nOn=false;try{nOn=localStorage.getItem('ntfyOpen')==='1'}catch(e){}
+    nOpen(nOn);$('ntfyToggle').onclick=()=>nOpen($('ntfyBody').style.display==='none');
     getSetting('ntfy_topic').then(v=>{if(tok!==navToken||!$('ntfyTopic'))return;if(v===null){$('ntfyMsg').innerHTML='<div class="notice error">Run dso-login-approval-setup.sql in Supabase first.</div>';return}$('ntfyTopic').value=v});
     $('ntfyGen').onclick=()=>{$('ntfyTopic').value='sheba-'+Math.random().toString(36).slice(2,8)+Math.random().toString(36).slice(2,8)};
     $('ntfySave').onclick=async()=>{const v=$('ntfyTopic').value.trim().replace(/[^A-Za-z0-9_-]/g,'');$('ntfyTopic').value=v;const e=await setSetting('ntfy_topic',v);msg($('ntfyMsg'),e?'Could not save: '+e:'Saved. Subscribe to "'+v+'" in the ntfy app, then press Send test.',e?undefined:'success')};
     $('ntfyTest').onclick=async()=>{const ok=await ntfyPush('Test from Sheba Sales','If you see this on your phone, DSO login requests will reach you.');msg($('ntfyMsg'),ok?'Test sent. Check your phone.':'Could not send. Save a topic name first and check the internet connection.',ok?'success':undefined)};
   }
-  p.insertAdjacentHTML('beforeend','<div class="panel" style="margin-top:14px"><h3>Top retailers of this month</h3><div id="retBars"></div></div>');
+  p.insertAdjacentHTML('beforeend','<div class="panel" style="margin-top:14px"><h3>Top retailers of this month</h3><div class="rtypes" id="retTabs" style="margin-bottom:12px"></div><div id="retBars"></div></div>');
   const card=(k,v,cls,ic)=>`<div class="kcard ${cls||''}"><div class="ic">${ic||'•'}</div><div><div class="k">${k}</div><div class="v">${v}</div></div></div>`;
   const five=m=>card('Sales quantity',Number(m.qty).toLocaleString('en-US'),'','▣')+card('Sales amount',money(m.gross),'','Tk')+card('Trade promotion',money(m.tp),'kc-amber','％')+card('Collection amount',money(m.col),'kc-green','✓')+card('Due amount',money(m.due),'kc-red','!');
   $('todayStats').innerHTML=card('Loading…','…');$('monthStats').innerHTML=card('Loading…','…');
@@ -391,15 +394,23 @@ async function dashboard(){
     $('todayStats').innerHTML=five(agg(rows.filter(x=>x.sale_date===t0)));
     $('monthStats').innerHTML=five(agg(rows));
     /* month ranking bars */
-    const bars=(el,keyFn,nameFn,limit)=>{
-      const g=[...groupBy(rows,keyFn).values()].map(l=>({name:nameFn(l[0]),a:agg(l)})).sort((x,y)=>y.a.gross-x.a.gross).slice(0,limit);
+    const bars=(el,keyFn,nameFn,limit,src,emptyTxt)=>{
+      const g=[...groupBy(src||rows,keyFn).values()].map(l=>({name:nameFn(l[0]),a:agg(l)})).sort((x,y)=>y.a.gross-x.a.gross).slice(0,limit);
       const max=Math.max(1,...g.map(x=>x.a.gross));
-      el.innerHTML=g.length&&g.some(x=>x.a.gross>0)?g.map(x=>`<div class="bar-row"><div>${nameFn===brandNm?brandTag(x.name,24):esc(x.name)}</div><div class="bar"><i style="width:${Math.max(2,x.a.gross/max*100).toFixed(1)}%"></i></div><div class="bar-v">${money(x.a.gross).replace(/\.00$/,'')}<small>${x.a.qty.toLocaleString('en-US')} pcs</small></div></div>`).join(''):'<p class="muted" style="margin:0">No sales yet this month.</p>';
+      el.innerHTML=g.length&&g.some(x=>x.a.gross>0)?g.map(x=>`<div class="bar-row"><div>${nameFn===brandNm?brandTag(x.name,24):esc(x.name)}</div><div class="bar"><i style="width:${Math.max(2,x.a.gross/max*100).toFixed(1)}%"></i></div><div class="bar-v">${money(x.a.gross).replace(/\.00$/,'')}<small>${x.a.qty.toLocaleString('en-US')} pcs</small></div></div>`).join(''):'<p class="muted" style="margin:0">'+(emptyTxt||'No sales yet this month.')+'</p>';
     };
     const brandNm=r=>r.brand,dsoNm=r=>r.dso_name;
     bars($('brandBars'),x=>x.brand_id,brandNm,8);
     if($('dsoBars'))bars($('dsoBars'),x=>x.dso_id,dsoNm,8);
-    bars($('retBars'),x=>x.retailer_id,r=>r.retailer||'—',10);
+    /* top retailers: All brands, or one brand at a time */
+    const rb=[...groupBy(rows.filter(x=>x.brand_id),x=>x.brand_id).values()].map(l=>({id:l[0].brand_id,name:l[0].brand,g:agg(l).gross})).sort((x,y)=>y.g-x.g);
+    let rsel='';
+    const drawRet=()=>{
+      $('retTabs').innerHTML=`<button data-b="" class="${rsel?'':'on'}">All brands</button>`+rb.map(b=>`<button data-b="${b.id}" class="${rsel===b.id?'on':''}">${esc(b.name||'—')}</button>`).join('');
+      bars($('retBars'),x=>x.retailer_id,r=>r.retailer||'—',10,rsel?rows.filter(x=>x.brand_id===rsel):rows,rsel?'No sales of this brand yet this month.':'');
+    };
+    $('retTabs').onclick=e=>{const b=e.target.closest('button[data-b]');if(!b)return;rsel=b.dataset.b;drawRet()};
+    drawRet();
   }catch(e){p.insertAdjacentHTML('beforeend',`<div class="notice error">${esc(e.message)}</div>`)}
 }
 
