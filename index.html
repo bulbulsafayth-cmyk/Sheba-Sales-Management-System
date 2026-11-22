@@ -2609,11 +2609,13 @@ try{buildBrandFloat()}catch(e){}
   const btn=document.createElement('button');btn.id='wsBtn';btn.type='button';
   btn.style.cssText='position:fixed;right:14px;bottom:14px;z-index:70;padding:8px 12px;border-radius:99px;background:#ffffffe6;color:#1d4ed8;border:2px solid #2563eb;font-size:13px;box-shadow:0 4px 14px #0004';
   const paint=()=>{btn.textContent=on?'🔊 Sound on':'🔇 Sound off';btn.style.display=document.getElementById('loginView').classList.contains('hidden')?'none':'block'};
-  const say=()=>{try{const u=new SpeechSynthesisUtterance('Welcome to Sheba Telecom. The home of Mobile Phone.');u.lang='en-US';u.rate=.92;u.pitch=1;u.volume=1;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}};
+  /* a short chime (always works after a click) + the spoken welcome (needs a voice installed on the device) */
+  const chime=()=>{try{const C=new (window.AudioContext||window.webkitAudioContext)(),t=C.currentTime;[[659,0],[784,.16],[1047,.32]].forEach(n=>{const o=C.createOscillator(),g=C.createGain();o.type='sine';o.frequency.value=n[0];g.gain.setValueAtTime(0,t+n[1]);g.gain.linearRampToValueAtTime(.25,t+n[1]+.03);g.gain.exponentialRampToValueAtTime(.001,t+n[1]+.6);o.connect(g);g.connect(C.destination);o.start(t+n[1]);o.stop(t+n[1]+.65)})}catch(e){}};
+  const say=()=>{chime();try{if(!window.speechSynthesis)return;const go=()=>{const u=new SpeechSynthesisUtterance('Welcome to Sheba Telecom. The home of Mobile Phone.');const vs=speechSynthesis.getVoices()||[];const en=vs.filter(x=>/^en/i.test(x.lang)),fem=/(aria|jenny|zira|hazel|susan|libby|sonia|michelle|natasha|neerja|heera|samantha|karen|moira|tessa|victoria|fiona|serena|allison|ava|google (us|uk) english|female|woman)/i,v=en.find(x=>/(aria|jenny)/i.test(x.name))||en.find(x=>fem.test(x.name))||en[0]||vs[0];if(v){u.voice=v;u.lang=v.lang}else u.lang='en-US';u.rate=.7;u.pitch=1.2;u.volume=1;setTimeout(()=>speechSynthesis.speak(u),450)};if((speechSynthesis.getVoices()||[]).length)go();else{let d=false;const f=()=>{if(d)return;d=true;go()};speechSynthesis.onvoiceschanged=f;setTimeout(f,800)}}catch(e){}};
   btn.onclick=e=>{e.stopPropagation();on=!on;try{localStorage.setItem('welcomeSound',on?'1':'0')}catch(x){}if(!on){try{speechSynthesis.cancel()}catch(x){}}paint()};
   document.body.appendChild(btn);paint();
   new MutationObserver(paint).observe(document.getElementById('loginView'),{attributes:true,attributeFilter:['class']});
-  document.addEventListener('pointerdown',e=>{
+  document.addEventListener('click',e=>{
     if(spoken||!on||e.target===btn||document.getElementById('loginView').classList.contains('hidden'))return;
     spoken=true;say();
   },true);
