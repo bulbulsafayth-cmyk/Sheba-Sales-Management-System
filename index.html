@@ -2039,7 +2039,7 @@ async function salesPage(editId){
       let picked=null;if(chqPick){picked=open.find(x=>String(x.id)===chqPick);if(!picked)return msg(m,'The cheque you selected is no longer due. Choose again. Nothing was saved.');open=[picked]}
       const tot=open.reduce((a,x)=>a+x.left,0);
       if(chqAmt>tot+0.005)return msg(m,'Cheque recovery '+money(chqAmt)+' is more than '+(picked?'the selected cheque due':'this retailer\'s cheque due')+' ('+money(tot)+'). Nothing was saved.');
-      let rest=chqAmt;open.forEach(x=>{if(rest<=0.005)return;const take=Math.min(rest,x.left);recPlan.push({cheque_id:x.id,amount:Math.round(take*100)/100,recovered_on:head.sale_date});rest=Math.round((rest-take)*100)/100});
+      let rest=chqAmt;open.forEach(x=>{if(rest<=0.005)return;const take=Math.min(rest,x.left);recPlan.push({cheque_id:x.id,amount:Math.round(take*100)/100,recovered_on:head.sale_date,entry_brand_id:head.brand_id,entry_dso_id:head.dso_id});rest=Math.round((rest-take)*100)/100});
     }
     /* cheque recovery goes ONLY to the cheque report: it is not cash, so it must not count in the daily (due) collection or reduce the verbal due */
     const chqOnly=recPlan.length>0;
@@ -2047,7 +2047,7 @@ async function salesPage(editId){
     btn.disabled=true;
     try{
       if(!(chqOnly&&!editing&&head.received_amount<=0))await saveEntry(editing?editId:null,head,collOnly?[]:used.map(x=>({product_id:x.product_id,quantity:x.quantity,unit_price:x.unit_price})));
-      if(recPlan.length){const re=await db.from('cheque_recoveries').insert(recPlan);if(re.error)throw new Error('The entry was saved but the cheque recovery was not: '+re.error.message+'. Record it from Credit & Cheque Report › Recovery.')}
+      if(recPlan.length){let re=await db.from('cheque_recoveries').insert(recPlan);if(re.error&&/entry_(brand|dso)_id/i.test(re.error.message||'')){re=await db.from('cheque_recoveries').insert(recPlan.map(({entry_brand_id,entry_dso_id,...q})=>q))}if(re.error)throw new Error('The entry was saved but the cheque recovery was not: '+re.error.message+'. Record it from Credit & Cheque Report › Recovery.')}
       if((chqAmt>0&&!collOnly)||oldChq){
         let eid=editing?editId:null;
         if(!eid){const f=await db.from('sales_entries').select('id').eq('dso_id',head.dso_id).eq('retailer_id',head.retailer_id).eq('brand_id',head.brand_id).eq('sale_date',head.sale_date).order('id',{ascending:false}).limit(1);if(f.error||!f.data||!f.data[0])throw new Error('The entry was saved but the cheque could not be linked. Open today\'s entries, press Edit and add the cheque again.');eid=f.data[0].id}
@@ -2234,11 +2234,11 @@ async function loadChqRecoveries(from,to){
       const e=c.sales_entry_id?ent[c.sales_entry_id]:null;
       if(c.sales_entry_id&&!e)return; /* a sales cheque this login may not see */
       const rt=RT[c.retailer_id]||(e&&RT[e.retailer_id]);if(!rt)return;
-      let did=c.dso_id||(e&&e.dso_id)||'',dsoN=did?(DS[did]?.full_name||(e&&e.dso_name)||''):'';
-      let bid=e?e.brand_id:'',bN=c.brand_override||(e?e.brand:'')||'';
+      let did=x.entry_dso_id||c.dso_id||(e&&e.dso_id)||'',dsoN=did?(DS[did]?.full_name||(e&&e.dso_name)||''):'';
+      let bid=x.entry_brand_id||(e?e.brand_id:''),bN=x.entry_brand_id?(BR[x.entry_brand_id]?.name||''):(c.brand_override||(e?e.brand:'')||'');
       if(!bN){const h=[];String(c.resp_text||'').replace(/[A-Za-z0-9]+/g,w=>{const n=bnames.find(q=>q.toLowerCase()===w.toLowerCase());if(n&&!h.includes(n))h.push(n)});bN=h.join(', ')}
       if(!isA&&!did&&!(myName&&nameHit(c.resp_text,myName)))return;
-      if(!isA&&did&&currentDso&&did!==currentDso.id)return;
+      if(!isA&&did&&currentDso&&did!==currentDso.id&&!(x.entry_dso_id&&false))return;
       if(fd&&!(did===fd||nameHit(c.resp_text,DS[fd]?.full_name)))return;
       if(fr&&String(rt.id)!==String(fr))return;
       if(fb){const fn=BR[fb]?.name||'';if(!(bid===fb||(fn&&bN.toLowerCase().includes(fn.toLowerCase()))))return}
