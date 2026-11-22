@@ -925,7 +925,7 @@ async function creditPage(){
     addEventListener('resize',layout);addEventListener('keydown',key);
     layout();
     /* a real landscape lock works on Android Chrome; iPhone cannot, so the turned layout above is used there */
-    (async()=>{try{await document.documentElement.requestFullscreen?.();await screen.orientation?.lock?.('landscape')}catch(e){}layout()})();
+    (async()=>{if(document.body.classList.contains('rot'))return;try{await document.documentElement.requestFullscreen?.();await screen.orientation?.lock?.('landscape')}catch(e){}layout()})();
   }
   /* ----- Admin: manual credit entries (new due / recovery / edit / delete) and cheque delete ----- */
   const dayOk=v=>/^\d{4}-\d{2}-\d{2}$/.test(v)&&!isNaN(Date.parse(v));
@@ -2824,21 +2824,38 @@ checkSession();
   if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
 })();
 
-/* ===== open the whole software in landscape on a phone ===== */
+/* ===== open the whole software in landscape on a phone: real orientation lock first, CSS turn only when the phone refuses the lock ===== */
 (function(){
   const isPhone=()=>Math.min(screen.width,screen.height)<=700&&('ontouchstart' in window||navigator.maxTouchPoints>0);
   const on=()=>{try{return localStorage.getItem('landscapeMode')!=='off'}catch(e){return true}};
+  const dims=()=>{const v=window.visualViewport;return [Math.round(Math.max(document.documentElement.clientWidth||0,(v&&v.width)||0,innerWidth)),Math.round(Math.max((v&&v.height)||0,innerHeight))]};
+  let lockFailed=false;
   const fit=()=>{
-    const b=document.body,h=document.documentElement,want=isPhone()&&on()&&innerHeight>innerWidth;
-    if(want){const w=innerWidth,hh=innerHeight;h.classList.add('lsrot');b.classList.add('rot');b.style.width=hh+'px';b.style.height=w+'px';b.style.transform='translateX('+w+'px) rotate(90deg)'}
+    const b=document.body,h=document.documentElement,[w,hh]=dims(),want=isPhone()&&on()&&lockFailed&&hh>w;
+    if(want){h.classList.add('lsrot');b.classList.add('rot');b.style.width=hh+'px';b.style.height=w+'px';b.style.transform='translateX('+w+'px) rotate(90deg)'}
     else{h.classList.remove('lsrot');b.classList.remove('rot');b.style.width=b.style.height=b.style.transform=''}
     const bt=document.getElementById('rotBtn');if(bt)bt.style.display=isPhone()?'':'none';
   };
-  let tried=false;
-  const lock=async()=>{if(tried||!isPhone()||!on())return;tried=true;try{await document.documentElement.requestFullscreen?.();await screen.orientation?.lock?.('landscape')}catch(e){}setTimeout(fit,300)};
-  addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,250));
-  addEventListener('pointerdown',lock,{once:true});
-  const init=()=>{fit();const bt=document.getElementById('rotBtn');if(bt)bt.onclick=()=>{const nowOn=on();try{localStorage.setItem('landscapeMode',nowOn?'off':'on')}catch(e){}if(nowOn){try{screen.orientation?.unlock?.()}catch(e){}if(document.fullscreenElement)document.exitFullscreen?.().catch(()=>{})}else{tried=false;lock()}fit()}};
+  const tryLock=async()=>{
+    lockFailed=false;
+    try{if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();await screen.orientation.lock('landscape')}
+    catch(e){lockFailed=true}
+    fit();setTimeout(fit,300);setTimeout(fit,900);
+  };
+  const unlock=()=>{lockFailed=false;try{screen.orientation&&screen.orientation.unlock()}catch(e){}try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}fit()};
+  const gate=()=>{
+    if(!isPhone()||!on()||document.getElementById('lsGo'))return;
+    const [w,hh]=dims();if(hh<=w)return;
+    const d=document.createElement('div');d.id='lsGo';
+    d.style.cssText='position:fixed;inset:0;z-index:2147483000;background:#0b1220;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px';
+    d.innerHTML='<div style="font-size:20px;font-weight:800">Sheba Sales &amp; Credit</div><div style="opacity:.8">This software works in landscape.</div><button id="lsGoBtn" style="padding:14px 26px;font-size:16px">Tap to open in landscape</button><div id="lsGoSkip" style="opacity:.6;text-decoration:underline;font-size:13px">Stay in portrait</div>';
+    document.body.appendChild(d);
+    document.getElementById('lsGoBtn').onclick=async()=>{d.remove();await tryLock()};
+    document.getElementById('lsGoSkip').onclick=()=>{try{localStorage.setItem('landscapeMode','off')}catch(e){}d.remove();fit()};
+  };
+  addEventListener('resize',fit);addEventListener('orientationchange',()=>{setTimeout(fit,250);setTimeout(fit,800)});
+  if(window.visualViewport)visualViewport.addEventListener('resize',fit);
+  const init=()=>{fit();gate();const bt=document.getElementById('rotBtn');if(bt)bt.onclick=async()=>{if(on()){try{localStorage.setItem('landscapeMode','off')}catch(e){}unlock()}else{try{localStorage.setItem('landscapeMode','on')}catch(e){}await tryLock()}}};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
