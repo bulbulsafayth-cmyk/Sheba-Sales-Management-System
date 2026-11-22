@@ -206,7 +206,7 @@ body::after{inset:-520px;background-size:520px 520px;opacity:.5;animation:phDrif
 .crsheet:has(.cr-cheque) .cr-road{background:#92d050;text-align:center}
 .crsheet:has(.cr-credit) .cr-road{background:#ffc000;display:inline-block;min-width:240px;margin-left:0}
 table.crt{border-collapse:collapse;width:100%;min-width:0;table-layout:fixed}
-table.crt th,table.crt td{border:1px solid #000;padding:5px 4px;white-space:normal;overflow-wrap:anywhere;text-align:center;font-size:12px;background:#fff;color:#e00000;font-weight:700;text-transform:none;letter-spacing:0;vertical-align:middle}
+table.crt th,table.crt td{border:1px solid #000;padding:5px 4px;white-space:normal;overflow-wrap:anywhere;text-align:center;font-size:12px;background:#fff;color:#000;font-weight:700;text-transform:none;letter-spacing:0;vertical-align:middle}
 table.crt tr.cr-h th{color:#000;font-weight:800;background:#fff;font-size:12px}
 .crsheet:has(.cr-credit) table.crt tr.cr-h th{background:#bfbfbf}
 table.crt td.l{text-align:left}
@@ -216,6 +216,7 @@ table.crt tr.crsum td{color:#000;font-weight:800;background:#f1f1f1}
 .crsheet:has(.cr-credit) table.crt tr.crsum td{background:#ffc000}
 table.crt tr.cr-offrow td,table.crt tr.cr-grand td{color:#000;font-weight:800;font-size:13px;background:#92d050}
 .crsheet:has(.cr-credit) table.crt tr.cr-grand td{background:#b7dee8;font-size:14px}
+table.crt tr.od td{color:#e00000}
 table.crt tr.crdone td{color:#6b7280;text-decoration:line-through}
 table.crt td.cract{text-decoration:none}
 #crLandBox{position:fixed;inset:0;z-index:9999;background:#0b1220;overflow:hidden}
@@ -681,6 +682,7 @@ async function creditPage(){
       head:['Enterprise Name','Responsible Person','Brand Name','Cheque Receiving / Invoice Date','Opening Info (Cheque Amount)','Payable Date','Today Received (Cheque Amount)','Payable Date','Recovery Amount','Cheque Amount (Due)','Day Count','Remarks'],
       sum:[4,6,8,9],widths:[12,16,8,7,8,7,8,7,7,8,5,9],groups:groupRoad(out,true,md),cheque:true,offices:md==='road',note:hidA.n?hidA.n+' sales-entry cheque'+(hidA.n>1?'s':'')+' (Tk '+Math.round(hidA.amt).toLocaleString('en-US')+') dated on or before '+dmy(A)+' are not listed: an opening cheque list as of '+dmy(A)+' was uploaded, and sales cheques up to that date are assumed to be inside it. If a cheque of this filter is missing from the opening upload, it will not show here.':''};
   }
+  const OVERDUE_DAYS=5; /* a due older than this many days shows in red */
   const render=()=>{
     const v=view;if(!v)return;
     const act=isAdmin;
@@ -698,7 +700,7 @@ async function creditPage(){
       const last=gi===G.length-1;let extra='';
       if(showOff&&(last||okey(G[gi+1])!==okey(g))){const o=okey(g);extra+=tot(G.filter(x=>okey(x)===o).flatMap(x=>x.rows),(o||(v.cheque?'All other roads':"Cox's Bazar Office"))+' Total','cr-offrow')}
       if(G.length>=2&&last)extra+=tot(allRows,'Grand Total','cr-grand');
-      return `<div class="cr-road">${esc(g.name)}</div><table class="crt">${cg}<thead><tr class="cr-h"><th>SL No.</th>${v.head.map(h=>`<th>${esc(h)}</th>`).join('')}${act?'<th class="noprint">Action</th>':''}</tr></thead><tbody>${g.rows.map((r,n)=>`<tr${r.done?' class="crdone"':''}><td>${n+1}</td>${r.c.map((_,i)=>cell(r,i)).join('')}${act?actCell(r):''}</tr>`).join('')}${tot(g.rows,'Total','crsum')}${extra}</tbody></table>`;
+      return `<div class="cr-road">${esc(g.name)}</div><table class="crt">${cg}<thead><tr class="cr-h"><th>SL No.</th>${v.head.map(h=>`<th>${esc(h)}</th>`).join('')}${act?'<th class="noprint">Action</th>':''}</tr></thead><tbody>${g.rows.map((r,n)=>`<tr class="${r.done?'crdone':(r.age>OVERDUE_DAYS?'od':'')}"><td>${n+1}</td>${r.c.map((_,i)=>cell(r,i)).join('')}${act?actCell(r):''}</tr>`).join('')}${tot(g.rows,'Total','crsum')}${extra}</tbody></table>`;
     }).join('')||'<p class="muted" style="padding:14px;text-align:center;color:#000">Nothing to show for this date.</p>';
     $('crOut').innerHTML=`${v.note?`<div class="notice noprint" style="margin-bottom:10px">${esc(v.note)}</div>`:''}<div class="crsheet" id="crSheet"><div class="cr-title ${v.cls}">${esc(v.title)}</div>${v.date?`<div class="cr-date">Date :  ${esc(v.date)}</div>`:''}${body}<div class="cr-credit-foot">Developed By Safayth Hossen Bulbul</div></div>`;
   };
@@ -780,7 +782,7 @@ async function creditPage(){
     const items=[];
     const TW=cw.reduce((a,x)=>a+x,0),bar=(t,size,align,bg,fg)=>items.push({h:size+16,d:(c,y)=>{c.fillStyle=bg;c.fillRect(pad,y,TW,size+16);c.strokeStyle='#000';c.lineWidth=1;c.strokeRect(pad+.5,y+.5,TW,size+16);c.fillStyle=fg;c.font='bold '+size+'px Arial,sans-serif';c.textBaseline='middle';c.textAlign=align;c.fillText(t,align==='center'?pad+TW/2:pad+10,y+(size+16)/2)}});
     const row=(cells,o)=>{o=o||{};const ls=cells.map((t,i)=>wrap(t,cw[i])),n=Math.max(1,...ls.map(l=>l.length)),h=n*lh+10;
-      items.push({h,d:(c,y)=>{let x=pad;c.textBaseline='middle';cells.forEach((_,i)=>{c.fillStyle=o.bg||'#fff';c.fillRect(x,y,cw[i],h);c.strokeStyle='#000';c.lineWidth=1;c.strokeRect(x+.5,y+.5,cw[i],h);c.fillStyle=o.fg||'#e00000';c.font='bold '+(o.fs||fs)+'px Arial,sans-serif';const al=o.left&&o.left[i]?'left':(o.num&&o.num[i]?'right':'center');c.textAlign=al;const tx=al==='left'?x+6:al==='right'?x+cw[i]-6:x+cw[i]/2;ls[i].forEach((ln,k)=>c.fillText(ln,tx,y+5+lh*k+lh/2));x+=cw[i]})}})};
+      items.push({h,d:(c,y)=>{let x=pad;c.textBaseline='middle';cells.forEach((_,i)=>{c.fillStyle=o.bg||'#fff';c.fillRect(x,y,cw[i],h);c.strokeStyle='#000';c.lineWidth=1;c.strokeRect(x+.5,y+.5,cw[i],h);c.fillStyle=o.fg||'#000';c.font='bold '+(o.fs||fs)+'px Arial,sans-serif';const al=o.left&&o.left[i]?'left':(o.num&&o.num[i]?'right':'center');c.textAlign=al;const tx=al==='left'?x+6:al==='right'?x+cw[i]-6:x+cw[i]/2;ls[i].forEach((ln,k)=>c.fillText(ln,tx,y+5+lh*k+lh/2));x+=cw[i]})}})};
     const isNum=Array(v.head.length+1).fill(false);(v.sum||[]).forEach(i=>{isNum[i+1]=true});
     const left=Array(v.head.length+1).fill(false);left[1]=true;
     const totRow=(label,rows,bg)=>row(['',label,...v.head.slice(1).map(()=>'')].map((_,j)=>j===1?label:(j>=2&&isNum[j]?fAmt(rows.reduce((a,r)=>a+Number(r.c[j-1]||0),0)):'')),{fg:'#000',bg,num:isNum});
@@ -791,7 +793,7 @@ async function creditPage(){
       items.push({h:10,d:()=>{}});
       bar(g.name,19,chq?'center':'left',chq?'#92d050':'#ffc000','#000');
       row(['SL No.',...v.head],{fg:'#000',bg:chq?'#fff':'#bfbfbf'});
-      g.rows.forEach((r,n)=>row([String(n+1),...r.c.map((x,i)=>isNum[i+1]?fAmt(x):(x==null?'':String(x)))],{num:isNum,left:left,fg:r.done?'#6b7280':'#e00000'}));
+      g.rows.forEach((r,n)=>row([String(n+1),...r.c.map((x,i)=>isNum[i+1]?fAmt(x):(x==null?'':String(x)))],{num:isNum,left:left,fg:r.done?'#6b7280':(r.age>OVERDUE_DAYS?'#e00000':'#000')}));
       totRow('Total',g.rows,chq?'#ffff00':'#ffc000');
       const last=gi===G.length-1;
       if(showOff&&(last||okey(G[gi+1])!==okey(g))){const o=okey(g);totRow((o||(v.cheque?'All other roads':"Cox's Bazar Office"))+' Total',G.filter(x=>okey(x)===o).flatMap(x=>x.rows),'#92d050')}
@@ -2611,7 +2613,7 @@ try{buildBrandFloat()}catch(e){}
   const paint=()=>{btn.textContent=on?'🔊 Sound on':'🔇 Sound off';btn.style.display=document.getElementById('loginView').classList.contains('hidden')?'none':'block'};
   /* a short chime (always works after a click) + the spoken welcome (needs a voice installed on the device) */
   const chime=()=>{try{const C=new (window.AudioContext||window.webkitAudioContext)(),t=C.currentTime;[[659,0],[784,.16],[1047,.32]].forEach(n=>{const o=C.createOscillator(),g=C.createGain();o.type='sine';o.frequency.value=n[0];g.gain.setValueAtTime(0,t+n[1]);g.gain.linearRampToValueAtTime(.25,t+n[1]+.03);g.gain.exponentialRampToValueAtTime(.001,t+n[1]+.6);o.connect(g);g.connect(C.destination);o.start(t+n[1]);o.stop(t+n[1]+.65)})}catch(e){}};
-  const say=()=>{chime();try{if(!window.speechSynthesis)return;const go=()=>{const u=new SpeechSynthesisUtterance('Welcome to Sheba Telecom. The home of Mobile Phone.');const vs=speechSynthesis.getVoices()||[];const en=vs.filter(x=>/^en/i.test(x.lang)),fem=/(aria|jenny|zira|hazel|susan|libby|sonia|michelle|natasha|neerja|heera|samantha|karen|moira|tessa|victoria|fiona|serena|allison|ava|google (us|uk) english|female|woman)/i,v=en.find(x=>/(aria|jenny)/i.test(x.name))||en.find(x=>fem.test(x.name))||en[0]||vs[0];if(v){u.voice=v;u.lang=v.lang}else u.lang='en-US';u.rate=.7;u.pitch=1.2;u.volume=1;setTimeout(()=>speechSynthesis.speak(u),450)};if((speechSynthesis.getVoices()||[]).length)go();else{let d=false;const f=()=>{if(d)return;d=true;go()};speechSynthesis.onvoiceschanged=f;setTimeout(f,800)}}catch(e){}};
+  const say=()=>{chime();try{if(!window.speechSynthesis)return;const go=()=>{const u=new SpeechSynthesisUtterance('Welcome to Shay-bah Telecom. The home of Mobile Phone.');const vs=speechSynthesis.getVoices()||[];const en=vs.filter(x=>/^en/i.test(x.lang)),fem=/(aria|jenny|zira|hazel|susan|libby|sonia|michelle|natasha|neerja|heera|samantha|karen|moira|tessa|victoria|fiona|serena|allison|ava|google (us|uk) english|female|woman)/i,v=en.find(x=>/(aria|jenny)/i.test(x.name))||en.find(x=>fem.test(x.name))||en[0]||vs[0];if(v){u.voice=v;u.lang=v.lang}else u.lang='en-US';u.rate=.7;u.pitch=1.2;u.volume=1;setTimeout(()=>speechSynthesis.speak(u),450)};if((speechSynthesis.getVoices()||[]).length)go();else{let d=false;const f=()=>{if(d)return;d=true;go()};speechSynthesis.onvoiceschanged=f;setTimeout(f,800)}}catch(e){}};
   btn.onclick=e=>{e.stopPropagation();on=!on;try{localStorage.setItem('welcomeSound',on?'1':'0')}catch(x){}if(!on){try{speechSynthesis.cancel()}catch(x){}}paint()};
   document.body.appendChild(btn);paint();
   new MutationObserver(paint).observe(document.getElementById('loginView'),{attributes:true,attributeFilter:['class']});
