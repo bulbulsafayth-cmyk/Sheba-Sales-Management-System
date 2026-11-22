@@ -182,7 +182,7 @@ body{background-image:url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2w
 /* floating phones: two layers of phone outlines drift slowly in different directions */
 body::before,body::after{content:"";position:fixed;z-index:-1;pointer-events:none;background-image:var(--phones);background-repeat:repeat;will-change:transform}
 body::before{inset:-720px;background-size:720px 720px;animation:phDrift 120s linear infinite}
-body::after{inset:-520px;background-size:520px 520px;opacity:.22;animation:phDrift2 150s linear infinite}
+body::after{inset:-520px;background-size:520px 520px;opacity:.5;animation:phDrift2 150s linear infinite}
 @keyframes phDrift{from{transform:translate(0,0)}to{transform:translate(720px,720px)}}
 @keyframes phDrift2{from{transform:translate(0,0)}to{transform:translate(-520px,520px)}}
 @media (prefers-reduced-motion:reduce){body::before,body::after{animation:none}}
@@ -245,6 +245,11 @@ body:before{content:'';position:fixed;inset:0;z-index:50;pointer-events:none;bac
 @media print{body:before{display:none}}
 @media(prefers-reduced-motion:reduce){body:before,.nav button{animation:none;transition:none}}
 
+
+.panel.fold>h3{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;user-select:none}
+.panel.fold>h3:after{content:attr(data-ar);font-size:12px;font-weight:700;color:#2563eb;background:#eff6ff;border:1px solid #bfd3fb;border-radius:99px;padding:3px 11px}
+.panel.fold.folded>h3{margin-bottom:0}
+.panel.fold.folded>*:not(h3){display:none}
 </style></head>
 <body>
 <div id="loginView" class="login-wrap"><div class="login"><h1>Sheba Distribution Sales &amp; Credit Management System</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
@@ -391,6 +396,13 @@ async function dashboard(){
     $('ntfyTest').onclick=async()=>{const ok=await ntfyPush('Test from Sheba Sales','If you see this on your phone, DSO login requests will reach you.');msg($('ntfyMsg'),ok?'Test sent. Check your phone.':'Could not send. Save a topic name first and check the internet connection.',ok?'success':undefined)};
   }
   p.insertAdjacentHTML('beforeend','<div class="panel" style="margin-top:14px"><h3>Top retailers of this month</h3><div class="tabs" id="retTabs" style="margin:0 0 12px"></div><div id="retBars"></div></div>');
+  /* show / hide (drop-down) for the three dashboard panels; state is remembered */
+  [...p.querySelectorAll('.panel')].filter(x=>/^(This month by brand|Top DSOs this month|Top retailers of this month)$/.test((x.querySelector(':scope>h3')||{}).textContent||'')).forEach(pn=>{
+    const h=pn.querySelector(':scope>h3'),key='fold_'+h.textContent;pn.classList.add('fold');
+    let off=false;try{off=localStorage.getItem(key)==='1'}catch(e){}
+    const set=f=>{pn.classList.toggle('folded',f);h.dataset.ar=f?'Show ▾':'Hide ▴';try{localStorage.setItem(key,f?'1':'0')}catch(e){}};
+    set(off);h.onclick=()=>set(!pn.classList.contains('folded'));
+  });
   const card=(k,v,cls,ic)=>`<div class="kcard ${cls||''}"><div class="ic">${ic||'•'}</div><div><div class="k">${k}</div><div class="v">${v}</div></div></div>`;
   const five=m=>card('Sales quantity',Number(m.qty).toLocaleString('en-US'),'','▣')+card('Sales amount',money(m.gross),'','Tk')+card('Trade promotion',money(m.tp),'kc-amber','％')+card('Collection amount',money(m.col),'kc-green','✓')+card('Due amount',money(m.due),'kc-red','!');
   $('todayStats').innerHTML=card('Loading…','…');$('monthStats').innerHTML=card('Loading…','…');
@@ -2404,7 +2416,7 @@ const PHONE_PICS={"vivo": {"d": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA
 function buildBrandFloat(names){
   /* real phone pictures (vivo, oppo, samsung, nokia, zte), each with its brand logo underneath */
   const T=720,H=150; /* tile size; phone picture height */
-  const L=[['vivo',40,40,-4,.85],['samsung',330,10,3,.8],['nokia',560,70,5,.85],['oppo',150,330,4,.85],['zte',470,380,-5,.85]];
+  const L=[['vivo',40,40,-4,1],['samsung',330,10,3,1],['nokia',560,70,5,1],['oppo',150,330,4,1],['zte',470,380,-5,1]];
   let g='';
   L.forEach(p=>{
     const k=p[0],I=PHONE_PICS[k],w=Math.round(I.w*H/I.h),cx=p[1]+w/2;
