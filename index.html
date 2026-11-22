@@ -580,7 +580,7 @@ async function creditPage(){
         const cr=roadOfRet(e.retailer_id,e.road);
         if(rd&&cr!==rd)return;
         if(A&&e.sale_date<=A){hidA.n++;hidA.amt+=Number(c.amount||0);return}
-        recd=e.sale_date;shop=e.retailer||'—';road=cr;rid=e.retailer_id;dso=e.dso_name||'—';brand=e.brand||'';who=dso;
+        recd=c.recv_override||e.sale_date;shop=e.retailer||'—';road=cr;rid=e.retailer_id;dso=e.dso_name||'—';brand=e.brand||'';who=dso;
       }else{
         /* opening cheques carry no brand or DSO link, so only the Admin sees them, and a brand/DSO filter hides them */
         /* DSO sees an opening cheque only when its Responsible-person text names them */
@@ -601,7 +601,7 @@ async function creditPage(){
       const all=rl.reduce((a,r)=>a+Number(r.amount||0),0);
       if(amt-before<=0.005)return;
       /* cheques of one shop with the same receive date and payable date (different DSOs / brands) print as ONE line */
-      items.push({so:c.shop_override||'',wo:c.who_override||'',key:c.sales_entry_id?'E|'+rid+'|'+recd+'|'+(c.payable_date||''):'O|'+c.id,id:c.id,shop,who,dso,brand,road,recd,pd:c.payable_date||'',amt,open:amt-before,today,left:Math.max(0,amt-all),hasRec:rl.length>0,rem:c.remarks||''});
+      items.push({bo:c.brand_override||'',so:c.shop_override||'',wo:c.who_override||'',key:c.sales_entry_id?'E|'+rid+'|'+recd+'|'+(c.payable_date||''):'O|'+c.id,id:c.id,shop,who,dso,brand,road,recd,pd:c.payable_date||'',amt,open:amt-before,today,left:Math.max(0,amt-all),hasRec:rl.length>0,rem:c.remarks||''});
     });
     const grp=new Map();items.forEach(x=>{(grp.get(x.key)||grp.set(x.key,[]).get(x.key)).push(x)});
     const out=[];
@@ -611,10 +611,10 @@ async function creditPage(){
       const open=sm('open'),today=sm('today'),amt=sm('amt'),due=ms.reduce((a,x)=>a+Math.max(0,x.open-x.today),0);
       const dbm=new Map();ms.forEach(x=>{const k=x.dso;dbm.set(k,{dso:x.dso,v:(dbm.get(k)?.v||0)+(isNew?x.amt:x.open)})});
       const who=dbm.size>1?[...dbm.values()].map(x=>x.dso+'-'+Math.round(x.v)).join(', '):f.who;
-      const brandTxt=[...new Set(ms.map(x=>x.brand).filter(x=>x&&x!=='—'))].join(', ')||'—';
+      const brandTxt=(ms.find(x=>x.bo)||{}).bo||[...new Set(ms.map(x=>x.brand).filter(x=>x&&x!=='—'))].join(', ')||'—';
       const rem=[...new Set(ms.map(x=>x.rem).filter(Boolean))].join('; ');
       const pd=f.pd?dmy(f.pd):'',age=daysBetween(f.recd,D);
-      out.push({hl:isAdmin?(DSOM[$('crDso')?.value]?.full_name||''):((currentDso&&(currentDso.full_name||currentDso.name))||''),road:f.road,dso:[...new Set(ms.map(x=>x.dso))].join(', '),brand:[...new Set(ms.map(x=>x.brand))].join(', '),age,ids:ms.map(x=>x.id),lefts:ms.map(x=>x.left),left:sm('left'),hasRec:ms.some(x=>x.hasRec),rem,done:due<=0.005,
+      out.push({rd:f.recd,pdr:f.pd,hl:isAdmin?(DSOM[$('crDso')?.value]?.full_name||''):((currentDso&&(currentDso.full_name||currentDso.name))||''),road:f.road,dso:[...new Set(ms.map(x=>x.dso))].join(', '),brand:[...new Set(ms.map(x=>x.brand))].join(', '),age,ids:ms.map(x=>x.id),lefts:ms.map(x=>x.left),left:sm('left'),hasRec:ms.some(x=>x.hasRec),rem,done:due<=0.005,
         c:[(ms.find(x=>x.so)||{}).so||f.shop,(ms.find(x=>x.wo)||{}).wo||who,brandTxt,dmy(f.recd),isNew?'':open,isNew?'':pd,isNew?amt:'',isNew?pd:'',today||'',due,age,rem]});
     });
     return {title:'Retailer Cheque Information List',cls:'cr-cheque',date:dmyFull(D),
@@ -625,7 +625,7 @@ async function creditPage(){
     const v=view;if(!v)return;
     const act=isAdmin;
     const actCell=r=>{
-      if(v.cheque){const ids=r.ids.join(',');return `<td class="noprint cract">${r.left>0.005?`<button data-act="rec" data-ids="${ids}" data-lefts="${r.lefts.join(',')}">Recovery</button> `:''}${r.hasRec?`<button class="secondary" data-act="unrec" data-ids="${ids}">Undo last</button> `:''}<button class="secondary" data-act="rem" data-ids="${ids}" data-v="${esc(r.rem)}">Remarks</button> <button class="secondary" data-act="qedit" data-ids="${ids}" data-shop="${esc(r.c[0])}" data-who="${esc(r.c[1])}">Edit</button> <button class="danger" data-act="del" data-ids="${ids}">Delete</button></td>`}
+      if(v.cheque){const ids=r.ids.join(',');return `<td class="noprint cract">${r.left>0.005?`<button data-act="rec" data-ids="${ids}" data-lefts="${r.lefts.join(',')}">Recovery</button> `:''}${r.hasRec?`<button class="secondary" data-act="unrec" data-ids="${ids}">Undo last</button> `:''}<button class="secondary" data-act="rem" data-ids="${ids}" data-v="${esc(r.rem)}">Remarks</button> <button class="secondary" data-act="qedit" data-ids="${ids}" data-shop="${esc(r.c[0])}" data-who="${esc(r.c[1])}" data-brand="${esc(r.c[2])}" data-recd="${r.rd||''}" data-pd="${r.pdr||''}" data-rem="${esc(r.rem)}">Edit</button> <button class="danger" data-act="del" data-ids="${ids}">Delete</button></td>`}
       if(r.key)return `<td class="noprint cract"><button class="secondary" data-act="cshop" data-k="${esc(r.key)}">Brands (${r.parts})</button> <button class="secondary" data-act="cedit" data-k="${esc(r.key)}">Edit</button></td>`;
       const dd=`data-rid="${r.rid}" data-bid="${r.bid}" data-did="${r.did||''}" data-list="${esc(r.list||'')}"`;
       return `<td class="noprint cract">${r.left>0.005?`<button data-act="crec" ${dd} data-left="${r.left}">Recovery</button> `:''}<button class="secondary" data-act="cdue" ${dd}>+ Due</button> <button class="secondary" data-act="cent" ${dd}>Entries / Delete</button> <button class="secondary" data-act="cedit" ${dd} data-shop="${esc(r.c[0])}" data-dso="${esc(r.c[2])}">Edit</button></td>`;
@@ -1012,21 +1012,59 @@ async function creditPage(){
     if(r.error)return msg(m,cmErr(r.error));
     run();return true;
   }
+  /* full edit of one cheque line: names, brand, dates, amount, DSO, remarks */
+  const showChequeEdit=async b=>{
+    const box=$('crForm');if(!box)return;
+    const d=b.dataset,ids=(d.ids||'').split(',').filter(Boolean);
+    const {data:rows,error}=await db.from('cheques').select('*').in('id',ids);
+    if(error)return msg($('crMsg'),error.message);
+    if(!rows||!rows.length)return;
+    const single=rows.length===1,c0=rows[0],noSale=rows.every(c=>!c.sales_entry_id);
+    const dsoOpts=Object.values(DSOM).filter(x=>x&&x.is_active!==false).sort((p,q)=>String(p.full_name).localeCompare(String(q.full_name))).map(x=>`<option value="${x.id}" ${x.id===c0.dso_id?'selected':''}>${esc(x.full_name)}</option>`).join('');
+    box.innerHTML=`<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 6px">Edit cheque${single?'':' line ('+rows.length+' cheques)'}</h3><div class="muted" style="margin-bottom:10px">${single?'':'Date, payable date and remarks apply to every cheque on this line; the amount can be changed one cheque at a time. '}${noSale?'':'This cheque came from a Sales Entry: the receiving date and brand changed here only change this report, not the sale. '}Clear a name or brand to go back to the original.</div><div class="form-grid"><div><label>Enterprise name</label><input id="ceShop" value="${esc(d.shop||'')}"></div><div><label>Responsible person</label><input id="ceWho" value="${esc(d.who||'')}"></div><div><label>Brand name</label><input id="ceBrand" value="${esc(d.brand==='—'?'':(d.brand||''))}"></div><div><label>Cheque receiving date</label><input type="date" id="ceRecv" value="${d.recd||''}"></div><div><label>Payable date</label><input type="date" id="cePay" value="${d.pd||''}"></div><div><label>Cheque amount (Tk)</label><input type="number" id="ceAmt" min="1" step="any" ${single?'':'disabled placeholder="one cheque at a time"'} value="${single?c0.amount:''}"></div>${single&&noSale?`<div><label>DSO</label><select id="ceDso"><option value="">— none —</option>${dsoOpts}</select></div>`:''}<div><label>Remarks</label><input id="ceRem" value="${esc(d.rem||'')}"></div></div><div class="form-actions"><button id="ceSave">Save changes</button><button class="secondary" id="ceCancel">Cancel</button></div><div id="ceMsg"></div></div>`;
+    $('ceCancel').onclick=()=>{box.innerHTML=''};
+    $('ceSave').onclick=async()=>{
+      const m=$('ceMsg'),v=x=>$(x).value.trim();
+      const shop=v('ceShop'),who=v('ceWho'),brand=v('ceBrand'),rv=$('ceRecv').value,pv=$('cePay').value,rem=v('ceRem');
+      const origBrand=d.brand==='—'?'':(d.brand||'');
+      if(!rv)return msg(m,'Choose the cheque receiving date.');
+      const jobs=[];
+      for(const row of rows){
+        const u={};
+        if(shop!==(d.shop||''))u.shop_override=shop||null;
+        if(who!==(d.who||''))u.who_override=who||null;
+        if(brand!==origBrand)u.brand_override=brand||null;
+        if(rv!==(d.recd||'')){if(row.sales_entry_id)u.recv_override=rv;else u.received_on=rv}
+        if(pv!==(d.pd||''))u.payable_date=pv||null;
+        if(rem!==(d.rem||''))u.remarks=rem||null;
+        if(single){
+          const amt=Number($('ceAmt').value);
+          if(!(amt>0))return msg(m,'Enter the cheque amount.');
+          if(Math.abs(amt-Number(row.amount))>0.004){
+            const {data:rc}=await db.from('cheque_recoveries').select('amount').eq('cheque_id',row.id);
+            const got=(rc||[]).reduce((a,x)=>a+Number(x.amount||0),0);
+            if(amt<got-0.005)return msg(m,'Already recovered '+fAmt(got)+'. The amount cannot be less than that.');
+            u.amount=amt;
+          }
+          if($('ceDso')&&($('ceDso').value||null)!==(row.dso_id||null))u.dso_id=$('ceDso').value||null;
+        }
+        if(Object.keys(u).length)jobs.push([row.id,u]);
+      }
+      if(!jobs.length)return msg(m,'Nothing was changed.');
+      const bt=$('ceSave');bt.disabled=true;
+      for(const [id,u] of jobs){
+        const res=await db.from('cheques').update(u).eq('id',id);
+        if(res.error){bt.disabled=false;return msg(m,/column|schema cache/i.test(res.error.message)?'Run cheque-edit-setup.sql in Supabase (SQL Editor) first, then try again. ('+res.error.message+')':res.error.message)}
+      }
+      box.innerHTML='';await run();msg($('crMsg'),'Cheque updated.','success');
+    };
+  };
   /* Admin: mark a cheque as recovered / edit its remarks */
   $('crOut').onclick=async e=>{
     const b=e.target.closest('button[data-act]');if(!b||!isAdmin)return;
     if(['crec','cdue','cent','del','cshop','cedit'].includes(b.dataset.act))return creditAction(b);
     const ids=(b.dataset.ids||'').split(',').filter(Boolean),act=b.dataset.act;let res=null;
-    if(act==='qedit'){
-      const s1=prompt('Enterprise (shop) name (only changes this cheque report; clear it to restore the original):',b.dataset.shop||'');if(s1===null)return;
-      const w1=prompt('Responsible Person text (clear it to restore the original):',b.dataset.who||'');if(w1===null)return;
-      const so=s1.trim()===(b.dataset.shop||'')?undefined:(s1.trim()||null),wo=w1.trim()===(b.dataset.who||'')?undefined:(w1.trim()||null);
-      if(so===undefined&&wo===undefined)return;
-      const upd={};if(so!==undefined)upd.shop_override=so;if(wo!==undefined)upd.who_override=wo;
-      res=await db.from('cheques').update(upd).in('id',ids);
-      if(res.error)return msg($('crMsg'),/column|schema cache/i.test(res.error.message)?'Run credit-edit-setup.sql in Supabase first, then try again. ('+res.error.message+')':res.error.message);
-      return run();
-    }
+    if(act==='qedit')return showChequeEdit(b);
     if(act==='rec'){
       /* one line can hold several cheques (different DSOs): the recovery is split across them, oldest first */
       const lefts=(b.dataset.lefts||'').split(',').map(Number),left=lefts.reduce((a,x)=>a+x,0);
