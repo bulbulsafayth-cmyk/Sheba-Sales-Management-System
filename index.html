@@ -2068,7 +2068,7 @@ async function salesPage(editId){
 }
 
 /* ---------- Reports (FIX 4: no duplicate option; FIX 7: scoped; FIX 8: filter by id; FIX 6: edit/delete) ---------- */
-let rep={rows:[],items:{},page:1,type:null,sub:'all',generated:false,prods:{},printAll:false};
+let rep={chq:[],rows:[],items:{},page:1,type:null,sub:'all',generated:false,prods:{},printAll:false};
 async function deleteEntry(id){
   if(!confirm('Delete this sales entry and all its products? This cannot be undone.'))return;
   let r=await db.rpc('delete_sales_entry',{p_id:id});
@@ -2080,7 +2080,7 @@ const REP_TITLES={daily:'Daily sales report',dso:'DSO-wise report',brand:'Brand-
 async function reportsPage(){
   const tok=navToken;
   const p=$('page'),isAdmin=userMode==='admin';
-  rep={rows:[],items:{},page:1,type:null,sub:'all',generated:false,prods:rep.prods||{},printAll:false};
+  rep={chq:[],rows:[],items:{},page:1,type:null,sub:'all',generated:false,prods:rep.prods||{},printAll:false};
   p.innerHTML=`<h1 class="page-title">Sales Reports</h1><div class="sub">Choose a report, press Generate and the report will appear.</div><div class="panel"><div class="rtypes noprint" id="repTypes"><button data-t="daily">Daily sales report</button>${isAdmin?'<button data-t="dso">DSO-wise report</button>':''}<button data-t="brand">Brand-wise report</button><button data-t="sheet">Daily Sales Sheet</button><button data-t="credit">Credit &amp; Cheque Report</button></div><div id="repFilters" class="hidden noprint"><div class="form-grid" style="margin-top:14px"><div><label>From date</label><input type="date" id="rFrom"></div><div><label>To date</label><input type="date" id="rTo"></div><div id="wBrand"><label>Brand</label><select id="rBrand"><option value="">All brands</option></select></div><div id="wModel" class="hidden"><label>Model</label><select id="rModel"><option value="">All models</option></select></div>${isAdmin?'<div id="wDso"><label>DSO</label><select id="rDso"><option value="">All DSOs</option></select></div>':''}<div><label>Retailer</label><select id="rRetailer"><option value="">All retailers</option></select></div></div><div class="form-actions"><button id="runReport">Generate report</button><button class="secondary" id="printReport">Print</button><button class="secondary" id="shareReport">Share</button><button class="secondary" id="openSheet">Daily Sales Sheet</button></div></div><div id="reportSummary"></div><div id="repOut" style="margin-top:15px"></div></div>`;
   const [b,d,rtl,pl]=await Promise.all([queryAll('brands'),isAdmin?queryAll('dsos'):Promise.resolve([]),queryAll('retailers'),queryAll('products').catch(()=>[])]);
   const bm=isAdmin?await loadDsoBrandMap():{};
@@ -2110,7 +2110,7 @@ async function reportsPage(){
     const isM=!!rep.model,key=rep.type==='dso'?(x=>x.dso_id):(x=>x.brand_id),label=rep.type==='dso'?(x=>x.dso_name):(x=>x.brand);
     const mv=l=>{let q=0,v=0;l.forEach(x=>(rep.items[x.id]||[]).forEach(i=>{q+=Number(i.quantity||0);v+=Number(i.quantity||0)*Number(i.unit_price||0)}));return {q,v}};
     if(isM){const t=mv(rep.rows),pm=rep.prods[rep.model]||{};L.push('Model: '+(pm.product_name||'')+(pm.model_code?' ('+pm.model_code+')':''),'Qty: '+fmtN(t.q),'Sales value: '+money(t.v))}
-    else{const a=aggRows(rep.rows);L.push('Entries: '+a.n,'Qty: '+fmtN(a.qty),'Gross sales: '+money(a.gross),'Trade promotion: '+money(a.tp),'Net sales: '+money(a.net),'Received: '+money(a.rec),'Outstanding: '+money(a.out))}
+    else{const a=aggRows(rep.rows);L.push('Entries: '+a.n,'Qty: '+fmtN(a.qty),'Gross sales: '+money(a.gross),'Trade promotion: '+money(a.tp),'Net sales: '+money(a.net),'Received: '+money(a.rec),'Outstanding: '+money(a.out));if(rep.type==='daily'&&(rep.chq||[]).length)L.push('Cheque recovery (not in Received): '+money(rep.chq.reduce((t,x)=>t+x.amt,0)))}
     if(rep.type!=='daily'){
       L.push('');
       [...groupBy(rep.rows,key).entries()].map(([id,l])=>({n:label(l[0])||'—',l})).sort((a,b)=>cmpTxt(a.n,b.n)).forEach(g=>{
@@ -2183,10 +2183,10 @@ function renderOut(){
   const rows=rep.rows,type=rep.type;
   const range=fmtDate($('rFrom').value)+' – '+fmtDate($('rTo').value);
   const title=t=>`<h3 style="margin:0 0 10px">${t} <span class="muted" style="font-weight:500;font-size:13px">· ${esc(range)}</span></h3>`;
-  if(!rows.length){out.innerHTML=title(REP_TITLES[type])+'<div class="empty">No sales found for this period.</div>';return}
+  if(!rows.length){out.innerHTML=title(REP_TITLES[type])+(type==='daily'&&(rep.chq||[]).length?chqRecHtml():'<div class="empty">No sales found for this period.</div>');return}
   const wirePager=list=>{if($('pager'))pager($('pager'),list.length,rep.page,50,n=>{rep.page=n;renderOut()})};
   if(type==='daily'){
-    out.innerHTML=title(REP_TITLES.daily)+cardsHtml(aggRows(rows))+dateTable(rows)+entriesTable(rows);
+    out.innerHTML=title(REP_TITLES.daily)+cardsHtml(aggRows(rows))+chqRecHtml()+dateTable(rows)+entriesTable(rows);
     wirePager(rows);return;
   }
   /* DSO-wise and Brand-wise: one tab per name, plus an "All" tab */
@@ -2212,6 +2212,47 @@ function renderOut(){
   }
   out.innerHTML=tabs+body;
   if(cur&&isDso)wirePager(cur.l);
+}
+
+/* Cheque recovery taken in Sales Entry: shown in the Daily sales report only (not in Received, not on the Daily Sales Sheet) */
+async function loadChqRecoveries(from,to){
+  try{
+    const rcs=await fetchAll(()=>db.from('cheque_recoveries').select('*').gte('recovered_on',from).lte('recovered_on',to).order('recovered_on'));
+    if(!rcs.length)return [];
+    const cids=[...new Set(rcs.map(x=>x.cheque_id))],cq={};
+    for(let i=0;i<cids.length;i+=100){(await fetchAll(()=>db.from('cheques').select('*').in('id',cids.slice(i,i+100)))).forEach(c=>{cq[c.id]=c})}
+    const eids=[...new Set(Object.values(cq).filter(c=>c.sales_entry_id).map(c=>c.sales_entry_id))],ent={};
+    for(let i=0;i<eids.length;i+=100){(await fetchAll(()=>scopedReport().in('id',eids.slice(i,i+100)))).forEach(x=>{ent[x.id]=x})}
+    const [rets,dsos,roads,brands]=await Promise.all([queryAll('retailers'),queryAll('dsos').catch(()=>[]),queryAll('roads'),queryAll('brands')]);
+    const RT=by1(rets),DS=by1(dsos),RD=by1(roads),BR=by1(brands);
+    const bnames=brands.map(b=>b.name).filter(Boolean);
+    const isA=userMode==='admin',myName=(!isA&&currentDso)?String(currentDso.full_name||currentDso.name||'').trim():'',mb=myBrandIds();
+    const fb=$('rBrand')?.value,fd=$('rDso')?.value,fr=$('rRetailer')?.value;
+    const out=[];
+    rcs.forEach(x=>{
+      const c=cq[x.cheque_id];if(!c)return;
+      const e=c.sales_entry_id?ent[c.sales_entry_id]:null;
+      if(c.sales_entry_id&&!e)return; /* a sales cheque this login may not see */
+      const rt=RT[c.retailer_id]||(e&&RT[e.retailer_id]);if(!rt)return;
+      let did=c.dso_id||(e&&e.dso_id)||'',dsoN=did?(DS[did]?.full_name||(e&&e.dso_name)||''):'';
+      let bid=e?e.brand_id:'',bN=c.brand_override||(e?e.brand:'')||'';
+      if(!bN){const h=[];String(c.resp_text||'').replace(/[A-Za-z0-9]+/g,w=>{const n=bnames.find(q=>q.toLowerCase()===w.toLowerCase());if(n&&!h.includes(n))h.push(n)});bN=h.join(', ')}
+      if(!isA&&!did&&!(myName&&nameHit(c.resp_text,myName)))return;
+      if(!isA&&did&&currentDso&&did!==currentDso.id)return;
+      if(fd&&!(did===fd||nameHit(c.resp_text,DS[fd]?.full_name)))return;
+      if(fr&&String(rt.id)!==String(fr))return;
+      if(fb){const fn=BR[fb]?.name||'';if(!(bid===fb||(fn&&bN.toLowerCase().includes(fn.toLowerCase()))))return}
+      else if(mb&&bid&&!mb.includes(bid))return;
+      out.push({d:x.recovered_on,road:RD[rt.road_id]?.name||'—',dso:dsoN||String(c.resp_text||'').replace(/\s+/g,' ').trim()||'—',retailer:rt.name,brand:bN||'—',amt:Number(x.amount||0)});
+    });
+    out.sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:cmpTxt(a.retailer,b.retailer));
+    return out;
+  }catch(e){return []}
+}
+function chqRecHtml(){
+  const L=(rep.chq||[]);if(!L.length)return '';
+  const tot=L.reduce((a,x)=>a+x.amt,0);
+  return `<div class="panel" style="margin:0 0 16px;border-left:4px solid #7c3aed"><h3 style="margin:0 0 4px">Cheque recovery <span class="muted" style="font-weight:500;font-size:13px">· ${L.length} ${L.length>1?'recoveries':'recovery'} · ${money(tot)}</span></h3><div class="muted" style="margin:0 0 8px">Shown here only. It is not added to Received and does not appear on the Daily Sales Sheet.</div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Road</th><th>Retailer</th><th>Brand</th><th>DSO / Responsible</th><th>Cheque recovered</th></tr></thead><tbody>${L.map(x=>`<tr><td>${esc(fmtDate(x.d))}</td><td>${esc(x.road)}</td><td>${esc(x.retailer)}</td><td>${esc(x.brand)}</td><td>${esc(x.dso)}</td><td>${money(x.amt)}</td></tr>`).join('')}<tr style="${GT}"><td colspan="5">Total cheque recovery</td><td>${money(tot)}</td></tr></tbody></table></div></div>`;
 }
 async function loadRepItems(rows,tok){
   const ids=rows.filter(x=>!isDueRow(x)).map(x=>x.id),items={};
@@ -2240,6 +2281,7 @@ async function runReport(){
     if(items&&rep.model){Object.keys(items).forEach(k=>{items[k]=items[k].filter(i=>String(i.product_id)===String(rep.model))});rows=rows.filter(x=>!isDueRow(x)&&(items[x.id]||[]).length)}
   }catch(e){return msg($('reportSummary'),e.message)}
   if(tok!==navToken||!items)return;
+  rep.chq=rep.type==='daily'?await loadChqRecoveries(from,to):[];if(tok!==navToken)return;
   rep.rows=rows;rep.items=items;rep.page=1;rep.sub='all';rep.generated=true;
   $('reportSummary').innerHTML='';
   renderOut();
