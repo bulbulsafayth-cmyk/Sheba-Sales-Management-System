@@ -195,6 +195,7 @@ body::after{inset:-300px;background-size:300px 300px;opacity:.5;animation:phDrif
 /* credit & cheque report */
 @page cr{size:A4 landscape;margin:8mm}
 .crsheet{background:#fff;color:#000;border:1px solid #cfd8e6;border-radius:10px;overflow:auto;page:cr;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.myamt{color:#1d4ed8;font-weight:800;background:#dbeafe;border-radius:3px;padding:0 3px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .crsheet .cr-title{text-align:center;font-weight:800;font-size:28px;padding:8px 10px;line-height:1.15}
 .crsheet .cr-cheque{background:#ff0000;color:#fff}
 .crsheet .cr-credit{background:#b7dee8;color:#000;border-bottom:2px solid #000}
@@ -613,7 +614,7 @@ async function creditPage(){
       const brandTxt=[...new Set(ms.map(x=>x.brand).filter(x=>x&&x!=='—'))].join(', ')||'—';
       const rem=[...new Set(ms.map(x=>x.rem).filter(Boolean))].join('; ');
       const pd=f.pd?dmy(f.pd):'',age=daysBetween(f.recd,D);
-      out.push({road:f.road,dso:[...new Set(ms.map(x=>x.dso))].join(', '),brand:[...new Set(ms.map(x=>x.brand))].join(', '),age,ids:ms.map(x=>x.id),lefts:ms.map(x=>x.left),left:sm('left'),hasRec:ms.some(x=>x.hasRec),rem,done:due<=0.005,
+      out.push({hl:isAdmin?(DSOM[$('crDso')?.value]?.full_name||''):((currentDso&&(currentDso.full_name||currentDso.name))||''),road:f.road,dso:[...new Set(ms.map(x=>x.dso))].join(', '),brand:[...new Set(ms.map(x=>x.brand))].join(', '),age,ids:ms.map(x=>x.id),lefts:ms.map(x=>x.left),left:sm('left'),hasRec:ms.some(x=>x.hasRec),rem,done:due<=0.005,
         c:[(ms.find(x=>x.so)||{}).so||f.shop,(ms.find(x=>x.wo)||{}).wo||who,brandTxt,dmy(f.recd),isNew?'':open,isNew?'':pd,isNew?amt:'',isNew?pd:'',today||'',due,age,rem]});
     });
     return {title:'Retailer Cheque Information List',cls:'cr-cheque',date:dmyFull(D),
@@ -629,7 +630,7 @@ async function creditPage(){
       const dd=`data-rid="${r.rid}" data-bid="${r.bid}" data-did="${r.did||''}" data-list="${esc(r.list||'')}"`;
       return `<td class="noprint cract">${r.left>0.005?`<button data-act="crec" ${dd} data-left="${r.left}">Recovery</button> `:''}<button class="secondary" data-act="cdue" ${dd}>+ Due</button> <button class="secondary" data-act="cent" ${dd}>Entries / Delete</button> <button class="secondary" data-act="cedit" ${dd} data-shop="${esc(r.c[0])}" data-dso="${esc(r.c[2])}">Edit</button></td>`;
     };
-    const cell=(r,i)=>{const val=r.c[i];const isAmt=(v.sum||[]).includes(i);return `<td class="${isAmt?'n':(i===0?'l':'')}">${isAmt?fAmt(val):esc(val===''||val==null?'':val)}</td>`};
+    const cell=(r,i)=>{const val=r.c[i];const isAmt=(v.sum||[]).includes(i);return `<td class="${isAmt?'n':(i===0?'l':'')}">${isAmt?fAmt(val):(v.cheque&&i===1&&r.hl?hiText(val,r.hl):esc(val===''||val==null?'':val))}</td>`};
     const tot=(rows,label,cls)=>`<tr class="${cls}"><td colspan="${v.cheque?5:4}" style="text-align:right">${esc(label)}</td>${v.head.map((h,i)=>i<(v.cheque?4:3)?'':(v.sum.includes(i)?`<td class="n">${fAmt(rows.reduce((x,r)=>x+Number(r.c[i]||0),0))}</td>`:'<td></td>')).join('')}${act?'<td class="noprint"></td>':''}</tr>`;
     const ws=[4,...v.widths,...(act?[11]:[])],wt=ws.reduce((a,x)=>a+x,0),cg='<colgroup>'+ws.map(w=>`<col style="width:${(w*100/wt).toFixed(2)}%">`).join('')+'</colgroup>';
     const G=v.groups,okey=g=>g.office||'',showOff=v.offices&&new Set(G.map(okey)).size>=2,allRows=G.flatMap(g=>g.rows);
@@ -1063,6 +1064,15 @@ const nameHit=(txt,nm)=>{
   if(txt.includes(nm))return true;
   const stop=new Set(['md','mohammad','muhammad','mohammed','mohd','mst','mrs','mr','ullah','islam','uddin','hossain','hossen','hasan','rahman','abu','sheikh']);
   return nm.split(/[\s.]+/).filter(w=>w.length>=3&&!stop.has(w)).some(w=>new RegExp('(^|[^a-z0-9])'+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'([^a-z0-9]|$)').test(txt));
+};
+/* Responsible-person text with this DSO's own part (name-amount) highlighted in blue, when several DSOs share the cheque */
+const hiText=(text,who)=>{
+  text=String(text==null?'':text);if(!who||!text)return esc(text);
+  const re=/([A-Za-z][A-Za-z0-9 .'\/&]*?)\s*-\s*(\d[\d,]*)/g,parts=[];let m;
+  while((m=re.exec(text)))parts.push({i:m.index,e:m.index+m[0].length,name:m[1],hit:nameHit(m[1],who)});
+  if(parts.length<2||!parts.some(p=>p.hit))return esc(text);
+  let o='',p0=0;parts.forEach(p=>{o+=esc(text.slice(p0,p.i));o+=p.hit?'<span class="myamt">'+esc(text.slice(p.i,p.e))+'</span>':esc(text.slice(p.i,p.e));p0=p.e});
+  return o+esc(text.slice(p0));
 };
 const retailerChequeDue=async(rid,D)=>{
   const dso=userMode==='dso'&&currentDso?currentDso:null,myName=dso?String(dso.full_name||dso.name||'').trim().toLowerCase():'';
