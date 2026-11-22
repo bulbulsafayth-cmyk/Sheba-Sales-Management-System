@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sheba Distribution Sales Management</title>
+<title>Sheba Distribution Sales &amp; Credit Management System</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#14243a">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Sheba Sales">
+<meta name="apple-mobile-web-app-title" content="Sheba Sales &amp; Credit">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -244,10 +244,11 @@ body:before{content:'';position:fixed;inset:0;z-index:50;pointer-events:none;bac
 @keyframes wmFloat{0%{opacity:0;transform:translate(-6vw,4vh) scale(.85)}30%{opacity:.09}55%{opacity:.09;transform:translate(0,0) scale(1)}85%,100%{opacity:0;transform:translate(6vw,-4vh) scale(1.08)}}
 @media print{body:before{display:none}}
 @media(prefers-reduced-motion:reduce){body:before,.nav button{animation:none;transition:none}}
+
 </style></head>
 <body>
-<div id="loginView" class="login-wrap"><div class="login"><h1>Distribution Sales</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
-<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Distribution Sales<small>MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
+<div id="loginView" class="login-wrap"><div class="login"><h1>Sheba Distribution Sales &amp; Credit Management System</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
+<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
 <script>
 const SUPABASE_URL='https://nvnogsganemysvbqmcpo.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_tyWf1VnXMzNVBs22Qgs3wg_SBy6HegJ';
@@ -2095,7 +2096,7 @@ async function reportsPage(){
   $('shareReport').onclick=()=>{
     if(!rep.generated||!rep.rows.length)return msg($('reportSummary'),'Generate a report first.');
     const nm={daily:'Daily sales report',dso:'DSO-wise report',brand:'Brand-wise report'}[rep.type]||'Sales report';
-    const range=fmtDate($('rFrom').value)+' - '+fmtDate($('rTo').value),L=['SHEBA DISTRIBUTION SALES MANAGEMENT',nm,range,''];
+    const range=fmtDate($('rFrom').value)+' - '+fmtDate($('rTo').value),L=['SHEBA DISTRIBUTION SALES & CREDIT MANAGEMENT SYSTEM',nm,range,''];
     const isM=!!rep.model,key=rep.type==='dso'?(x=>x.dso_id):(x=>x.brand_id),label=rep.type==='dso'?(x=>x.dso_name):(x=>x.brand);
     const mv=l=>{let q=0,v=0;l.forEach(x=>(rep.items[x.id]||[]).forEach(i=>{q+=Number(i.quantity||0);v+=Number(i.quantity||0)*Number(i.unit_price||0)}));return {q,v}};
     if(isM){const t=mv(rep.rows),pm=rep.prods[rep.model]||{};L.push('Model: '+(pm.product_name||'')+(pm.model_code?' ('+pm.model_code+')':''),'Qty: '+fmtN(t.q),'Sales value: '+money(t.v))}
@@ -2246,7 +2247,7 @@ function fitSheets(){
     sh.style.setProperty('--fit',Math.max(0.5,Math.min(1,sc)).toFixed(3));
   });
 }
-const PRINT_TITLE='Sheba Distribution Sales Management';let _oldTitle=document.title;
+const PRINT_TITLE='Sheba Distribution Sales & Credit Management System';let _oldTitle=document.title;
 window.addEventListener('beforeprint',()=>{_oldTitle=document.title;document.title=PRINT_TITLE;fitSheets()});
 window.addEventListener('afterprint',()=>{document.title=_oldTitle});
 
@@ -2310,7 +2311,7 @@ async function sheetPage(){
     const th=m.cols.map(id=>{const p=plabel(id);return `<th class="pc">${esc(p.n)}${p.v?'<br>'+esc(p.v):''}</th>`}).join('');
     const body=m.list.map((r,i)=>`<tr><td>${i+1}</td><td class="l">${esc(r.name)}</td>${m.cols.map(id=>`<td>${r.q[id]||''}</td>`).join('')}<td><b>${fmtN(r.qty)}</b></td><td class="n">${fmtN(r.val)}</td><td class="n">${fmtN(r.tp)}</td><td class="n">${fmtN(r.col+r.due)}</td><td class="n">${fmtN(r.out)}</td><td class="l">${esc(r.notes.join('; '))}</td></tr>`).join('');
     const foot=`<tr class="gt"><td></td><td class="l">Grand Total</td>${m.cols.map(id=>`<td>${t.q[id]||''}</td>`).join('')}<td>${fmtN(t.qty)}</td><td class="n">${fmtN(t.val)}</td><td class="n">${fmtN(t.tp)}</td><td class="n">${fmtN(t.col+t.due)}</td><td class="n">${fmtN(t.out)}</td><td></td></tr>`;
-    return `<div class="sheet"><div class="stitle">SHEBA DISTRIBUTION SALES MANAGEMENT</div><table class="sh hd"><tr><td class="co"><img class="logo" src="${LOGO}" alt="${esc(COMPANY.name)}"></td><td class="ti"><div class="shbrand">${brandLogo(mt.brand,46)}<span>${brandLogo(mt.brand,46)?'':esc(mt.brand.toUpperCase())+' '}DAILY SALES SHEET</span></div></td></tr><tr><td colspan="2" class="ad">${esc(COMPANY.address)}</td></tr></table><table class="sh sm"><thead><tr><th>DSO NAME</th><th>DATE</th><th>BRAND</th></tr></thead><tbody><tr><td>${esc(mt.dso)}</td><td>${fmtDate(date)}</td><td>${brandLogo(mt.brand,30)||esc(mt.brand)}</td></tr></tbody></table><div class="table-wrap"><table class="sh mx ${m.cols.length>12?'dense':''}"><thead><tr><th>SL</th><th class="l">Outlet Name</th>${th}<th>Total Qty</th><th>Total Sales Value (Tk)</th><th>TPP</th><th>Collection</th><th>Outstanding</th><th class="l">Remarks</th></tr></thead><tbody>${body}${foot}</tbody></table></div><div class="sheetfoot"><div><span><b>${esc(mt.dso)}</b><br>Distribution Sales Officer</span></div><div><span><b>Safayth Hossen Bulbul</b><br>Manager Operation &amp; Finance</span></div><div><span><b>Monirul Islam</b><br>Store Incharge</span></div></div></div>`;
+    return `<div class="sheet"><div class="stitle">SHEBA DISTRIBUTION SALES &amp; CREDIT MANAGEMENT SYSTEM</div><table class="sh hd"><tr><td class="co"><img class="logo" src="${LOGO}" alt="${esc(COMPANY.name)}"></td><td class="ti"><div class="shbrand">${brandLogo(mt.brand,46)}<span>${brandLogo(mt.brand,46)?'':esc(mt.brand.toUpperCase())+' '}DAILY SALES SHEET</span></div></td></tr><tr><td colspan="2" class="ad">${esc(COMPANY.address)}</td></tr></table><table class="sh sm"><thead><tr><th>DSO NAME</th><th>DATE</th><th>BRAND</th></tr></thead><tbody><tr><td>${esc(mt.dso)}</td><td>${fmtDate(date)}</td><td>${brandLogo(mt.brand,30)||esc(mt.brand)}</td></tr></tbody></table><div class="table-wrap"><table class="sh mx ${m.cols.length>12?'dense':''}"><thead><tr><th>SL</th><th class="l">Outlet Name</th>${th}<th>Total Qty</th><th>Total Sales Value (Tk)</th><th>TPP</th><th>Collection</th><th>Outstanding</th><th class="l">Remarks</th></tr></thead><tbody>${body}${foot}</tbody></table></div><div class="sheetfoot"><div><span><b>${esc(mt.dso)}</b><br>Distribution Sales Officer</span></div><div><span><b>Safayth Hossen Bulbul</b><br>Manager Operation &amp; Finance</span></div><div><span><b>Monirul Islam</b><br>Store Incharge</span></div></div></div>`;
   };
   const run=async()=>{
     const m=$('shMsg'),date=$('shDate').value;
