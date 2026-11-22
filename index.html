@@ -223,14 +223,15 @@ table.crt td.cract{text-decoration:none}
 /* ===== whole app in landscape ===== */
 html.lsrot{overflow:hidden;height:100%}
 body.rot{position:fixed;left:0;top:0;margin:0;transform-origin:0 0;overflow:auto;-webkit-overflow-scrolling:touch}
-body.rot .app{display:flex;min-height:100%}body.rot .login-wrap{min-height:100%;display:flex;align-items:safe center;justify-content:center;padding:10px}body.rot .login{padding:18px}
-body.rot .sidebar{width:170px;padding:10px 8px;position:sticky;top:0;height:100%;overflow-y:auto;align-self:flex-start}
-body.rot .brand{padding:2px 6px 8px;font-size:14px}
-body.rot .nav{display:block;overflow:visible}body.rot .nav button{width:100%;white-space:normal;padding:9px 10px;font-size:13px}
-body.rot .top{height:52px;padding:0 14px}body.rot .content{padding:14px}
+body.rot .app{display:block;min-height:100%}body.rot .login-wrap{min-height:100%;display:flex;align-items:safe center;justify-content:center;padding:10px}body.rot .login{padding:18px}
+body.rot .sidebar,.lsh .sidebar{width:100%;height:auto;padding:4px 8px;position:sticky;top:0;z-index:70;overflow:visible;align-self:auto}
+body.rot .brand{display:none}
+body.rot .nav{display:flex;overflow-x:auto;overflow-y:hidden;gap:4px;-webkit-overflow-scrolling:touch}
+body.rot .nav button{width:auto;flex:none;white-space:nowrap;padding:8px 12px;font-size:13px;margin:0}
+body.rot .top{height:46px;padding:0 12px}body.rot .content{padding:12px}
 body.rot .cards{grid-template-columns:repeat(4,minmax(0,1fr))}body.rot .cards5{grid-template-columns:repeat(5,minmax(0,1fr))}
 body.rot .form-grid{grid-template-columns:repeat(3,minmax(0,1fr))}body.rot .totals{grid-template-columns:repeat(4,minmax(0,1fr))}
-@media(orientation:landscape) and (max-height:520px){.sidebar{position:sticky;top:0;height:100vh;overflow-y:auto;align-self:flex-start;width:176px;padding:10px 8px}.brand{padding:2px 6px 8px;font-size:14px}.nav button{padding:9px 10px;font-size:13px;white-space:normal}.top{height:52px}.content{padding:14px}.form-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.app{min-height:100vh}}
+@media(orientation:landscape) and (max-height:520px){.app{display:block;min-height:100vh}.sidebar{width:100%;height:auto;padding:4px 8px;position:sticky;top:0;z-index:70;overflow:visible}.brand{display:none}.nav{display:flex;overflow-x:auto;gap:4px}.nav button{width:auto;flex:none;white-space:nowrap;padding:8px 12px;font-size:13px;margin:0}.top{height:46px;padding:0 12px}.content{padding:12px}.form-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.cards{grid-template-columns:repeat(4,minmax(0,1fr))}}
 #rotBtn{padding:6px 10px}
 #crLandBox{position:fixed;inset:0;z-index:9999;background:#0b1220;overflow:hidden}
 #crLandBox .crl-wrap{position:absolute;left:0;top:0;display:flex;flex-direction:column;background:#fff}
