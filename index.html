@@ -1180,6 +1180,18 @@ const nameHit=(txt,nm)=>{
   const stop=new Set(['md','mohammad','muhammad','mohammed','mohd','mst','mrs','mr','ullah','islam','uddin','hossain','hossen','hasan','rahman','abu','sheikh']);
   return nm.split(/[\s.]+/).filter(w=>w.length>=3&&!stop.has(w)).some(w=>new RegExp('(^|[^a-z0-9])'+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'([^a-z0-9]|$)').test(txt));
 };
+/* does an open cheque belong to the brand / DSO chosen in Sales Entry?  true = yes, false = clearly another brand AND another DSO, null = cannot tell */
+const chqRel=(x,bsel,dsel,bn,dn)=>{
+  if(!bn||!dn)return null;
+  const dName=dn[dsel]||'',bName=bn[bsel]||'';
+  const md=x.did?x.did===dsel:(x.resp&&dName?nameHit(x.resp,dName):null);
+  let mb=null;
+  if(x.bid)mb=x.bid===bsel;
+  else if(x.resp&&bName){const has=Object.values(bn).filter(n=>n&&new RegExp('(^|[^a-z0-9])'+String(n).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'([^a-z0-9]|$)','i').test(x.resp));if(has.length)mb=has.some(n=>n.toLowerCase()===bName.toLowerCase())}
+  if(md===true||mb===true)return true;
+  if(md===false||mb===false)return false;
+  return null;
+};
 /* Responsible-person text with this DSO's own part (name-amount) highlighted in blue, when several DSOs share the cheque */
 const hiText=(text,who)=>{
   text=String(text==null?'':text);if(!who||!text)return esc(text);
@@ -1887,7 +1899,7 @@ async function salesPage(editId){
   const applyColl=()=>{collOnly=$('sColl').checked;showChq();$('prodBox').classList.toggle('hidden',collOnly);$('sTp').disabled=collOnly;if(collOnly)$('sTp').value=0;totals()};
   $('sColl').onchange=()=>{applyColl();showCollDue()};
   /* Due collection only: show the retailer's current due per brand as soon as the retailer is chosen */
-  let bnames=null,dnames=null,dueSeq=0,chqPick='';
+  let bnames=null,dnames=null,dueSeq=0,chqPick='',chqAll=false;
   async function showCollDue(){
     const el=$('collDue');if(!el)return;
     const rid=$('sRetailer').value,D=$('sDate').value,bsel=$('sBrand').value,seq=++dueSeq;
@@ -1911,10 +1923,14 @@ async function salesPage(editId){
       cm.forEach(x=>{if(x.entry_date>D)return;add(x.brand_id,(x.kind==='due'?1:-1)*Number(x.amount||0))});
       const list=Object.entries(by).filter(([b,v])=>v>0.005).sort((a,b)=>b[1]-a[1]),tot=list.reduce((t,x)=>t+x[1],0);
       const cdue=await retailerChequeDue(rid,D);if(seq!==dueSeq)return;
-      cdue.forEach(x=>{x.label=x.resp||[dnames[x.did],bnames[x.bid]].filter(Boolean).join(' · ')});
-      el.innerHTML=`<div class="notice" style="margin:0"><b>Verbal due: ${money(tot)}</b>${list.length?list.map(([b,v])=>`<div style="margin-top:3px${b===bsel?';font-weight:800;color:#b91c1c':''}">${esc(bnames[b]||'—')}: ${money(v)}</div>`).join(''):'<div style="margin-top:3px">No verbal due.</div>'}${chequeDueHtml(cdue,bsel,{cur:chqPick})}</div>`;
-      if(!cdue.some(x=>String(x.id)===chqPick))chqPick='';
+      cdue.forEach(x=>{x.label=x.resp||[dnames[x.did],bnames[x.bid]].filter(Boolean).join(' · ');x.rel=chqRel(x,bsel,$('sDso').value,bnames,dnames)});
+      /* only the cheques of the selected brand / DSO are listed; other brands' / DSOs' cheques stay hidden unless asked for */
+      const other=cdue.filter(x=>x.rel===false),shown=chqAll?cdue:cdue.filter(x=>x.rel!==false);
+      const otherBox=other.length?`<label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="chqAllBox" ${chqAll?'checked':''} style="width:auto;margin:0"> Also show cheques of other brand / DSO (${other.length} · ${money(other.reduce((a,x)=>a+x.left,0))})</label>`:'';
+      el.innerHTML=`<div class="notice" style="margin:0"><b>Verbal due: ${money(tot)}</b>${list.length?list.map(([b,v])=>`<div style="margin-top:3px${b===bsel?';font-weight:800;color:#b91c1c':''}">${esc(bnames[b]||'—')}: ${money(v)}</div>`).join(''):'<div style="margin-top:3px">No verbal due.</div>'}${chequeDueHtml(shown,bsel,{cur:chqPick})}${otherBox}</div>`;
+      if(!shown.some(x=>String(x.id)===chqPick))chqPick='';
       el.querySelectorAll('input[name=chqPick]').forEach(i=>{i.onchange=()=>{chqPick=i.value}});
+      const ab=$('chqAllBox');if(ab)ab.onchange=()=>{chqAll=ab.checked;showCollDue()};
     }catch(e){if(seq===dueSeq)el.innerHTML=`<div class="notice error" style="margin:0">Due could not be loaded: ${esc(e&&e.message||String(e))}</div>`}
   }
   ['sRetailer','sBrand','sDate'].forEach(i=>$(i).addEventListener('change',showCollDue));
@@ -2034,6 +2050,7 @@ async function salesPage(editId){
       btn.disabled=true;let open;try{open=await retailerChequeDue(head.retailer_id,head.sale_date)}catch(e){btn.disabled=false;return msg(m,'Could not read the cheque due: '+(e.message||e))}btn.disabled=false;
       /* money is taken first from the cheques of the selected brand and DSO, then the same brand, then older cheques with no brand, then the rest (oldest first) */
       const rk=x=>x.bid&&x.bid===head.brand_id&&x.did===head.dso_id?0:x.bid&&x.bid===head.brand_id?1:(!x.bid&&(!x.did||x.did===head.dso_id))?2:3;
+      if(!chqAll)open=open.filter(x=>chqRel(x,head.brand_id,head.dso_id,bnames,dnames)!==false);
       open=[...open].sort((a,b)=>rk(a)-rk(b)||(a.recd<b.recd?-1:a.recd>b.recd?1:0));
       /* a cheque ticked in the Cheque due box takes the whole recovery */
       let picked=null;if(chqPick){picked=open.find(x=>String(x.id)===chqPick);if(!picked)return msg(m,'The cheque you selected is no longer due. Choose again. Nothing was saved.');open=[picked]}
