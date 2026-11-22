@@ -251,12 +251,13 @@ table.crt td.cract button{display:block;width:100%;margin:0 0 3px;padding:3px 4p
 </style></head>
 <body>
 <div id="loginView" class="login-wrap"><div class="login"><h1>Sheba Distribution Sales &amp; Credit Management System</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
-<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
+<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="cash">▤ &nbsp; Daily Cash Status</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
 <script>
 const SUPABASE_URL='https://nvnogsganemysvbqmcpo.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_tyWf1VnXMzNVBs22Qgs3wg_SBy6HegJ';
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 const $=id=>document.getElementById(id);
+const by1=a=>Object.fromEntries(a.map(x=>[x.id,x]));
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function msg(el,text,kind='error'){if(el)el.innerHTML=`<div class="notice ${kind}">${esc(text)}</div>`}
 function money(n){return 'Tk '+Number(n||0).toLocaleString('en-BD',{minimumFractionDigits:2,maximumFractionDigits:2})}
@@ -356,8 +357,8 @@ function showApp(mode='admin'){
   if(mode==='admin')startApprovalWatch();else stopApprovalWatch();
 }
 $('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(b)go(b.dataset.page)});
-const titles={dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location'};
-const pages={dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage(),dsoloc:()=>dsoLocPage()};
+const titles={dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location',cash:'Daily Cash Status'};
+const pages={dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage(),dsoloc:()=>dsoLocPage(),cash:()=>cashPage()};
 function go(p,arg){
   if(userMode==='dso'&&!DSO_PAGES.includes(p))p='sales';
   currentPage=p;navToken++;
@@ -2331,6 +2332,98 @@ async function shareText(title,text){
 const fmtN=n=>{n=Number(n||0);return n?n.toLocaleString('en-US',{maximumFractionDigits:2}):'–'};
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const fmtDate=d=>{const [y,m,dd]=String(d).split('-');return Number(dd)+' '+MON[Number(m)-1]+' '+y};
+
+/* ---------- Daily Cash Status (Admin) ---------- */
+async function cashPage(){
+  const tok=navToken;
+  if(!document.getElementById('csCss')){const st=document.createElement('style');st.id='csCss';st.textContent='@page cs{size:A4 portrait;margin:9mm}.cswrap{page:cs}.cs-sheet{background:#fff;color:#000;padding:16px;max-width:860px;margin:16px auto;border:1px solid #cfd8e6;border-radius:10px;font-size:12px}.cs-h{text-align:center;font-weight:800;font-size:20px}.cs-a{text-align:center;font-size:12px;margin:2px 0 6px}.cs-d{border:1px solid #000;padding:3px 8px;font-weight:800;margin-bottom:8px;text-align:center}.cs-cols{display:grid;grid-template-columns:1.2fr 1fr;gap:10px;align-items:start;margin-bottom:10px}.cs-cols>div{min-width:0}table.cst{border-collapse:collapse;width:100%;min-width:0!important;table-layout:fixed;margin-bottom:8px}table.cst td,table.cst th{overflow-wrap:anywhere}table.cst th,table.cst td{border:1px solid #000;padding:3px 5px;font-size:12px;background:#fff;color:#000;text-align:left;text-transform:none;letter-spacing:0}table.cst th{background:#eef1f5;font-weight:800;text-align:center}table.cst td.n{text-align:right;font-variant-numeric:tabular-nums}table.cst tr.tt td{font-weight:800;background:#f1f1f1}.cs-ttl{font-weight:800;margin:0 0 3px}.cs-edit table input{width:100%;min-width:70px}.cs-edit td{vertical-align:middle}.cs-auto td{background:#f3f7ff}@media print{.cs-sheet{border:0;border-radius:0;margin:0;padding:0;max-width:none}.cs-cols{break-inside:avoid}}';document.head.appendChild(st)}
+  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Daily Cash Status</h1><div class="sub">Collection is taken from the Daily Sales Sheet figures (per DSO and brand). Add the other lines by hand. The sheet below is what prints (A4).</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="csDate"></div><div><label>Opening cash</label><input type="number" id="csOpen" step="any"><div class="muted" id="csOpenNote" style="margin-top:4px"></div></div></div><div class="form-actions" style="margin-top:10px"><button id="csPrev" class="secondary hidden">Use previous day's closing</button><button id="csPrint">Print</button></div><div id="csMsg"></div></div><div id="csEdit" class="cs-edit"></div></div><div class="cswrap" id="csSheet"></div>`;
+  $('csDate').value=today();
+  const idm=a=>Object.fromEntries(a.map(x=>[x.id,x]));
+  const num=v=>{const n=Number(String(v==null?'':v).replace(/,/g,''));return Number.isFinite(n)?n:0};
+  const f=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
+  const cmpN=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});
+  let S=null;
+  const sum=(k)=>S.lines.filter(x=>x.kind===k).reduce((a,x)=>a+Number(x.amount||0),0);
+  const calc=()=>{
+    const aC=S.auto.reduce((a,x)=>a+x.amt,0),mC=sum('collection'),coll=aC+mC,wd=sum('withdraw'),dep=sum('deposit'),exp=sum('expense');
+    const bal=S.open+coll+wd;return {coll,wd,dep,exp,bal,close:bal-dep-exp,aQ:S.auto.reduce((a,x)=>a+x.qty,0),mQ:S.lines.filter(x=>x.kind==='collection').reduce((a,x)=>a+Number(x.qty||0),0)};
+  };
+  const saveDay=async()=>{
+    const c=calc();
+    try{await db.from('cash_days').upsert({day:S.day,opening_cash:S.open,opening_manual:S.manual,closing_cash:c.close,updated_at:new Date().toISOString()})}catch(e){}
+  };
+  const sheet=()=>{
+    const c=calc(),L=k=>S.lines.filter(x=>x.kind===k);
+    const col=[...S.auto.map(x=>({n:x.dso,b:x.brand,q:x.qty,a:x.amt})),...L('collection').map(x=>({n:x.name,b:x.brand,q:Number(x.qty||0),a:Number(x.amount||0)}))];
+    const rows=(arr,fn,min)=>{let h=arr.map(fn).join('');for(let i=arr.length;i<(min||0);i++)h+=fn(null,i);return h};
+    const left=`<table class="cst"><colgroup><col style="width:8%"><col style="width:32%"><col style="width:20%"><col style="width:14%"><col style="width:26%"></colgroup><thead><tr><th>SL</th><th>Depositor's Name</th><th>Brand Info</th><th>Qty</th><th>Collection</th></tr></thead><tbody>${col.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.n)}</td><td>${esc(x.b)}</td><td class="n">${x.q?f(x.q):''}</td><td class="n">${f(x.a)}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center">—</td></tr>'}<tr class="tt"><td colspan="3" style="text-align:right">Total</td><td class="n">${f(c.aQ+c.mQ)}</td><td class="n">${f(c.coll)}</td></tr></tbody></table>`;
+    const dep=L('deposit'),exp=L('expense'),wd=L('withdraw');
+    const right=`<div class="cs-ttl">Bank Deposit</div><table class="cst"><colgroup><col style="width:9%"><col style="width:41%"><col style="width:26%"><col style="width:24%"></colgroup><thead><tr><th>SL</th><th>Bank Name</th><th>Amount</th><th>Remarks</th></tr></thead><tbody>${dep.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td class="n">${f(x.amount)}</td><td>${esc(x.remarks)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center">—</td></tr>'}<tr class="tt"><td colspan="2" style="text-align:right">Total Bank Deposit</td><td class="n">${f(c.dep)}</td><td></td></tr></tbody></table><div class="cs-ttl">Expense</div><table class="cst"><colgroup><col style="width:9%"><col style="width:41%"><col style="width:26%"><col style="width:24%"></colgroup><thead><tr><th>SL</th><th>Expense Description</th><th>Amount</th><th>Remarks</th></tr></thead><tbody>${exp.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td class="n">${f(x.amount)}</td><td>${esc(x.remarks)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center">—</td></tr>'}<tr class="tt"><td colspan="2" style="text-align:right">Total Expense</td><td class="n">${f(c.exp)}</td><td></td></tr></tbody></table>`;
+    const summ=`<div class="cs-ttl" style="text-align:center">Cash Summary</div><table class="cst"><colgroup><col style="width:62%"><col style="width:38%"></colgroup><tbody><tr><td>Total Collection</td><td class="n">${f(c.coll)}</td></tr><tr><td>Total Bank Withdraw</td><td class="n">${f(c.wd)}</td></tr><tr><td>Total Opening Cash</td><td class="n">${f(S.open)}</td></tr><tr class="tt"><td>Total Balance</td><td class="n">${f(c.bal)}</td></tr><tr><td>Total Bank Deposit</td><td class="n">${f(c.dep)}</td></tr><tr><td>Total Expense</td><td class="n">${f(c.exp)}</td></tr><tr class="tt"><td>Total Closing Cash</td><td class="n">${f(c.close)}</td></tr></tbody></table>`;
+    const wdt=`<div class="cs-ttl" style="text-align:center">Bank Withdrawal Info</div><table class="cst"><colgroup><col style="width:62%"><col style="width:38%"></colgroup><thead><tr><th>Bank Name</th><th>Amount</th></tr></thead><tbody>${wd.map(x=>`<tr><td>${esc(x.name)}</td><td class="n">${f(x.amount)}</td></tr>`).join('')||'<tr><td colspan="2" style="text-align:center">—</td></tr>'}<tr class="tt"><td style="text-align:right">Total</td><td class="n">${f(c.wd)}</td></tr></tbody></table>`;
+    $('csSheet').innerHTML=`<div class="cs-sheet"><div class="cs-h">Sheba Distribution Daily Cash Status</div><div class="cs-a">Rakshit Market, 3rd floor, Main Road, Cox's Bazar.</div><div class="cs-d">Date: ${esc(fmtDate(S.day))}</div><div class="cs-cols"><div>${left}</div><div>${right}</div></div><div class="cs-cols"><div>${summ}</div><div>${wdt}</div></div></div>`;
+  };
+  const inp=(id,fld,v,type,ph)=>`<input data-id="${id}" data-f="${fld}" type="${type||'text'}" ${type==='number'?'step="any"':''} value="${esc(v==null?'':v)}" placeholder="${ph||''}">`;
+  const sec=(kind,title,heads,cells,note)=>{
+    const L=S.lines.filter(x=>x.kind===kind);
+    return `<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 8px">${title}</h3>${note||''}<div class="table-wrap"><table><thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}<th></th></tr></thead><tbody>${kind==='collection'?S.auto.map(x=>`<tr class="cs-auto"><td>${esc(x.dso)}</td><td>${esc(x.brand)}</td><td>${f(x.qty)}</td><td>${f(x.amt)}</td><td class="muted">from sales</td></tr>`).join(''):''}${L.map(x=>`<tr>${cells(x)}<td><button class="secondary" data-del="${x.id}">Delete</button></td></tr>`).join('')}</tbody></table></div><div style="margin-top:8px"><button class="secondary" data-add="${kind}">+ Add row</button></div></div>`;
+  };
+  const edit=()=>{
+    $('csEdit').innerHTML=
+      sec('collection','Collection (DSO rows come from sales; add other depositors here)',['Depositor\'s name','Brand','Sales qty','Collection amount'],x=>`<td>${inp(x.id,'name',x.name,'text','e.g. Lohagara Office')}</td><td>${inp(x.id,'brand',x.brand)}</td><td>${inp(x.id,'qty',x.qty||'','number')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td>`,'<div class="muted" style="margin:0 0 8px">Blue rows are filled automatically from this day\'s sales entries (cash + due collection, same as the Daily Sales Sheet). Cheque recovery is not included.</div>')+
+      sec('deposit','Bank deposit',['Bank name','Amount','Remarks'],x=>`<td>${inp(x.id,'name',x.name,'text','e.g. DBBL')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td><td>${inp(x.id,'remarks',x.remarks)}</td>`)+
+      sec('expense','Expense (Top Pay, daily expense, etc.)',['Description','Amount','Remarks'],x=>`<td>${inp(x.id,'name',x.name,'text','e.g. Top Pay')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td><td>${inp(x.id,'remarks',x.remarks)}</td>`)+
+      sec('withdraw','Bank withdrawal (money taken out of the bank into cash)',['Bank name','Amount'],x=>`<td>${inp(x.id,'name',x.name,'text','e.g. City Bank')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td>`);
+  };
+  const refresh=()=>{
+    $('csOpen').value=S.open||'';
+    $('csOpenNote').textContent=S.manual?'Typed by you.':(S.hasPrev?"Taken from the previous day's closing cash.":'No earlier day found: type the opening cash.');
+    $('csPrev').classList.toggle('hidden',!(S.manual&&S.hasPrev));
+    sheet();
+  };
+  const load=async()=>{
+    const day=$('csDate').value;if(!day)return;
+    $('csMsg').innerHTML='<div class="notice">Loading…</div>';$('csEdit').innerHTML='';$('csSheet').innerHTML='';
+    try{
+      const [dsos,brands]=await Promise.all([queryAll('dsos'),queryAll('brands')]);
+      const DN=idm(dsos),BN=idm(brands);
+      const ent=await fetchAll(()=>db.from('sales_entries').select('id,dso_id,brand_id,received_amount').eq('sale_date',day).order('id'));
+      const ids=ent.map(e=>e.id),qty={};
+      for(let i=0;i<ids.length;i+=40){(await fetchAll(()=>db.from('sales_items').select('sales_entry_id,quantity').in('sales_entry_id',ids.slice(i,i+40)).order('id'))).forEach(it=>{qty[it.sales_entry_id]=(qty[it.sales_entry_id]||0)+Number(it.quantity||0)})}
+      const g=new Map();
+      ent.forEach(e=>{const k=e.dso_id+'|'+e.brand_id;let o=g.get(k);if(!o){o={dso:DN[e.dso_id]?.full_name||'—',brand:BN[e.brand_id]?.name||'—',qty:0,amt:0};g.set(k,o)}o.qty+=qty[e.id]||0;o.amt+=Number(e.received_amount||0)});
+      const auto=[...g.values()].filter(o=>o.qty||o.amt).sort((a,b)=>cmpN(a.dso,b.dso)||cmpN(a.brand,b.brand));
+      const lr=await db.from('cash_lines').select('*').eq('day',day).order('id');
+      if(lr.error)throw new Error(/does not exist|schema cache|relation/i.test(lr.error.message||'')?'Daily Cash Status is not set up yet. Run cash-status-setup.sql in Supabase, then reload.':lr.error.message);
+      const dr=await db.from('cash_days').select('*').eq('day',day).limit(1);
+      const pr=await db.from('cash_days').select('day,closing_cash').lt('day',day).order('day',{ascending:false}).limit(1);
+      if(tok!==navToken)return;
+      const row=(dr.data||[])[0],prev=(pr.data||[])[0];
+      const manual=!!(row&&row.opening_manual),open=manual?Number(row.opening_cash||0):(prev?Number(prev.closing_cash||0):(row?Number(row.opening_cash||0):0));
+      S={day,auto,lines:lr.data||[],open,manual:manual||(!prev&&!!row&&Number(row.opening_cash)>0),hasPrev:!!prev};
+      $('csMsg').innerHTML='';
+      refresh();edit();saveDay();
+    }catch(e){S=null;msg($('csMsg'),e.message||String(e))}
+  };
+  $('csDate').onchange=load;
+  $('csPrint').onclick=()=>{if(S)window.print()};
+  $('csOpen').onchange=()=>{if(!S)return;S.open=num($('csOpen').value);S.manual=true;refresh();saveDay()};
+  $('csPrev').onclick=async()=>{if(!S)return;S.manual=false;await db.from('cash_days').upsert({day:S.day,opening_manual:false,opening_cash:S.open,closing_cash:0});load()};
+  $('csEdit').onclick=async e=>{
+    const a=e.target.closest('button[data-add]'),d=e.target.closest('button[data-del]');
+    if(a){const r=await db.from('cash_lines').insert({day:S.day,kind:a.dataset.add}).select().limit(1);if(r.error)return msg($('csMsg'),r.error.message);S.lines.push(r.data[0]);edit();refresh();saveDay();return}
+    if(d){if(!confirm('Delete this row?'))return;const r=await db.from('cash_lines').delete().eq('id',d.dataset.del);if(r.error)return msg($('csMsg'),r.error.message);S.lines=S.lines.filter(x=>String(x.id)!==d.dataset.del);edit();refresh();saveDay()}
+  };
+  $('csEdit').onchange=async e=>{
+    const i=e.target.closest('input[data-id]');if(!i||!S)return;
+    const fld=i.dataset.f,v=(fld==='amount'||fld==='qty')?num(i.value):i.value.trim();
+    const row=S.lines.find(x=>String(x.id)===i.dataset.id);if(!row)return;
+    const r=await db.from('cash_lines').update({[fld]:v}).eq('id',row.id);if(r.error)return msg($('csMsg'),r.error.message);
+    row[fld]=v;refresh();saveDay();
+  };
+  load();
+}
 async function sheetPage(){
   const tok=navToken,isAdmin=userMode==='admin';
   $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Daily Sales Sheet</h1><div class="sub">One printable sheet per DSO and brand for a single day. Print in A4 landscape.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="shDate"></div><div><label>Brand</label><select id="shBrand"><option value="">All brands</option></select></div>${isAdmin?'<div><label>DSO</label><select id="shDso"><option value="">All DSOs</option></select></div>':''}</div><div class="form-actions"><button id="shRun">Generate sheet</button><button class="secondary" id="shPrint">Print / PDF</button><button class="secondary" id="shXlsx">Excel</button><button class="secondary" id="shImg"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-4.2M8.6 13.4l6.8 4.2"/></svg>Share</button><button class="secondary" id="shSave"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg>Save image</button><button class="secondary" id="shBack">← Summary report</button></div><div id="shMsg"></div></div></div><div id="shOut" class="sheetwrap"></div>`;
