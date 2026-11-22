@@ -2603,6 +2603,22 @@ async function apwPoll(){
   });
 }
 try{buildBrandFloat()}catch(e){}
+/* welcome voice: first click/touch on the login page says the welcome line once (browsers do not allow sound before a click) */
+(function(){
+  let spoken=false,on=true;try{on=localStorage.getItem('welcomeSound')!=='0'}catch(e){}
+  const btn=document.createElement('button');btn.id='wsBtn';btn.type='button';
+  btn.style.cssText='position:fixed;right:14px;bottom:14px;z-index:70;padding:8px 12px;border-radius:99px;background:#ffffffe6;color:#1d4ed8;border:2px solid #2563eb;font-size:13px;box-shadow:0 4px 14px #0004';
+  const paint=()=>{btn.textContent=on?'🔊 Sound on':'🔇 Sound off';btn.style.display=document.getElementById('loginView').classList.contains('hidden')?'none':'block'};
+  const say=()=>{try{const u=new SpeechSynthesisUtterance('Welcome to Sheba Telecom. The home of Mobile Phone.');u.lang='en-US';u.rate=.92;u.pitch=1;u.volume=1;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}};
+  btn.onclick=e=>{e.stopPropagation();on=!on;try{localStorage.setItem('welcomeSound',on?'1':'0')}catch(x){}if(!on){try{speechSynthesis.cancel()}catch(x){}}paint()};
+  document.body.appendChild(btn);paint();
+  new MutationObserver(paint).observe(document.getElementById('loginView'),{attributes:true,attributeFilter:['class']});
+  document.addEventListener('pointerdown',e=>{
+    if(spoken||!on||e.target===btn||document.getElementById('loginView').classList.contains('hidden'))return;
+    spoken=true;say();
+  },true);
+})();
+
 checkSession();
 </script>
 <script>
