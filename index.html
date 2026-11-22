@@ -195,6 +195,8 @@ body::after{inset:-300px;background-size:300px 300px;opacity:.5;animation:phDrif
 /* credit & cheque report */
 @page cr{size:A4 landscape;margin:8mm}
 .crsheet{background:#fff;color:#000;border:1px solid #cfd8e6;border-radius:10px;overflow:auto;page:cr;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.apvsw{width:52px;height:28px;border-radius:99px;background:#cbd5e1;border:0;padding:3px;position:relative;cursor:pointer;transition:.2s}.apvsw i{display:block;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px #0003}.apvsw.on{background:#16a34a}.apvsw.on i{transform:translateX(24px)}
+#apwBox{position:fixed;top:12px;right:12px;z-index:200;display:flex;flex-direction:column;gap:8px;max-width:min(360px,92vw)}.apwCard{background:#fff;border:2px solid #2563eb;border-radius:12px;padding:12px 14px;box-shadow:0 8px 28px #0004}.apwCard b{display:block;margin-bottom:6px}.apwCard button{margin-right:6px}
 .myamt{color:#1d4ed8;font-weight:800;background:#dbeafe;border-radius:3px;padding:0 3px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .crsheet .cr-title{text-align:center;font-weight:800;font-size:28px;padding:8px 10px;line-height:1.15}
 .crsheet .cr-cheque{background:#ff0000;color:#fff}
@@ -284,7 +286,7 @@ async function showDsoPicker(){
 }
 async function enterDso(d){d.brandIds=await dsoBrandIds(d);d.roadIds=await dsoRoadIds(d);currentDso=d;store.set('dsoId',d.id);
   showApp('dso')}
-async function useDso(id){const {data}=await db.from('dsos').select(DSO_COLS).eq('id',id).eq('is_active',true).maybeSingle();if(!data)return false;await enterDso(data);return true}
+async function useDso(id,gate){const {data}=await db.from('dsos').select(DSO_COLS).eq('id',id).eq('is_active',true).maybeSingle();if(!data)return false;if(gate&&!(await dsoApprovalGate(data)))return 'denied';await enterDso(data);return true}
 /* FIX 2: DSO sessions are restored on refresh too */
 async function checkSession(){
   const {data:{session}}=await db.auth.getSession();if(!session)return;
@@ -308,17 +310,22 @@ $('loginBtn').onclick=async()=>{
     showApp('admin');
   }else{
     if(prof.data.role!=='dso'){await db.auth.signOut();return msg($('loginMsg'),'This account is not a DSO account.')}
-    if(prof.data.dso_id&&await useDso(prof.data.dso_id))return;
+    if(prof.data.dso_id){
+      const ur=await useDso(prof.data.dso_id,true);
+      if(ur==='denied'){await db.auth.signOut();return msg($('loginMsg'),'Admin did not approve this login.')}
+      if(ur)return;
+    }
     await showDsoPicker();
   }
 };
 $('dsoContinueBtn').onclick=async()=>{
   const d=(window._availableDsos||[]).find(x=>x.id===$('dsoSelect').value);
   if(!d)return msg($('loginMsg'),'Please select your DSO name.');
+  if(!(await dsoApprovalGate(d)))return msg($('loginMsg'),'Admin did not approve this login.');
   await enterDso(d);
 };
 $('backLoginBtn').onclick=async()=>{await db.auth.signOut();store.del('dsoId');store.del('loggedDso');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
-$('logoutBtn').onclick=async()=>{stopLocTracking();currentDso=null;store.del('dsoId');store.del('loggedDso');await db.auth.signOut();$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
+$('logoutBtn').onclick=async()=>{stopLocTracking();stopApprovalWatch();currentDso=null;store.del('dsoId');store.del('loggedDso');await db.auth.signOut();$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
 const DSO_PAGES=['dashboard','sales','reports','sheet','credit'];
 function showApp(mode='admin'){
   userMode=mode;$('loginView').classList.add('hidden');$('appView').classList.remove('hidden');
@@ -327,6 +334,7 @@ function showApp(mode='admin'){
   $('sessionLabel').textContent=mode==='dso'?'DSO: '+(currentDso?.full_name||''):'Admin session';
   go(mode==='dso'?'sales':'dashboard');
   if(mode==='dso')startLocTracking();else stopLocTracking();
+  if(mode==='admin')startApprovalWatch();else stopApprovalWatch();
 }
 $('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(b)go(b.dataset.page)});
 const titles={dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location'};
@@ -348,6 +356,21 @@ async function dashboard(){
   const wd=new Date(t0+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long'});
   const row=(id,title)=>`<div class="dash-h">${title}</div><div class="cards cards5" id="${id}"></div>`;
   p.innerHTML=`<div class="hero"><div><div class="hero-h">${greet}, ${esc(who)}</div><div class="hero-s">${wd}, ${fmtDate(t0)} · ${isAdmin?'Distribution sales overview':'Your sales summary'}</div></div><div class="hero-a"><button onclick="go('sales')">＋ New sales entry</button><button class="ghost" onclick="go('reports')">Reports</button><button class="ghost" onclick="go('sheet')">Daily sales sheet</button></div></div>${row('todayStats','Today · '+fmtDate(t0))}${row('monthStats','This month · '+MON[Number(t0.slice(5,7))-1]+' '+t0.slice(0,4))}<div class="dgrid"><div class="panel"><h3>This month by brand</h3><div id="brandBars"><p class="muted">Loading…</p></div></div>${isAdmin?'<div class="panel"><h3>Top DSOs this month</h3><div id="dsoBars"><p class="muted">Loading…</p></div></div>':''}</div>${isAdmin?'<div class="chips" id="stats"></div>':''}`;
+  if(isAdmin){
+    p.querySelector('.hero').insertAdjacentHTML('afterend','<div class="panel" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><div style="flex:1;min-width:220px"><b>DSO login permission</b><div class="muted" id="apvTxt">Loading…</div></div><span id="apvLbl" style="font-weight:700"></span><button class="apvsw" id="apvSw" role="switch" aria-checked="false" title="Turn DSO login approval on / off" disabled><i></i></button></div>');
+    const paint=on=>{$('apvSw').classList.toggle('on',!!on);$('apvSw').setAttribute('aria-checked',on?'true':'false');$('apvLbl').textContent=on?'ON':'OFF';$('apvTxt').textContent=on?'ON: every DSO login asks for your approval here (keep this app open). Approve or deny in the box that appears.':'OFF: all DSOs can log in freely.'};
+    getApv().then(v=>{if(tok!==navToken||!$('apvSw'))return;if(v===null){$('apvTxt').textContent='Not set up yet. Run dso-login-approval-setup.sql in Supabase (SQL Editor), then reload.';return}paint(v);$('apvSw').disabled=false;
+      $('apvSw').onclick=async()=>{const on=!$('apvSw').classList.contains('on');$('apvSw').disabled=true;const e=await setApv(on);$('apvSw').disabled=false;if(e){$('apvTxt').textContent='Could not save: '+e;return}paint(on);if(on&&window.Notification&&Notification.permission==='default')Notification.requestPermission()};
+    });
+  }
+  if(isAdmin){
+    $('apvSw').closest('.panel').insertAdjacentHTML('afterend','<div class="panel" id="ntfyBox"><b>Phone notification (works when the phone is locked)</b><div class="muted" style="margin:4px 0 10px">1) Install the free <b>ntfy</b> app on your phone. 2) In it, subscribe to the secret topic below. 3) Press Save, then Send test. Every DSO login request will then ring on your phone; tap it to open this app and approve.</div><div class="form-grid"><div><label>Secret topic name</label><input id="ntfyTopic" placeholder="e.g. sheba-8k2x9q4mzt" autocomplete="off"></div></div><div class="form-actions"><button id="ntfySave">Save</button><button class="secondary" id="ntfyGen">Make a random topic</button><button class="secondary" id="ntfyTest">Send test</button></div><div id="ntfyMsg"></div></div>');
+    getSetting('ntfy_topic').then(v=>{if(tok!==navToken||!$('ntfyTopic'))return;if(v===null){$('ntfyMsg').innerHTML='<div class="notice error">Run dso-login-approval-setup.sql in Supabase first.</div>';return}$('ntfyTopic').value=v});
+    $('ntfyGen').onclick=()=>{$('ntfyTopic').value='sheba-'+Math.random().toString(36).slice(2,8)+Math.random().toString(36).slice(2,8)};
+    $('ntfySave').onclick=async()=>{const v=$('ntfyTopic').value.trim().replace(/[^A-Za-z0-9_-]/g,'');$('ntfyTopic').value=v;const e=await setSetting('ntfy_topic',v);msg($('ntfyMsg'),e?'Could not save: '+e:'Saved. Subscribe to "'+v+'" in the ntfy app, then press Send test.',e?undefined:'success')};
+    $('ntfyTest').onclick=async()=>{const ok=await ntfyPush('Test from Sheba Sales','If you see this on your phone, DSO login requests will reach you.');msg($('ntfyMsg'),ok?'Test sent. Check your phone.':'Could not send. Save a topic name first and check the internet connection.',ok?'success':undefined)};
+  }
+  p.insertAdjacentHTML('beforeend','<div class="panel" style="margin-top:14px"><h3>Top retailers of this month</h3><div id="retBars"></div></div>');
   const card=(k,v,cls,ic)=>`<div class="kcard ${cls||''}"><div class="ic">${ic||'•'}</div><div><div class="k">${k}</div><div class="v">${v}</div></div></div>`;
   const five=m=>card('Sales quantity',Number(m.qty).toLocaleString('en-US'),'','▣')+card('Sales amount',money(m.gross),'','Tk')+card('Trade promotion',money(m.tp),'kc-amber','％')+card('Collection amount',money(m.col),'kc-green','✓')+card('Due amount',money(m.due),'kc-red','!');
   $('todayStats').innerHTML=card('Loading…','…');$('monthStats').innerHTML=card('Loading…','…');
@@ -376,6 +399,7 @@ async function dashboard(){
     const brandNm=r=>r.brand,dsoNm=r=>r.dso_name;
     bars($('brandBars'),x=>x.brand_id,brandNm,8);
     if($('dsoBars'))bars($('dsoBars'),x=>x.dso_id,dsoNm,8);
+    bars($('retBars'),x=>x.retailer_id,r=>r.retailer||'—',10);
   }catch(e){p.insertAdjacentHTML('beforeend',`<div class="notice error">${esc(e.message)}</div>`)}
 }
 
@@ -2461,6 +2485,60 @@ async function dsoLocPage(){
   };
   await load(false);
   const iv=setInterval(()=>{if(tok!==navToken||!$('dlMap')){clearInterval(iv);return}load(true)},60000);
+}
+/* ---------- DSO login approval (Admin switch on the Dashboard) ---------- */
+const APV_KEY='dso_login_approval';
+async function getApv(){try{const r=await db.from('app_settings').select('value').eq('key',APV_KEY).maybeSingle();if(r.error)return null;return !!r.data&&String(r.data.value)==='on'}catch(e){return null}}
+async function setApv(on){const r=await db.from('app_settings').upsert({key:APV_KEY,value:on?'on':'off',updated_at:new Date().toISOString()},{onConflict:'key'});return r.error?r.error.message:''}
+async function getSetting(k){try{const r=await db.from('app_settings').select('value').eq('key',k).maybeSingle();return r.error?null:(r.data?String(r.data.value||''):'')}catch(e){return null}}
+async function setSetting(k,v){const r=await db.from('app_settings').upsert({key:k,value:v,updated_at:new Date().toISOString()},{onConflict:'key'});return r.error?r.error.message:''}
+/* phone notification through ntfy.sh (works when the Admin phone is locked); the Admin subscribes to the same secret topic in the free ntfy app */
+async function ntfyPush(title,message){
+  const t=await getSetting('ntfy_topic');if(!t)return false;
+  try{const r=await fetch('https://ntfy.sh/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic:t,title,message,priority:4,tags:['bell'],click:location.href.split('#')[0]})});return r.ok}catch(e){return false}
+}
+/* DSO side: when the switch is ON, ask the Admin and wait for the answer */
+async function dsoApprovalGate(d){
+  let on;try{on=await getApv()}catch(e){on=false}
+  if(!on)return true;
+  const ins=await db.from('dso_login_requests').insert({dso_id:d.id}).select('id').single();
+  if(ins.error)return false;
+  ntfyPush('DSO login request',(d.full_name||'A DSO')+' wants to log in. Open the app and tap Approve.');
+  const id=ins.data.id,box=document.createElement('div');
+  box.style.cssText='position:fixed;inset:0;z-index:300;background:#0b1a33cc;display:flex;align-items:center;justify-content:center;padding:20px';
+  box.innerHTML='<div style="background:#fff;border-radius:14px;padding:22px;max-width:340px;text-align:center"><div style="font-size:34px">⏳</div><b>Waiting for Admin approval…</b><p class="muted" style="margin:8px 0 14px">A request was sent to the Admin. Keep this screen open.</p><button class="secondary" id="apvCancel">Cancel</button></div>';
+  document.body.appendChild(box);
+  let stop=false;$('apvCancel').onclick=()=>{stop=true};
+  const t0=Date.now();let res=false;
+  while(!stop&&Date.now()-t0<150000){
+    await new Promise(k=>setTimeout(k,3000));
+    const r=await db.from('dso_login_requests').select('status').eq('id',id).maybeSingle();
+    if(r.data&&r.data.status==='approved'){res=true;break}
+    if(r.data&&r.data.status==='denied')break;
+  }
+  box.remove();return res;
+}
+/* Admin side: requests pop up while the Admin app is open */
+const APW={t:null,names:null,shown:new Set()};
+function stopApprovalWatch(){if(APW.t){clearInterval(APW.t);APW.t=null}const b=document.getElementById('apwBox');if(b)b.remove();APW.shown.clear()}
+function startApprovalWatch(){stopApprovalWatch();APW.t=setInterval(apwPoll,4000);apwPoll()}
+async function apwPoll(){
+  if(userMode!=='admin')return;
+  const r=await db.from('dso_login_requests').select('*').eq('status','pending').gte('created_at',new Date(Date.now()-150000).toISOString()).order('id');
+  if(r.error)return;
+  let box=document.getElementById('apwBox');
+  if(!box){box=document.createElement('div');box.id='apwBox';box.className='noprint';document.body.appendChild(box)}
+  const ids=new Set((r.data||[]).map(x=>String(x.id)));
+  [...box.children].forEach(c=>{if(!ids.has(c.dataset.id))c.remove()});
+  if(!APW.names)APW.names=Object.fromEntries(((await db.from('dsos').select('id,full_name')).data||[]).map(x=>[x.id,x.full_name]));
+  (r.data||[]).forEach(q=>{
+    if(box.querySelector('[data-id="'+q.id+'"]'))return;
+    const nm=APW.names[q.dso_id]||'A DSO',c=document.createElement('div');c.className='apwCard';c.dataset.id=q.id;
+    c.innerHTML='<b>DSO login request</b><div style="margin-bottom:10px"><b style="display:inline">'+esc(nm)+'</b> wants to log in.</div><button data-a="approved">Approve</button><button class="danger" data-a="denied">Deny</button>';
+    c.onclick=async e=>{const b=e.target.closest('button[data-a]');if(!b)return;b.disabled=true;await db.from('dso_login_requests').update({status:b.dataset.a,decided_at:new Date().toISOString()}).eq('id',q.id);c.remove()};
+    box.appendChild(c);
+    if(!APW.shown.has(q.id)){APW.shown.add(q.id);try{if(window.Notification&&Notification.permission==='granted')new Notification('DSO login request',{body:nm+' wants to log in'});if(navigator.vibrate)navigator.vibrate(200)}catch(e){}}
+  });
 }
 try{buildBrandFloat()}catch(e){}
 checkSession();
