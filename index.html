@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Sheba Sales &amp; Credit">
+<meta name="application-name" content="Sheba Sales &amp; Credit"><meta name="apple-mobile-web-app-title" content="Sheba Sales &amp; Credit">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -220,6 +220,18 @@ table.crt tr.od td{color:#e00000}
 table.crt tr.crdone td{color:#6b7280;text-decoration:line-through}
 table.crt td.cract{text-decoration:none}
 @media(max-width:620px){#crOut .crsheet{overflow-x:auto}#crOut .crsheet table.crt{min-width:960px}#crOut .crsheet .cr-title,#crOut .crsheet .cr-date,#crOut .crsheet .cr-road{min-width:960px;box-sizing:border-box}#crLand{flex:1 1 100%;background:#0f9d72;color:#fff}}
+/* ===== whole app in landscape ===== */
+html.lsrot{overflow:hidden;height:100%}
+body.rot{position:fixed;left:0;top:0;margin:0;transform-origin:0 0;overflow:auto;-webkit-overflow-scrolling:touch}
+body.rot .app{display:flex;min-height:100%}body.rot .login-wrap{min-height:100%;display:flex;align-items:safe center;justify-content:center;padding:10px}body.rot .login{padding:18px}
+body.rot .sidebar{width:170px;padding:10px 8px;position:sticky;top:0;height:100%;overflow-y:auto;align-self:flex-start}
+body.rot .brand{padding:2px 6px 8px;font-size:14px}
+body.rot .nav{display:block;overflow:visible}body.rot .nav button{width:100%;white-space:normal;padding:9px 10px;font-size:13px}
+body.rot .top{height:52px;padding:0 14px}body.rot .content{padding:14px}
+body.rot .cards{grid-template-columns:repeat(4,minmax(0,1fr))}body.rot .cards5{grid-template-columns:repeat(5,minmax(0,1fr))}
+body.rot .form-grid{grid-template-columns:repeat(3,minmax(0,1fr))}body.rot .totals{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(orientation:landscape) and (max-height:520px){.sidebar{position:sticky;top:0;height:100vh;overflow-y:auto;align-self:flex-start;width:176px;padding:10px 8px}.brand{padding:2px 6px 8px;font-size:14px}.nav button{padding:9px 10px;font-size:13px;white-space:normal}.top{height:52px}.content{padding:14px}.form-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.app{min-height:100vh}}
+#rotBtn{padding:6px 10px}
 #crLandBox{position:fixed;inset:0;z-index:9999;background:#0b1220;overflow:hidden}
 #crLandBox .crl-wrap{position:absolute;left:0;top:0;display:flex;flex-direction:column;background:#fff}
 #crLandBox .crl-bar{display:flex;gap:8px;padding:6px 8px;background:#0b1220;flex:none}
@@ -252,7 +264,7 @@ table.crt td.cract button{display:block;width:100%;margin:0 0 3px;padding:3px 4p
 </style></head>
 <body>
 <div id="loginView" class="login-wrap"><div class="login"><h1>Sheba Distribution Sales &amp; Credit Management System</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
-<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="cash">▤ &nbsp; Daily Cash Status</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
+<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="cash">▤ &nbsp; Daily Cash Status</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
 <script>
 const SUPABASE_URL='https://nvnogsganemysvbqmcpo.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_tyWf1VnXMzNVBs22Qgs3wg_SBy6HegJ';
@@ -664,7 +676,7 @@ async function creditPage(){
       const all=rl.reduce((a,r)=>a+Number(r.amount||0),0);
       if(amt-before<=0.005)return;
       /* cheques of one shop with the same receive date and payable date (different DSOs / brands) print as ONE line */
-      items.push({bo:c.brand_override||'',so:c.shop_override||'',wo:c.who_override||'',key:rid?'S|'+rid:'O|'+c.id,id:c.id,shop,who,dso,brand,road,recd,pd:c.payable_date||'',amt,open:amt-before,today,left:Math.max(0,amt-all),hasRec:rl.length>0,rem:c.remarks||''});
+      items.push({bo:c.brand_override||'',so:c.shop_override||'',wo:c.who_override||'',key:rid?'S|'+rid+'|'+recd:'O|'+c.id,id:c.id,shop,who,dso,brand,road,recd,pd:c.payable_date||'',amt,open:amt-before,today,left:Math.max(0,amt-all),hasRec:rl.length>0,rem:c.remarks||''});
     });
     const grp=new Map();items.forEach(x=>{(grp.get(x.key)||grp.set(x.key,[]).get(x.key)).push(x)});
     const out=[];
@@ -903,8 +915,8 @@ async function creditPage(){
     document.getElementById('crlPlus').onclick=()=>{z=Math.min(2,z+.1);body.style.zoom=z};
     const layout=()=>{
       const w=innerWidth,h=innerHeight;
-      if(h>w)wrap.style.cssText='width:'+h+'px;height:'+w+'px;transform-origin:0 0;transform:translateX('+w+'px) rotate(90deg)';
-      else wrap.style.cssText='width:100vw;height:100vh';
+      if(h>w&&!document.body.classList.contains('rot'))wrap.style.cssText='width:'+h+'px;height:'+w+'px;transform-origin:0 0;transform:translateX('+w+'px) rotate(90deg)';
+      else wrap.style.cssText=document.body.classList.contains('rot')?'width:100%;height:100%':'width:100vw;height:100vh';
     };
     const key=e=>{if(e.key==='Escape')close()};
     const close=()=>{removeEventListener('resize',layout);removeEventListener('keydown',key);try{screen.orientation?.unlock?.()}catch(e){}if(document.fullscreenElement)document.exitFullscreen?.().catch(()=>{});box.remove()};
@@ -2809,6 +2821,24 @@ checkSession();
   window.addEventListener('appinstalled',function(){dip=null;if(btn)btn.classList.add('hidden')});
   if(btn)btn.onclick=function(){if(!dip)return;dip.prompt();dip.userChoice.finally(function(){dip=null;btn.classList.add('hidden')})};
   if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
+})();
+
+/* ===== open the whole software in landscape on a phone ===== */
+(function(){
+  const isPhone=()=>Math.min(screen.width,screen.height)<=700&&('ontouchstart' in window||navigator.maxTouchPoints>0);
+  const on=()=>{try{return localStorage.getItem('landscapeMode')!=='off'}catch(e){return true}};
+  const fit=()=>{
+    const b=document.body,h=document.documentElement,want=isPhone()&&on()&&innerHeight>innerWidth;
+    if(want){const w=innerWidth,hh=innerHeight;h.classList.add('lsrot');b.classList.add('rot');b.style.width=hh+'px';b.style.height=w+'px';b.style.transform='translateX('+w+'px) rotate(90deg)'}
+    else{h.classList.remove('lsrot');b.classList.remove('rot');b.style.width=b.style.height=b.style.transform=''}
+    const bt=document.getElementById('rotBtn');if(bt)bt.style.display=isPhone()?'':'none';
+  };
+  let tried=false;
+  const lock=async()=>{if(tried||!isPhone()||!on())return;tried=true;try{await document.documentElement.requestFullscreen?.();await screen.orientation?.lock?.('landscape')}catch(e){}setTimeout(fit,300)};
+  addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,250));
+  addEventListener('pointerdown',lock,{once:true});
+  const init=()=>{fit();const bt=document.getElementById('rotBtn');if(bt)bt.onclick=()=>{const nowOn=on();try{localStorage.setItem('landscapeMode',nowOn?'off':'on')}catch(e){}if(nowOn){try{screen.orientation?.unlock?.()}catch(e){}if(document.fullscreenElement)document.exitFullscreen?.().catch(()=>{})}else{tried=false;lock()}fit()}};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
 <div class="devcredit">Developed By Safayth Hossen Bulbul</div>
