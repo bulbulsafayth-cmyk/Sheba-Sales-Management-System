@@ -2336,13 +2336,16 @@ const fmtDate=d=>{const [y,m,dd]=String(d).split('-');return Number(dd)+' '+MON[
 /* ---------- Daily Cash Status (Admin) ---------- */
 async function cashPage(){
   const tok=navToken;
-  if(!document.getElementById('csCss')){const st=document.createElement('style');st.id='csCss';st.textContent='@page cs{size:A4 portrait;margin:9mm}.cswrap{page:cs}.cs-sheet{background:#fff;color:#000;padding:16px;max-width:860px;margin:16px auto;border:1px solid #cfd8e6;border-radius:10px;font-size:12px}.cs-h{text-align:center;font-weight:800;font-size:20px}.cs-a{text-align:center;font-size:12px;margin:2px 0 6px}.cs-d{border:1px solid #000;padding:3px 8px;font-weight:800;margin-bottom:8px;text-align:center}.cs-cols{display:grid;grid-template-columns:1.2fr 1fr;gap:10px;align-items:start;margin-bottom:10px}.cs-cols>div{min-width:0}table.cst{border-collapse:collapse;width:100%;min-width:0!important;table-layout:fixed;margin-bottom:8px}table.cst td,table.cst th{overflow-wrap:anywhere}table.cst th,table.cst td{border:1px solid #000;padding:3px 5px;font-size:12px;background:#fff;color:#000;text-align:left;text-transform:none;letter-spacing:0}table.cst th{background:#eef1f5;font-weight:800;text-align:center}table.cst td.n{text-align:right;font-variant-numeric:tabular-nums}table.cst tr.tt td{font-weight:800;background:#f1f1f1}.cs-ttl{font-weight:800;margin:0 0 3px}.cs-edit table input{width:100%;min-width:70px}.cs-edit td{vertical-align:middle}.cs-auto td{background:#f3f7ff}@media print{.cs-sheet{border:0;border-radius:0;margin:0;padding:0;max-width:none}.cs-cols{break-inside:avoid}}';document.head.appendChild(st)}
+  if(!document.getElementById('csCss')){const st=document.createElement('style');st.id='csCss';st.textContent='@page cs{size:A4 portrait;margin:9mm}.cswrap{page:cs}.cs-sheet{background:#fff;color:#000;padding:16px;max-width:860px;margin:16px auto;border:1px solid #cfd8e6;border-radius:10px;font-size:12px}.cs-h{text-align:center;font-weight:800;font-size:20px}.cs-a{text-align:center;font-size:12px;margin:2px 0 6px}.cs-d{border:1px solid #000;padding:3px 8px;font-weight:800;margin-bottom:8px;text-align:center}.cs-cols{display:grid;grid-template-columns:1.2fr 1fr;gap:10px;align-items:start;margin-bottom:10px}.cs-cols>div{min-width:0}table.cst{border-collapse:collapse;width:100%;min-width:0!important;table-layout:fixed;margin-bottom:8px}table.cst td,table.cst th{overflow-wrap:anywhere}table.cst th,table.cst td{border:1px solid #000;padding:3px 5px;font-size:12px;background:#fff;color:#000;text-align:left;text-transform:none;letter-spacing:0}table.cst th{background:#eef1f5;font-weight:800;text-align:center}table.cst td.n{text-align:right;font-variant-numeric:tabular-nums}table.cst tr.tt td{font-weight:800;background:#f1f1f1}.cs-ttl{font-weight:800;margin:0 0 3px}.cs-edit table input,.cs-edit table select{width:100%;min-width:70px}.cs-edit td{vertical-align:middle}.cs-auto td{background:#f3f7ff}@media print{.cs-sheet{border:0;border-radius:0;margin:0;padding:0;max-width:none}.cs-cols{break-inside:avoid}}';document.head.appendChild(st)}
   $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Daily Cash Status</h1><div class="sub">Collection is taken from the Daily Sales Sheet figures (per DSO and brand). Add the other lines by hand. The sheet below is what prints (A4).</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="csDate"></div><div><label>Opening cash</label><input type="number" id="csOpen" step="any"><div class="muted" id="csOpenNote" style="margin-top:4px"></div></div></div><div class="form-actions" style="margin-top:10px"><button id="csPrev" class="secondary hidden">Use previous day's closing</button><button id="csPrint">Print</button></div><div id="csMsg"></div></div><div id="csEdit" class="cs-edit"></div></div><div class="cswrap" id="csSheet"></div>`;
   $('csDate').value=today();
   const idm=a=>Object.fromEntries(a.map(x=>[x.id,x]));
   const num=v=>{const n=Number(String(v==null?'':v).replace(/,/g,''));return Number.isFinite(n)?n:0};
   const f=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
   const cmpN=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});
+  const BANKS=['DBBL 5451','DBBL 1994','DBBL SPC','DBBL Sheba BS Cafe','DBBL CC Loan A/c','Dhaka Bank Telecom','Dhaka Bank Smile','One Bank Distribution','City Bank Telecom','City Bank Distribution','City Bank Oppo Dealer Finance','City Bank Vivo Dealer Finance','Brac Bank'];
+  const EXPS=['Transportation','Market Expense (DSO)','Courier Charge','Top Pay (Oppo)','Top Pay (Realme)','Hire Purchase (Vivo BS)','Hire Purchase (SPC)','Sohoj Kisti (Samsung BS)','Sohoj Kisti (Honor BS)','Benli Elec. BD Ltd.','Best Tycoon Elec. BD Ltd.','Salextra BD Ltd.','Smart Technology Ltd (Honor)','Smart Hi Tech (Honor)'];
+  const OTHER={bank:'Other bank (type name)',exp:'Other expense (type description)'};
   let S=null;
   const sum=(k)=>S.lines.filter(x=>x.kind===k).reduce((a,x)=>a+Number(x.amount||0),0);
   const calc=()=>{
@@ -2365,16 +2368,22 @@ async function cashPage(){
     $('csSheet').innerHTML=`<div class="cs-sheet"><div class="cs-h">Sheba Distribution Daily Cash Status</div><div class="cs-a">Rakshit Market, 3rd floor, Main Road, Cox's Bazar.</div><div class="cs-d">Date: ${esc(fmtDate(S.day))}</div><div class="cs-cols"><div>${left}</div><div>${right}</div></div><div class="cs-cols"><div>${summ}</div><div>${wdt}</div></div></div>`;
   };
   const inp=(id,fld,v,type,ph)=>`<input data-id="${id}" data-f="${fld}" type="${type||'text'}" ${type==='number'?'step="any"':''} value="${esc(v==null?'':v)}" placeholder="${ph||''}">`;
+  /* drop-down of fixed names + an "Other" choice that shows a text box */
+  const pick=(x,list,otherLbl,ph)=>{
+    const inList=list.includes(x.name),isOther=S.other.has(String(x.id))||(!inList&&x.name!=='');
+    const sel=`<select data-id="${x.id}" data-sel="1"><option value="">Select…</option>${list.map(n=>`<option value="${esc(n)}" ${x.name===n?'selected':''}>${esc(n)}</option>`).join('')}<option value="__other" ${isOther?'selected':''}>${otherLbl}</option></select>`;
+    return sel+(isOther?`<div style="margin-top:6px">${inp(x.id,'name',x.name,'text',ph)}</div>`:'');
+  };
   const sec=(kind,title,heads,cells,note)=>{
     const L=S.lines.filter(x=>x.kind===kind);
     return `<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 8px">${title}</h3>${note||''}<div class="table-wrap"><table><thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}<th></th></tr></thead><tbody>${kind==='collection'?S.auto.map(x=>`<tr class="cs-auto"><td>${esc(x.dso)}</td><td>${esc(x.brand)}</td><td>${f(x.qty)}</td><td>${f(x.amt)}</td><td class="muted">from sales</td></tr>`).join(''):''}${L.map(x=>`<tr>${cells(x)}<td><button class="secondary" data-del="${x.id}">Delete</button></td></tr>`).join('')}</tbody></table></div><div style="margin-top:8px"><button class="secondary" data-add="${kind}">+ Add row</button></div></div>`;
   };
   const edit=()=>{
     $('csEdit').innerHTML=
-      sec('collection','Collection (DSO rows come from sales; add other depositors here)',['Depositor\'s name','Brand','Sales qty','Collection amount'],x=>`<td>${inp(x.id,'name',x.name,'text','e.g. Lohagara Office')}</td><td>${inp(x.id,'brand',x.brand)}</td><td>${inp(x.id,'qty',x.qty||'','number')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td>`,'<div class="muted" style="margin:0 0 8px">Blue rows are filled automatically from this day\'s sales entries (cash + due collection, same as the Daily Sales Sheet). Cheque recovery is not included.</div>')+
-      sec('deposit','Bank deposit',['Bank name','Amount','Remarks'],x=>`<td>${inp(x.id,'name',x.name,'text','e.g. DBBL')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td><td>${inp(x.id,'remarks',x.remarks)}</td>`)+
-      sec('expense','Expense (Top Pay, daily expense, etc.)',['Description','Amount','Remarks'],x=>`<td>${inp(x.id,'name',x.name,'text','e.g. Top Pay')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td><td>${inp(x.id,'remarks',x.remarks)}</td>`)+
-      sec('withdraw','Bank withdrawal (money taken out of the bank into cash)',['Bank name','Amount'],x=>`<td>${inp(x.id,'name',x.name,'text','e.g. City Bank')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td>`);
+      sec('collection','Collection (DSO rows come from sales; add other depositors here)',['Depositor\'s name','Brand','Sales qty','Collection amount'],x=>`<td>${inp(x.id,'name',x.name,'text','e.g. Lohagara Office')}</td><td>${inp(x.id,'brand',x.brand)}</td><td>${inp(x.id,'qty',x.qty||'','number')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td>`,'<div class="muted" style="margin:0 0 8px">Blue rows are filled automatically from this day\'s sales entries (cash + due collection, same as the Daily Sales Sheet). Cheque recovery is not included. Lohagara office sales are left out: add the money received from Lohagara office as one row by hand.</div>')+
+      sec('deposit','Bank deposit',['Bank name','Amount','Remarks'],x=>`<td>${pick(x,BANKS,OTHER.bank,'Bank name')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td><td>${inp(x.id,'remarks',x.remarks)}</td>`)+
+      sec('expense','Expense (Top Pay, daily expense, etc.)',['Description','Amount','Remarks'],x=>`<td>${pick(x,EXPS,OTHER.exp,'Expense description')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td><td>${inp(x.id,'remarks',x.remarks)}</td>`)+
+      sec('withdraw','Bank withdrawal (money taken out of the bank into cash)',['Bank name','Amount'],x=>`<td>${pick(x,BANKS,OTHER.bank,'Bank name')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td>`);
   };
   const refresh=()=>{
     $('csOpen').value=S.open||'';
@@ -2386,9 +2395,11 @@ async function cashPage(){
     const day=$('csDate').value;if(!day)return;
     $('csMsg').innerHTML='<div class="notice">Loading…</div>';$('csEdit').innerHTML='';$('csSheet').innerHTML='';
     try{
-      const [dsos,brands]=await Promise.all([queryAll('dsos'),queryAll('brands')]);
+      const [dsos,brands,roads]=await Promise.all([queryAll('dsos'),queryAll('brands'),queryAll('roads')]);
       const DN=idm(dsos),BN=idm(brands);
-      const ent=await fetchAll(()=>db.from('sales_entries').select('id,dso_id,brand_id,received_amount').eq('sale_date',day).order('id'));
+      /* Lohagara office is NOT calculated from sales: its money is typed in by hand as one row */
+      const LOH=new Set(roads.filter(x=>/loha/i.test([x.office,x.name,x.report_group].filter(Boolean).join(' '))).map(x=>x.id));
+      const ent=(await fetchAll(()=>db.from('sales_entries').select('id,dso_id,brand_id,road_id,received_amount').eq('sale_date',day).order('id'))).filter(e=>!LOH.has(e.road_id));
       const ids=ent.map(e=>e.id),qty={};
       for(let i=0;i<ids.length;i+=40){(await fetchAll(()=>db.from('sales_items').select('sales_entry_id,quantity').in('sales_entry_id',ids.slice(i,i+40)).order('id'))).forEach(it=>{qty[it.sales_entry_id]=(qty[it.sales_entry_id]||0)+Number(it.quantity||0)})}
       const g=new Map();
@@ -2401,7 +2412,7 @@ async function cashPage(){
       if(tok!==navToken)return;
       const row=(dr.data||[])[0],prev=(pr.data||[])[0];
       const manual=!!(row&&row.opening_manual),open=manual?Number(row.opening_cash||0):(prev?Number(prev.closing_cash||0):(row?Number(row.opening_cash||0):0));
-      S={day,auto,lines:lr.data||[],open,manual:manual||(!prev&&!!row&&Number(row.opening_cash)>0),hasPrev:!!prev};
+      S={day,auto,other:new Set(),lines:lr.data||[],open,manual:manual||(!prev&&!!row&&Number(row.opening_cash)>0),hasPrev:!!prev};
       $('csMsg').innerHTML='';
       refresh();edit();saveDay();
     }catch(e){S=null;msg($('csMsg'),e.message||String(e))}
@@ -2416,6 +2427,14 @@ async function cashPage(){
     if(d){if(!confirm('Delete this row?'))return;const r=await db.from('cash_lines').delete().eq('id',d.dataset.del);if(r.error)return msg($('csMsg'),r.error.message);S.lines=S.lines.filter(x=>String(x.id)!==d.dataset.del);edit();refresh();saveDay()}
   };
   $('csEdit').onchange=async e=>{
+    const sl=e.target.closest('select[data-sel]');
+    if(sl&&S){
+      const row=S.lines.find(x=>String(x.id)===sl.dataset.id);if(!row)return;
+      const v=sl.value,id=String(row.id);
+      if(v==='__other'){S.other.add(id);if(row.name&&![...BANKS,...EXPS].includes(row.name)){}else{row.name='';const r0=await db.from('cash_lines').update({name:''}).eq('id',row.id);if(r0.error)return msg($('csMsg'),r0.error.message)}}
+      else{S.other.delete(id);row.name=v;const r1=await db.from('cash_lines').update({name:v}).eq('id',row.id);if(r1.error)return msg($('csMsg'),r1.error.message)}
+      edit();refresh();saveDay();return;
+    }
     const i=e.target.closest('input[data-id]');if(!i||!S)return;
     const fld=i.dataset.f,v=(fld==='amount'||fld==='qty')?num(i.value):i.value.trim();
     const row=S.lines.find(x=>String(x.id)===i.dataset.id);if(!row)return;
