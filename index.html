@@ -1020,9 +1020,17 @@ async function creditPage(){
     if(error)return msg($('crMsg'),error.message);
     if(!rows||!rows.length)return;
     const single=rows.length===1,c0=rows[0],noSale=rows.every(c=>!c.sales_entry_id);
-    const dsoOpts=Object.values(DSOM).filter(x=>x&&x.is_active!==false).sort((p,q)=>String(p.full_name).localeCompare(String(q.full_name))).map(x=>`<option value="${x.id}" ${x.id===c0.dso_id?'selected':''}>${esc(x.full_name)}</option>`).join('');
-    box.innerHTML=`<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 6px">Edit cheque${single?'':' line ('+rows.length+' cheques)'}</h3><div class="muted" style="margin-bottom:10px">${single?'':'Date, payable date and remarks apply to every cheque on this line; the amount can be changed one cheque at a time. '}${noSale?'':'This cheque came from a Sales Entry: the receiving date and brand changed here only change this report, not the sale. '}Clear a name or brand to go back to the original.</div><div class="form-grid"><div><label>Enterprise name</label><input id="ceShop" value="${esc(d.shop||'')}"></div><div><label>Responsible person</label><input id="ceWho" value="${esc(d.who||'')}"></div><div><label>Brand name</label><input id="ceBrand" value="${esc(d.brand==='—'?'':(d.brand||''))}"></div><div><label>Cheque receiving date</label><input type="date" id="ceRecv" value="${d.recd||''}"></div><div><label>Payable date</label><input type="date" id="cePay" value="${d.pd||''}"></div><div><label>Cheque amount (Tk)</label><input type="number" id="ceAmt" min="1" step="any" ${single?'':'disabled placeholder="one cheque at a time"'} value="${single?c0.amount:''}"></div>${single&&noSale?`<div><label>DSO</label><select id="ceDso"><option value="">— none —</option>${dsoOpts}</select></div>`:''}<div><label>Remarks</label><input id="ceRem" value="${esc(d.rem||'')}"></div></div><div class="form-actions"><button id="ceSave">Save changes</button><button class="secondary" id="ceCancel">Cancel</button></div><div id="ceMsg"></div></div>`;
+    const dsoList=Object.values(DSOM).filter(x=>x&&x.is_active!==false).sort((p,q)=>String(p.full_name).localeCompare(String(q.full_name)));
+    const segs=[];{const re=/([A-Za-z][A-Za-z0-9 .'\/&]*?)\s*-\s*(\d[\d,]*)/g;let mm;while((mm=re.exec(c0.resp_text||'')))segs.push({name:mm[1],amt:mm[2].replace(/,/g,'')})}
+    const dsoRow=x=>{const on=c0.dso_id?x.id===c0.dso_id:nameHit(c0.resp_text,x.full_name),sg=segs.find(g=>nameHit(g.name,x.full_name));return `<label style="display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" data-d="${x.id}" ${on?'checked':''} style="width:auto;margin:0"> <span style="flex:1">${esc(x.full_name)}</span><input type="number" data-a="${x.id}" placeholder="Tk" min="0" step="any" value="${on&&sg?sg.amt:''}" style="width:90px"></label>`};
+    box.innerHTML=`<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 6px">Edit cheque${single?'':' line ('+rows.length+' cheques)'}</h3><div class="muted" style="margin-bottom:10px">${single?'':'Date, payable date and remarks apply to every cheque on this line; the amount can be changed one cheque at a time. '}${noSale?'':'This cheque came from a Sales Entry: the receiving date and brand changed here only change this report, not the sale. '}Clear a name or brand to go back to the original.</div><div class="form-grid"><div><label>Enterprise name</label><input id="ceShop" value="${esc(d.shop||'')}"></div><div><label>Responsible person</label><input id="ceWho" value="${esc(d.who||'')}"></div><div><label>Brand name</label><input id="ceBrand" value="${esc(d.brand==='—'?'':(d.brand||''))}"></div><div><label>Cheque receiving date</label><input type="date" id="ceRecv" value="${d.recd||''}"></div><div><label>Payable date</label><input type="date" id="cePay" value="${d.pd||''}"></div><div><label>Cheque amount (Tk)</label><input type="number" id="ceAmt" min="1" step="any" ${single?'':'disabled placeholder="one cheque at a time"'} value="${single?c0.amount:''}"></div>${single&&noSale?`<div style="grid-column:1/-1"><label>DSOs responsible (tick one or more; the amount of each is optional)</label><div id="ceDsos" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px 12px;padding:8px;border:1px solid #d9e1ed;border-radius:9px">${dsoList.map(dsoRow).join('')}</div><div class="muted" style="margin-top:4px">Ticking DSOs fills the Responsible person box, e.g. "Mukit-77530 Hamid-45550". Every ticked DSO sees this shop in their own login.</div></div>`:''}<div><label>Remarks</label><input id="ceRem" value="${esc(d.rem||'')}"></div></div><div class="form-actions"><button id="ceSave">Save changes</button><button class="secondary" id="ceCancel">Cancel</button></div><div id="ceMsg"></div></div>`;
     $('ceCancel').onclick=()=>{box.innerHTML=''};
+    let dsoTouched=false;
+    if($('ceDsos'))$('ceDsos').oninput=()=>{
+      dsoTouched=true;
+      const picked=[...$('ceDsos').querySelectorAll('input[type=checkbox]:checked')].map(cb=>{const x=DSOM[cb.dataset.d],a=$('ceDsos').querySelector('input[data-a="'+cb.dataset.d+'"]').value;return x.full_name+(a?'-'+a:'')});
+      if(picked.length)$('ceWho').value=picked.join(' ');
+    };
     $('ceSave').onclick=async()=>{
       const m=$('ceMsg'),v=x=>$(x).value.trim();
       const shop=v('ceShop'),who=v('ceWho'),brand=v('ceBrand'),rv=$('ceRecv').value,pv=$('cePay').value,rem=v('ceRem');
@@ -1032,7 +1040,14 @@ async function creditPage(){
       for(const row of rows){
         const u={};
         if(shop!==(d.shop||''))u.shop_override=shop||null;
-        if(who!==(d.who||''))u.who_override=who||null;
+        if(who!==(d.who||'')){
+          if(row.sales_entry_id)u.who_override=who||null;
+          else{
+            /* the real Responsible-person text (this is what DSO logins match on); brand names already in it are kept */
+            const keep=brandsIn(row.resp_text).filter(n=>!new RegExp('\\b'+n+'\\b','i').test(who));
+            u.resp_text=who?(who+(keep.length?' '+keep.join(' '):'')):null;u.who_override=null;
+          }
+        }
         if(brand!==origBrand)u.brand_override=brand||null;
         if(rv!==(d.recd||'')){if(row.sales_entry_id)u.recv_override=rv;else u.received_on=rv}
         if(pv!==(d.pd||''))u.payable_date=pv||null;
@@ -1046,7 +1061,7 @@ async function creditPage(){
             if(amt<got-0.005)return msg(m,'Already recovered '+fAmt(got)+'. The amount cannot be less than that.');
             u.amount=amt;
           }
-          if($('ceDso')&&($('ceDso').value||null)!==(row.dso_id||null))u.dso_id=$('ceDso').value||null;
+          if($('ceDsos')&&dsoTouched){const ps=[...$('ceDsos').querySelectorAll('input[type=checkbox]:checked')].map(cb=>cb.dataset.d);u.dso_id=ps.length===1?ps[0]:null}
         }
         if(Object.keys(u).length)jobs.push([row.id,u]);
       }
