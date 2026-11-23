@@ -265,7 +265,7 @@ table.crt td.cract button{display:block;width:100%;margin:0 0 3px;padding:3px 4p
 </style></head>
 <body>
 <div id="loginView" class="login-wrap"><div class="login"><h1>Sheba Distribution Sales &amp; Credit Management System</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
-<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="cash">▤ &nbsp; Daily Cash Status</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
+<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="target">◉ &nbsp; Target vs Achievement</button><button data-page="cash">▤ &nbsp; Daily Cash Status</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
 <script>
 const SUPABASE_URL='https://nvnogsganemysvbqmcpo.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_tyWf1VnXMzNVBs22Qgs3wg_SBy6HegJ';
@@ -360,21 +360,22 @@ $('dsoContinueBtn').onclick=async()=>{
 };
 $('backLoginBtn').onclick=async()=>{await db.auth.signOut();store.del('dsoId');store.del('loggedDso');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
 $('logoutBtn').onclick=async()=>{stopLocTracking();stopApprovalWatch();currentDso=null;store.del('dsoId');store.del('loggedDso');await db.auth.signOut();$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
-const DSO_PAGES=['dashboard','sales','reports','sheet','credit'];
+const DSO_PAGES=['dashboard','sales','reports','sheet','credit','target'];
 function showApp(mode='admin'){
   userMode=mode;$('loginView').classList.add('hidden');$('appView').classList.remove('hidden');
   if(!window._bfNames){window._bfNames=1;addBrandNames()}
-  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('hidden',mode==='dso'&&!DSO_PAGES.includes(b.dataset.page)));
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('hidden',(mode==='dso'&&!DSO_PAGES.includes(b.dataset.page))||(mode!=='dso'&&b.dataset.page==='target')));
   $('sessionLabel').textContent=mode==='dso'?'DSO: '+(currentDso?.full_name||''):'Admin session';
   go(mode==='dso'?'sales':'dashboard');
   if(mode==='dso')startLocTracking();else stopLocTracking();
   if(mode==='admin')startApprovalWatch();else stopApprovalWatch();
 }
 $('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(b)go(b.dataset.page)});
-const titles={dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location',cash:'Daily Cash Status'};
-const pages={dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage(),dsoloc:()=>dsoLocPage(),cash:()=>cashPage()};
+const titles={dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location',cash:'Daily Cash Status',target:'Target vs Achievement'};
+const pages={dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage(),dsoloc:()=>dsoLocPage(),cash:()=>cashPage(),target:()=>targetPage()};
 function go(p,arg){
   if(userMode==='dso'&&!DSO_PAGES.includes(p))p='sales';
+  if(userMode!=='dso'&&p==='target')p='dashboard';
   currentPage=p;navToken++;
   document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===((p==='sheet'||p==='credit')?'reports':p)));
   $('topTitle').textContent=titles[p];
@@ -2499,6 +2500,90 @@ async function cashPage(){
     row[fld]=v;refresh();saveDay();
   };
   load();
+}
+
+/* ---------- Target vs Achievement (DSO login only) ---------- */
+async function targetPage(){
+  const tok=navToken,dso=currentDso;
+  if(!dso){$('page').innerHTML='<div class="notice error">This page is for DSO logins.</div>';return}
+  if(!document.getElementById('tvCss')){const st=document.createElement('style');st.id='tvCss';st.textContent='.tv-card{background:#fff;color:#0f172a;border-radius:16px;overflow:hidden;max-width:520px;margin:14px auto;border:1px solid #cfd8e6;box-shadow:0 10px 30px -14px #0006}.tv-hd{background:linear-gradient(135deg,#0b3a8f,#2563eb);color:#fff;padding:14px 18px}.tv-hd small{opacity:.85;display:block;font-size:12px}.tv-hd b{font-size:19px;display:block;margin-top:2px}.tv-meta{display:flex;flex-wrap:wrap;gap:6px 18px;padding:10px 18px;background:#eef3fc;font-size:13px;font-weight:600}.tv-meta span{white-space:nowrap}.tv-row{padding:10px 18px;border-top:1px solid #e5eaf3}.tv-t{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.tv-t b{font-size:14px}.tv-t em{font-style:normal;font-weight:800;font-size:13px}.tv-v{display:flex;gap:14px;margin:4px 0 6px;font-size:13px}.tv-v div{flex:1}.tv-v small{display:block;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:.04em}.tv-v strong{font-size:17px;font-variant-numeric:tabular-nums}.tv-bar{height:8px;border-radius:99px;background:#e5eaf3;overflow:hidden}.tv-bar i{display:block;height:100%;border-radius:99px}.tv-ft{padding:8px 18px;font-size:11px;color:#64748b;text-align:center;border-top:1px solid #e5eaf3}.tv-form td{padding:5px 6px}.tv-form input{width:100%;min-width:80px}@media print{.tv-card{box-shadow:none;margin:0 auto}}';document.head.appendChild(st)}
+  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Target vs Achievement</h1><div class="sub">Fill your targets, check the achievements (taken from your sales entries, you can correct them) and share the report.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="tvDate"></div><div><label>Road name</label><select id="tvRoad"></select></div><div><label>Shop quantity</label><input type="number" id="tvShops" step="any" placeholder="Total shops on the road"></div></div><div class="table-wrap" style="margin-top:10px"><table class="tv-form"><thead><tr><th></th><th>Target</th><th>Achievement</th></tr></thead><tbody id="tvRows"></tbody></table></div><div class="form-actions" style="margin-top:12px"><button id="tvImg">Share picture</button><button id="tvTxt" class="secondary">Share as text</button><button id="tvPrint" class="secondary">Print</button><button id="tvAuto" class="secondary">Use sales figures</button></div><div id="tvMsg"></div></div></div><div id="tvCard"></div>`;
+  const KEY=(d)=>'dsoTarget|'+dso.id+'|'+d;
+  const M=[['visit','Shop visit','n'],['memo','Memo','n'],['vol','Sales volume','n'],['val','Sales value','t'],['coll','Collection','t']];
+  const f=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
+  const num=v=>{const n=Number(String(v==null?'':v).replace(/,/g,''));return Number.isFinite(n)?n:0};
+  let D=null,auto=null,roads=[];
+  const load=()=>{try{return JSON.parse(localStorage.getItem(KEY($('tvDate').value))||'null')}catch(e){return null}};
+  const save=()=>{try{localStorage.setItem(KEY(D.date),JSON.stringify(D))}catch(e){}};
+  const ach=k=>D.man[k]?num(D.ach[k]):(auto?auto[k]:num(D.ach[k]));
+  const pct=(a,t)=>t>0?Math.round(a/t*100):null;
+  const col=p=>p==null?'#94a3b8':p>=100?'#16a34a':p>=50?'#f59e0b':'#dc2626';
+  const card=()=>{
+    const rn=(roads.find(x=>String(x.id)===String(D.road))||{}).name||'—';
+    const rows=M.map(([k,lb])=>{const t=num(D.tar[k]),a=ach(k),p=pct(a,t);return `<div class="tv-row"><div class="tv-t"><b>${lb}</b><em style="color:${col(p)}">${p==null?'':p+'%'}</em></div><div class="tv-v"><div><small>Target</small><strong>${f(t)}</strong></div><div><small>Achievement</small><strong>${f(a)}</strong></div></div><div class="tv-bar"><i style="width:${Math.min(100,p||0)}%;background:${col(p)}"></i></div></div>`}).join('');
+    $('tvCard').innerHTML=`<div class="tv-card" id="tvCardBox"><div class="tv-hd"><small>${esc(COMPANY.name)}</small><b>Today's Target vs Achievement</b></div><div class="tv-meta"><span>DSO: ${esc(dso.full_name||'')}</span><span>Date: ${esc(fmtDate(D.date))}</span><span>Road: ${esc(rn)}</span><span>Shop quantity: ${f(num(D.shops))}</span></div>${rows}<div class="tv-ft">Sheba Distribution Sales &amp; Credit Management System</div></div>`;
+  };
+  const rowsHtml=()=>{
+    $('tvRows').innerHTML=M.map(([k,lb])=>`<tr><td><b>${lb}</b></td><td><input data-k="${k}" data-w="tar" type="number" step="any" value="${D.tar[k]||''}"></td><td><input data-k="${k}" data-w="ach" type="number" step="any" value="${ach(k)||''}"><div class="muted" style="font-size:11px">${D.man[k]?'edited':'from sales'}</div></td></tr>`).join('');
+  };
+  const text=()=>{
+    const rn=(roads.find(x=>String(x.id)===String(D.road))||{}).name||'—';
+    const o=["Today's target vs. achievement",'DSO: '+(dso.full_name||''),'Date: '+fmtDate(D.date),'','Road name: '+rn,'Shop quantity: '+f(num(D.shops))];
+    M.forEach(([k,lb])=>{const t=num(D.tar[k]),a=ach(k),p=pct(a,t);o.push(lb+' target: '+f(t),lb+' achievement: '+f(a)+(p==null?'':' ('+p+'%)'))});
+    return o.join('\n');
+  };
+  const draw=()=>{rowsHtml();card()};
+  const init=async()=>{
+    const date=$('tvDate').value;if(!date)return;
+    $('tvMsg').innerHTML='<div class="notice">Loading…</div>';
+    try{
+      const [rds,rows]=await Promise.all([queryAll('roads'),fetchAll(()=>scopedReport().eq('sale_date',date).order('id'))]);
+      if(tok!==navToken)return;
+      roads=rds.sort((a,b)=>String(a.name).localeCompare(String(b.name),undefined,{numeric:true}));
+      const sales=rows.filter(x=>!isDueRow(x)),ids=sales.map(x=>x.id);let qty=0;
+      for(let i=0;i<ids.length;i+=40){(await fetchAll(()=>db.from('sales_items').select('quantity').in('sales_entry_id',ids.slice(i,i+40)).order('id'))).forEach(it=>{qty+=Number(it.quantity||0)})}
+      auto={visit:new Set(rows.map(x=>x.retailer_id).filter(Boolean)).size,memo:sales.length,vol:qty,val:sales.reduce((a,x)=>a+Number(x.total_sales||0),0),coll:rows.reduce((a,x)=>a+Number(x.received_amount||0),0)};
+      const cnt={};rows.forEach(x=>{if(x.road_id)cnt[x.road_id]=(cnt[x.road_id]||0)+1});
+      const topRoad=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
+      const sv=load();
+      D=sv||{date,road:'',shops:'',tar:{},ach:{},man:{}};
+      D.date=date;D.tar=D.tar||{};D.ach=D.ach||{};D.man=D.man||{};
+      if(!D.road&&topRoad)D.road=topRoad[0];
+      $('tvRoad').innerHTML='<option value="">Select road</option>'+roads.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
+      $('tvRoad').value=D.road||'';$('tvShops').value=D.shops||'';
+      $('tvMsg').innerHTML='';draw();
+    }catch(e){msg($('tvMsg'),e.message||String(e))}
+  };
+  $('tvDate').value=today();$('tvDate').onchange=init;
+  $('tvRoad').onchange=()=>{if(!D)return;D.road=$('tvRoad').value;save();card()};
+  $('tvShops').oninput=()=>{if(!D)return;D.shops=$('tvShops').value;save();card()};
+  $('tvRows').oninput=e=>{const i=e.target.closest('input[data-k]');if(!i||!D)return;const k=i.dataset.k;if(i.dataset.w==='tar')D.tar[k]=i.value;else{D.ach[k]=i.value;D.man[k]=true}save();card()};
+  $('tvAuto').onclick=()=>{if(!D)return;D.man={};D.ach={};save();draw()};
+  $('tvPrint').onclick=()=>{if(D)window.print()};
+  $('tvTxt').onclick=()=>{if(D)shareText("Today's target vs. achievement",text())};
+  let pend=null;
+  const sendImg=async file=>{
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"Today's target vs. achievement"});return}
+    const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),8000);
+    msg($('tvMsg'),'The picture was saved on this device. Send it from Downloads or Gallery.','success');
+  };
+  $('tvImg').onclick=async()=>{
+    if(!D)return;const b=$('tvImg');
+    if(pend){const fl=pend;pend=null;b.textContent='Share picture';try{await sendImg(fl)}catch(e){if(!e||e.name!=='AbortError')msg($('tvMsg'),'Could not share: '+(e.message||e))}return}
+    b.disabled=true;b.textContent='Preparing…';$('tvMsg').innerHTML='';
+    try{
+      await loadH2C();
+      const cv=await html2canvas($('tvCardBox'),{scale:2,backgroundColor:'#ffffff',useCORS:true});
+      const blob=await new Promise(ok=>cv.toBlob(ok,'image/png'));
+      const fl=new File([blob],'Target_vs_Achievement_'+D.date+'.png',{type:'image/png'});
+      b.disabled=false;b.textContent='Share picture';
+      try{await sendImg(fl)}catch(e){
+        if(e&&e.name==='NotAllowedError'){pend=fl;b.textContent='Picture ready - tap to share'}
+        else if(e&&e.name!=='AbortError')msg($('tvMsg'),'Could not share: '+(e.message||e));
+      }
+    }catch(e){b.disabled=false;b.textContent='Share picture';msg($('tvMsg'),e.message||String(e))}
+  };
+  init();
 }
 async function sheetPage(){
   const tok=navToken,isAdmin=userMode==='admin';
