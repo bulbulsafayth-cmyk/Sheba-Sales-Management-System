@@ -2589,7 +2589,7 @@ async function targetPage(){
 }
 async function sheetPage(){
   const tok=navToken,isAdmin=userMode==='admin';
-  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Daily Sales Sheet</h1><div class="sub">One printable sheet per DSO and brand for a single day. Print in A4 landscape.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="shDate"></div><div><label>Brand</label><select id="shBrand"><option value="">All brands</option></select></div>${isAdmin?'<div><label>DSO</label><select id="shDso"><option value="">All DSOs</option></select></div>':''}</div><div class="form-actions"><button id="shRun">Generate sheet</button><button class="secondary" id="shPrint">Print / PDF</button><button class="secondary" id="shXlsx">Excel</button><button class="secondary" id="shImg"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-4.2M8.6 13.4l6.8 4.2"/></svg>Share</button><button class="secondary" id="shSave"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg>Save image</button><button class="secondary" id="shBack">← Summary report</button></div><div id="shMsg"></div></div></div><div id="shOut" class="sheetwrap"></div>`;
+  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Daily Sales Sheet</h1><div class="sub">One printable sheet per DSO and brand for a single day. Print in A4 landscape.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="shDate"></div><div><label>Brand</label><select id="shBrand"><option value="">All brands</option></select></div>${isAdmin?'<div><label>DSO</label><select id="shDso"><option value="">All DSOs</option></select></div>':''}</div><div class="form-actions"><button id="shRun">Generate sheet</button><button class="secondary" id="shPrint">Print / PDF</button><button class="secondary" id="shXlsx">Excel</button><button class="secondary" id="shImg"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-4.2M8.6 13.4l6.8 4.2"/></svg>Share</button><button class="secondary" id="shSave"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg>Save image</button><button class="secondary" id="shBack">← Summary report</button></div><div id="shMsg"></div></div></div><div id="shOut" class="sheetwrap"></div><datalist id="dlR"></datalist><datalist id="dlB"></datalist>`;
   const [brands,dsos,roads,rets,prods]=await Promise.all(['brands','dsos','roads','retailers','products'].map(t=>queryAll(t)));
   if(tok!==navToken)return;
   const bm=await loadDsoBrandMap();
@@ -2639,7 +2639,7 @@ async function sheetPage(){
   const calcHtml=k=>{
     const c=cget(k),side=(sd,title,ph)=>{
       const tot=c[sd].reduce((a,x)=>a+cnum(x.a),0)+(sd==='l'?cnum(c.tc):0);
-      return `<div class="cbox">${sd==='l'?`<div class="crow ctc"><b>Total Collection</b><input class="ca" data-k="${k}" data-s="tc" data-f="tc" inputmode="decimal" value="${esc(c.tc)}" placeholder="0"><button class="secondary cadd noprint" data-sheet="${SHT[k]||0}" title="Fill with this sheet's collection">Use sheet ${fmtN(SHT[k]||0)}</button></div>`:''}<div class="ctt">${title}</div>${c[sd].map((x,i)=>`<div class="crow"><input class="cn" data-k="${k}" data-s="${sd}" data-i="${i}" data-f="n" value="${esc(x.n)}" placeholder="${ph}"><input class="ca" data-k="${k}" data-s="${sd}" data-i="${i}" data-f="a" inputmode="decimal" value="${esc(x.a)}" placeholder="0"><button class="cx noprint" data-rm="${sd}|${i}" title="Remove row">×</button></div>`).join('')}<div class="crow ctot"><span>Total</span><b class="ct-${sd}">${tot?fmtN(tot):'–'}</b></div><button class="secondary cadd noprint" data-add="${sd}">+ Add row</button></div>`;
+      return `<div class="cbox">${sd==='l'?`<div class="crow ctc"><b>Total Collection</b><input class="ca" data-k="${k}" data-s="tc" data-f="tc" inputmode="decimal" value="${esc(c.tc)}" placeholder="0"><button class="secondary cadd noprint" data-sheet="${SHT[k]||0}" title="Fill with this sheet's collection">Use sheet ${fmtN(SHT[k]||0)}</button></div>`:''}<div class="ctt">${title}</div>${c[sd].map((x,i)=>`<div class="crow"><input class="cn" list="${sd==='l'?'dlR':'dlB'}" autocomplete="off" data-k="${k}" data-s="${sd}" data-i="${i}" data-f="n" value="${esc(x.n)}" placeholder="${ph}"><input class="ca" data-k="${k}" data-s="${sd}" data-i="${i}" data-f="a" inputmode="decimal" value="${esc(x.a)}" placeholder="0"><button class="cx noprint" data-rm="${sd}|${i}" title="Remove row">×</button></div>`).join('')}<div class="crow ctot"><span>Total</span><b class="ct-${sd}">${tot?fmtN(tot):'–'}</b></div><button class="secondary cadd noprint" data-add="${sd}">+ Add row</button></div>`;
     };
     return `<div class="cgrid">${side('l','Cash &amp; cheque collection','e.g. Total cash / ck Shop name')}${side('r','Deposit / given to','e.g. Bank, DSO name')}</div><div class="cchk">${chkHtml(c)}</div>`;
   };
@@ -2656,6 +2656,17 @@ async function sheetPage(){
     let rows=[];try{const r0=await db.from('sheet_calc').select('k,data').eq('day',date);if(!r0.error)rows=r0.data||[]}catch(e){}
     rows.forEach(x=>{CALC[x.k]=x.data});
     keys.forEach(k=>{if(!CALC[k]){try{const v=localStorage.getItem('shcalc|'+k);if(v)CALC[k]=JSON.parse(v)}catch(e){}}});
+  };
+  const CBANKS=['DBBL 5451','DBBL 1994','DBBL SPC','DBBL Sheba BS Cafe','DBBL CC Loan A/c','Dhaka Bank Telecom','Dhaka Bank Smile','One Bank Distribution','City Bank Telecom','City Bank Distribution','City Bank Oppo Dealer Finance','City Bank Vivo Dealer Finance','Brac Bank'];
+  let LISTS=null;
+  const loadLists=async()=>{
+    if(!LISTS){
+      LISTS={r:[],d:[]};
+      try{const rs=await fetchAll(()=>db.from('retailers').select('id,name').order('name').order('id'));LISTS.r=[...new Set(rs.map(x=>(x.name||'').trim()).filter(Boolean))]}catch(e){}
+      try{const ds=await db.from('dsos').select('full_name').eq('is_active',true).order('full_name');LISTS.d=(ds.data||[]).map(x=>x.full_name).filter(Boolean)}catch(e){}
+    }
+    const o=v=>`<option value="${esc(v)}"></option>`;
+    const r=$('dlR'),b=$('dlB');if(r)r.innerHTML=LISTS.r.map(o).join('');if(b)b.innerHTML=CBANKS.map(o).join('')+LISTS.d.map(o).join('');
   };
   const cwire=()=>{
     const out=$('shOut');if(out.dataset.cw)return;out.dataset.cw='1';
@@ -2697,7 +2708,7 @@ async function sheetPage(){
       const gm=new Map();
       entries.forEach(e=>{const k=e.dso_id+'|'+e.brand_id;if(!gm.has(k))gm.set(k,{dso_id:e.dso_id,brand_id:e.brand_id,entries:[]});gm.get(k).entries.push(e)});
       last=[...gm.values()].sort((a,b)=>cmp(L.dso[a.dso_id]?.full_name||'',L.dso[b.dso_id]?.full_name||'')||cmp(L.brand[a.brand_id]?.name||'',L.brand[b.brand_id]?.name||'')).map(g=>({g,m:model(g.entries,by),date}));
-      await cload(date,last.map(x=>date+'|'+x.g.dso_id+'|'+x.g.brand_id));if(tok!==navToken)return;
+      await loadLists();await cload(date,last.map(x=>date+'|'+x.g.dso_id+'|'+x.g.brand_id));if(tok!==navToken)return;
       cwire();
       $('shOut').innerHTML=last.map(x=>html(x.g,x.m,date)).join('');
     }catch(err){msg(m,err.message||String(err))}
