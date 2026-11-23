@@ -320,9 +320,23 @@ async function showDsoPicker(){
   $('appView').classList.add('hidden');$('loginView').classList.remove('hidden');
   $('authFields').classList.add('hidden');$('dsoStep').classList.remove('hidden');$('loginMsg').innerHTML='';
 }
-async function enterDso(d){d.brandIds=await dsoBrandIds(d);d.roadIds=await dsoRoadIds(d);currentDso=d;store.set('dsoId',d.id);
-  showApp('dso')}
-async function useDso(id,gate){const {data}=await db.from('dsos').select(DSO_COLS).eq('id',id).eq('is_active',true).maybeSingle();if(!data)return false;if(gate&&!(await dsoApprovalGate(data)))return 'denied';await enterDso(data);return true}
+/* Welcome voice for DSOs: spoken by the phone's own voice (no sound file), only on a fresh login */
+function unlockVoice(){try{if(!('speechSynthesis' in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}}
+function welcomeVoice(d){
+  try{
+    if(!('speechSynthesis' in window))return;
+    const parts=String(d.full_name||d.name||'').trim().split(/\s+/).filter(Boolean);
+    const first=parts.find(w=>!/^(md\.?|mohammad|mohammed|muhammad|mr\.?)$/i.test(w))||parts[0];
+    if(!first)return;
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance('Welcome back, Mister '+first.replace(/[.,]/g,''));
+    u.lang='en-US';u.rate=.95;u.pitch=1;u.volume=1;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+async function enterDso(d,welcome){d.brandIds=await dsoBrandIds(d);d.roadIds=await dsoRoadIds(d);currentDso=d;store.set('dsoId',d.id);
+  showApp('dso');if(welcome)welcomeVoice(d)}
+async function useDso(id,gate){const {data}=await db.from('dsos').select(DSO_COLS).eq('id',id).eq('is_active',true).maybeSingle();if(!data)return false;if(gate&&!(await dsoApprovalGate(data)))return 'denied';await enterDso(data,!!gate);return true}
 /* FIX 2: DSO sessions are restored on refresh too */
 async function checkSession(){
   const {data:{session}}=await db.auth.getSession();if(!session)return;
@@ -335,6 +349,7 @@ async function checkSession(){
 $('loginType').onchange=()=>{$('loginMsg').innerHTML='';$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden')};
 $('password').addEventListener('keydown',e=>{if(e.key==='Enter')$('loginBtn').click()});
 $('loginBtn').onclick=async()=>{
+  unlockVoice();
   userMode=$('loginType').value;
   const {data,error}=await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
   if(error)return msg($('loginMsg'),error.message);
@@ -355,10 +370,11 @@ $('loginBtn').onclick=async()=>{
   }
 };
 $('dsoContinueBtn').onclick=async()=>{
+  unlockVoice();
   const d=(window._availableDsos||[]).find(x=>x.id===$('dsoSelect').value);
   if(!d)return msg($('loginMsg'),'Please select your DSO name.');
   if(!(await dsoApprovalGate(d)))return msg($('loginMsg'),'Admin did not approve this login.');
-  await enterDso(d);
+  await enterDso(d,true);
 };
 $('backLoginBtn').onclick=async()=>{await db.auth.signOut();store.del('dsoId');store.del('loggedDso');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
 $('logoutBtn').onclick=async()=>{stopLocTracking();stopApprovalWatch();currentDso=null;store.del('dsoId');store.del('loggedDso');await db.auth.signOut();$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
@@ -2823,56 +2839,19 @@ function buildBrandFloat(){
   if(still){P.forEach(p=>{show(p);p.d.style.transform='translate('+p.x+'px,'+p.y+'px)'})}
   else{
     requestAnimationFrame(tick);
-    /* intro: "Sheba Telecom" slides down from the top, blasts at the bottom, and the phones fly out of the blast */
+    /* intro: "Sheba Telecom" floats down like a wave, blasts at the bottom, and the phones fly out of the blast (no screen crack) */
     const ti=document.createElement('div');ti.className='sbTitle';
     ti.innerHTML='<div class="sbWord">'+'Sheba Telecom'.split('').map((c,k)=>c===' '?'<span class="sp">&nbsp;</span>':'<span style="animation-delay:'+(k*0.09).toFixed(2)+'s">'+c+'</span>').join('')+'</div><div class="sbSub">The Home of Mobile Phones</div>';T.appendChild(ti);
     const bx=W()/2,dur=5600,t0=performance.now();
     let by=Hh()-100;
     const dims=()=>{const th=ti.offsetHeight||90,tw=ti.offsetWidth||300;by=Hh()-th-30;return {th,tw}};
-    const pos=y=>{const {tw}=dims();ti.style.transform='translate('+(W()/2-tw/2).toFixed(0)+'px,'+y.toFixed(0)+'px)'};
+    const pos=(y,sx)=>{const {tw}=dims();ti.style.transform='translate('+(W()/2-tw/2+(sx||0)).toFixed(0)+'px,'+y.toFixed(0)+'px)'};
     const fall=now=>{
       const u=Math.min(1,(now-t0)/dur),e=u*u*(3-2*u)*0.6+u*0.4,{th}=dims();
-      pos(-th-30+((Hh()-th-30)+th+30)*e);
+      pos(-th-30+((Hh()-th-30)+th+30)*e,Math.sin(u*Math.PI*6)*Math.min(24,W()*.05)*(1-u));
       if(u<1)return requestAnimationFrame(fall);
-      crackIt();
-    };
-    /* sound (browsers only allow it once the page has had a tap or click; otherwise it stays silent) */
-    let AC=null;const ac=()=>{try{if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();return AC}catch(e){return null}};
-    const noise=(C,len)=>{const b=C.createBuffer(1,Math.max(1,Math.floor(C.sampleRate*len)),C.sampleRate),d=b.getChannelData(0);for(let k=0;k<d.length;k++)d[k]=Math.random()*2-1;const n=C.createBufferSource();n.buffer=b;return n};
-    const crackSound=n=>{const C=ac();if(!C)return;try{const t=C.currentTime;
-      const x=noise(C,.5),hp=C.createBiquadFilter(),g=C.createGain();hp.type='highpass';hp.frequency.value=1800+n*500;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.9,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+.28+n*.06);x.connect(hp);hp.connect(g);g.connect(C.destination);x.start(t);
-      for(let k=0;k<4+n*2;k++){const o=noise(C,.03),f=C.createBiquadFilter(),h=C.createGain(),at=t+.02+Math.random()*.25;f.type='bandpass';f.frequency.value=2500+Math.random()*4500;h.gain.setValueAtTime(.7,at);h.gain.exponentialRampToValueAtTime(.0001,at+.03);o.connect(f);f.connect(h);h.connect(C.destination);o.start(at)}
-      const th=C.createOscillator(),tg=C.createGain();th.type='sine';th.frequency.setValueAtTime(130,t);th.frequency.exponentialRampToValueAtTime(45,t+.2);tg.gain.setValueAtTime(.6,t);tg.gain.exponentialRampToValueAtTime(.0001,t+.25);th.connect(tg);tg.connect(C.destination);th.start(t);th.stop(t+.3)}catch(e){}};
-    const boomSound=()=>{const C=ac();if(!C)return;try{const t=C.currentTime;
-      const x=noise(C,1.4),lp=C.createBiquadFilter(),g=C.createGain();lp.type='lowpass';lp.frequency.setValueAtTime(3500,t);lp.frequency.exponentialRampToValueAtTime(200,t+1.2);g.gain.setValueAtTime(1,t);g.gain.exponentialRampToValueAtTime(.0001,t+1.3);x.connect(lp);lp.connect(g);g.connect(C.destination);x.start(t);
-      const o=C.createOscillator(),og=C.createGain();o.type='sine';o.frequency.setValueAtTime(110,t);o.frequency.exponentialRampToValueAtTime(30,t+.7);og.gain.setValueAtTime(1,t);og.gain.exponentialRampToValueAtTime(.0001,t+.8);o.connect(og);og.connect(C.destination);o.start(t);o.stop(t+.85)}catch(e){}};
-    ac();
-    /* glass cracks that run across the whole screen: three hits, each from a different point */
-    const crackIt=()=>{
-      const NS='http://www.w3.org/2000/svg',w=W(),h=Hh(),svg=document.createElementNS(NS,'svg');
-      svg.setAttribute('viewBox','0 0 '+w+' '+h);svg.style.cssText='position:absolute;inset:0;width:100%;height:100%';T.appendChild(svg);
-      const mk=(d,wd,col,delay,dd)=>{const p=document.createElementNS(NS,'path');p.setAttribute('d',d);p.setAttribute('pathLength','1');p.setAttribute('fill','none');p.setAttribute('stroke',col);p.setAttribute('stroke-width',wd);p.setAttribute('stroke-linecap','round');p.setAttribute('stroke-linejoin','round');p.style.strokeDasharray='1';p.style.strokeDashoffset='1';svg.appendChild(p);p.animate([{strokeDashoffset:1},{strokeDashoffset:0}],{duration:dd,delay,easing:'cubic-bezier(.1,.9,.2,1)',fill:'forwards'});return p};
-      const ray=(x,y,a,len,n,delay,wd)=>{let d='M'+x.toFixed(0)+' '+y.toFixed(0),px=x,py=y,tot=0;const pts=[];
-        while(tot<len){const st=25+Math.random()*55;a+=(Math.random()-.5)*.7;px+=Math.cos(a)*st;py+=Math.sin(a)*st;tot+=st;d+=' L'+px.toFixed(0)+' '+py.toFixed(0);pts.push([px,py,a]);if(px<-40||px>w+40||py<-40||py>h+40)break}
-        mk(d,wd+1.6,'#0a1a3acc',delay,420+len);mk(d,wd,'#ffffff',delay,420+len);
-        if(n>0)pts.filter((_,k)=>k%3===1).forEach(q=>{ray(q[0],q[1],q[2]+(Math.random()<.5?-1:1)*(.5+Math.random()*.7),len*.35,n-1,delay+60,Math.max(.8,wd-.8))})};
-      const hit=(n,x,y)=>{
-        crackSound(n);
-        const fl=document.createElement('div');fl.style.cssText='position:absolute;inset:0;background:#fff';T.appendChild(fl);fl.animate([{opacity:.5},{opacity:0}],{duration:180}).onfinish=()=>fl.remove();
-        T.animate([{transform:'translate(0,0)'},{transform:'translate(-9px,5px)'},{transform:'translate(8px,-6px)'},{transform:'translate(-5px,3px)'},{transform:'translate(0,0)'}],{duration:320});
-        const rays=7+n*3,R=Math.max(w,h)*(.55+n*.2);
-        for(let r=0;r<rays;r++)ray(x,y,(r/rays)*Math.PI*2+Math.random()*.5,R*(.5+Math.random()*.6),2,0,2.6-n*.3);
-        const rg=document.createElementNS(NS,'path');let dd='';for(let k=0;k<=14;k++){const a=k/14*Math.PI*2,rr=26+n*14+Math.random()*10;dd+=(k?' L':'M')+(x+Math.cos(a)*rr).toFixed(0)+' '+(y+Math.sin(a)*rr).toFixed(0)}
-        mk(dd,2,'#fff',0,300);
-      };
-      hit(0,w/2,h-60);
-      setTimeout(()=>hit(1,w*(.15+Math.random()*.25),h*(.25+Math.random()*.3)),700);
-      setTimeout(()=>hit(2,w*(.6+Math.random()*.25),h*(.3+Math.random()*.3)),1400);
-      setTimeout(()=>{
-        ti.animate([{opacity:1},{opacity:0}],{duration:160,fill:'forwards'}).onfinish=()=>ti.remove();
-        boomSound();blast();
-        svg.animate([{opacity:1},{opacity:1,offset:.45},{opacity:0}],{duration:1700,fill:'forwards'}).onfinish=()=>svg.remove();
-      },2200);
+      ti.animate([{opacity:1},{opacity:0}],{duration:160,fill:'forwards'}).onfinish=()=>ti.remove();
+      blast();
     };
     const blast=()=>{
       const f=document.createElement('div');f.className='sbFlash';f.style.cssText='left:'+(bx-40)+'px;top:'+(by-40)+'px;width:80px;height:80px';T.appendChild(f);
