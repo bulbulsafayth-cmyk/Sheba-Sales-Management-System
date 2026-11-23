@@ -395,6 +395,13 @@ async function dashboard(){
   p.innerHTML=`<div class="hero"><div><div class="hero-h">${greet}, ${esc(who)}</div><div class="hero-s">${wd}, ${fmtDate(t0)} · ${isAdmin?'Distribution sales overview':'Your sales summary'}</div></div><div class="hero-a"><button onclick="go('sales')">＋ New sales entry</button><button class="ghost" onclick="go('reports')">Reports</button><button class="ghost" onclick="go('sheet')">Daily sales sheet</button></div></div>${row('todayStats','Today · '+fmtDate(t0))}${row('monthStats','This month · '+MON[Number(t0.slice(5,7))-1]+' '+t0.slice(0,4))}<div class="dgrid"><div class="panel"><h3>This month by brand</h3><div id="brandBars"><p class="muted">Loading…</p></div></div>${isAdmin?'<div class="panel"><h3>Top DSOs this month</h3><div id="dsoBars"><p class="muted">Loading…</p></div></div>':''}</div>${isAdmin?'<div class="chips" id="stats"></div>':''}`;
   if(isAdmin){
     p.querySelector('.hero').insertAdjacentHTML('afterend','<div class="panel" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><div style="flex:1;min-width:220px"><b>DSO login permission</b><div class="muted" id="apvTxt">Loading…</div></div><span id="apvLbl" style="font-weight:700"></span><button class="apvsw" id="apvSw" role="switch" aria-checked="false" title="Turn DSO login approval on / off" disabled><i></i></button></div>');
+    $('apvSw').closest('.panel').insertAdjacentHTML('afterend','<div class="panel" id="apvWinBox"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><div style="flex:1;min-width:220px"><b>Login closed by time</b><div class="muted" id="apvWinTxt">Loading…</div></div><button class="apvsw" id="apvWinSw" role="switch" aria-checked="false" disabled><i></i></button></div><div class="form-grid" style="margin-top:12px;max-width:420px"><div><label>Closed from</label><input type="time" id="apvWinFrom" value="21:00"></div><div><label>Until</label><input type="time" id="apvWinTo" value="15:00"></div></div><div class="form-actions"><button id="apvWinSave" disabled>Save time</button></div></div>');
+    const winPaint=w=>{$('apvWinSw').classList.toggle('on',!!w.on);$('apvWinSw').setAttribute('aria-checked',w.on?'true':'false');$('apvWinFrom').value=w.from;$('apvWinTo').value=w.to;$('apvWinTxt').textContent=w.on?('ON: from '+w.from+' until '+w.to+' (next day if needed) DSOs cannot log in unless you tap Allow. Outside this time DSOs log in as the switch above says.'):'OFF: no time restriction.'};
+    const winSave=async on=>{const v=(on?'on':'off')+'|'+$('apvWinFrom').value+'|'+$('apvWinTo').value;const e=await setSetting(APVW_KEY,v);if(e){$('apvWinTxt').textContent='Could not save: '+e;return false}winPaint({on,from:$('apvWinFrom').value,to:$('apvWinTo').value});return true};
+    getApvWin().then(w=>{if(tok!==navToken||!$('apvWinSw'))return;if(!w.ok){$('apvWinTxt').textContent='Not set up yet. Run dso-login-approval-setup.sql in Supabase (SQL Editor), then reload.';return}winPaint(w);$('apvWinSw').disabled=false;$('apvWinSave').disabled=false;
+      $('apvWinSw').onclick=async()=>{const on=!$('apvWinSw').classList.contains('on');$('apvWinSw').disabled=true;await winSave(on);$('apvWinSw').disabled=false;if(on&&window.Notification&&Notification.permission==='default')Notification.requestPermission()};
+      $('apvWinSave').onclick=async()=>{const ok=await winSave($('apvWinSw').classList.contains('on'));if(ok)$('apvWinTxt').textContent+=' Saved.'};
+    });
     const paint=on=>{$('apvSw').classList.toggle('on',!!on);$('apvSw').setAttribute('aria-checked',on?'true':'false');$('apvLbl').textContent=on?'ON':'OFF';$('apvTxt').textContent=on?'ON: every DSO login asks for your approval here (keep this app open). Approve or deny in the box that appears.':'OFF: all DSOs can log in freely.'};
     getApv().then(v=>{if(tok!==navToken||!$('apvSw'))return;if(v===null){$('apvTxt').textContent='Not set up yet. Run dso-login-approval-setup.sql in Supabase (SQL Editor), then reload.';return}paint(v);$('apvSw').disabled=false;
       $('apvSw').onclick=async()=>{const on=!$('apvSw').classList.contains('on');$('apvSw').disabled=true;const e=await setApv(on);$('apvSw').disabled=false;if(e){$('apvTxt').textContent='Could not save: '+e;return}paint(on);if(on&&window.Notification&&Notification.permission==='default')Notification.requestPermission()};
@@ -2788,7 +2795,7 @@ function buildBrandFloat(){
   /* moving phone pictures (real elements): drifting phones (no click zoom) */
   if(document.getElementById('phoneLayer'))return;
   const keys=['vivo','samsung','nokia','oppo','zte'],H=62;
-  const css=document.createElement('style');css.textContent='#phoneLayer{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}#phoneTop{position:fixed;inset:0;z-index:60;pointer-events:none;overflow:hidden}.bph{position:absolute;left:0;top:0;will-change:transform;opacity:0}.bph.on{opacity:1}.bph .in{display:flex;flex-direction:column;align-items:center}.bph img.ph{display:block;height:'+H+'px;width:auto}.bph .lg{margin-top:3px;background:#ffffffeb;border-radius:5px;padding:1px 4px;height:15px;display:flex;align-items:center}.bph .lg img{height:11px;width:auto;max-width:36px;object-fit:contain}.sbTitle{position:absolute;left:50%;top:0;font:800 clamp(28px,6vw,54px)/1 Georgia,serif;letter-spacing:2px;color:#fff;white-space:nowrap;text-shadow:0 0 14px #3b82f6,0 0 30px #2563eb,0 3px 6px #000a;will-change:transform}.sbFlash{position:absolute;border-radius:50%;background:radial-gradient(circle,#fff 0,#fde68a 35%,#f97316aa 60%,transparent 72%);will-change:transform,opacity}.sbSpark{position:absolute;width:8px;height:8px;border-radius:50%;will-change:transform,opacity}@media print{#phoneLayer,#phoneTop{display:none!important}}';
+  const css=document.createElement('style');css.textContent='#phoneLayer{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}#phoneTop{position:fixed;inset:0;z-index:60;pointer-events:none;overflow:hidden}.bph{position:absolute;left:0;top:0;will-change:transform;opacity:0}.bph.on{opacity:1}.bph .in{display:flex;flex-direction:column;align-items:center}.bph img.ph{display:block;height:'+H+'px;width:auto}.bph .lg{margin-top:3px;background:#ffffffeb;border-radius:5px;padding:1px 4px;height:15px;display:flex;align-items:center}.bph .lg img{height:11px;width:auto;max-width:36px;object-fit:contain}.sbTitle{position:absolute;left:50%;top:0;width:clamp(150px,22vw,230px);will-change:transform}.sbCard{position:relative;background:#fff;border-radius:12px;padding:10px 14px;box-shadow:0 0 28px #3b82f6,0 8px 24px #000a}.sbCard img{display:block;width:100%;height:auto}.sbCrack{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.sbFlash{position:absolute;border-radius:50%;background:radial-gradient(circle,#fff 0,#fde68a 35%,#f97316aa 60%,transparent 72%);will-change:transform,opacity}.sbSpark{position:absolute;width:8px;height:8px;border-radius:50%;will-change:transform,opacity}@media print{#phoneLayer,#phoneTop{display:none!important}}';
   document.head.appendChild(css);
   const L=document.createElement('div');L.id='phoneLayer';document.body.appendChild(L);const T=document.createElement('div');T.id='phoneTop';document.body.appendChild(T);
   const W=()=>innerWidth,Hh=()=>innerHeight,N=Math.max(40,Math.min(80,Math.round(W()*Hh()/15000))),P=[];
@@ -2817,14 +2824,34 @@ function buildBrandFloat(){
   else{
     requestAnimationFrame(tick);
     /* intro: "Sheba Telecom" slides down from the top, blasts at the bottom, and the phones fly out of the blast */
-    const ti=document.createElement('div');ti.className='sbTitle';ti.textContent='Sheba Telecom';T.appendChild(ti);
-    const tw=ti.offsetWidth,bx=W()/2,by=Hh()-70,dur=5200,t0=performance.now();
+    const ti=document.createElement('div');ti.className='sbTitle';
+    ti.innerHTML='<div class="sbCard"><img src="'+LOGO+'" alt=""><svg class="sbCrack" viewBox="0 0 200 100" preserveAspectRatio="none"></svg></div>';T.appendChild(ti);
+    const card=ti.firstChild,svg=ti.querySelector('svg'),tw=ti.offsetWidth||200,bx=W()/2,dur=5600,t0=performance.now();
+    let sc=1.2;let by=Hh()-100;const dims=()=>{const th=ti.offsetHeight||90,ey=Hh()-th*sc-18;by=ey+th*sc/2;return {th,ey}};
+    const pos=(y,scale)=>{ti.style.transform='translate('+(-tw/2).toFixed(0)+'px,'+y.toFixed(0)+'px) scale('+scale.toFixed(2)+')'};
     const fall=now=>{
-      const u=Math.min(1,(now-t0)/dur),e=u*u*(3-2*u)*0.6+u*0.4,y=-70+(by+70)*e;
-      ti.style.transform='translate('+(-tw/2).toFixed(0)+'px,'+y.toFixed(0)+'px) scale('+(1+0.25*u).toFixed(2)+')';
-      ti.style.opacity=u>.93?String(Math.max(0,(1-u)/.07)):'1';
+      const u=Math.min(1,(now-t0)/dur),e=u*u*(3-2*u)*0.6+u*0.4;
+      const {th,ey}=dims();pos(-130+(ey+(th*(sc-1))/2+130)*e,1+(sc-1)*u);
       if(u<1)return requestAnimationFrame(fall);
-      ti.remove();blast();
+      crackIt();
+    };
+    /* three glass cracks (crack, crack, crack), then the blast */
+    const crackIt=()=>{
+      const cx=60+Math.random()*80,cy=30+Math.random()*40,NS='http://www.w3.org/2000/svg';
+      const stage=n=>{
+        const g=document.createElementNS(NS,'g');g.setAttribute('stroke','#111');g.setAttribute('fill','none');g.setAttribute('stroke-linecap','round');g.setAttribute('stroke-linejoin','round');
+        const rays=3+n*2;
+        for(let r=0;r<rays;r++){
+          const a=Math.random()*Math.PI*2;let x=cx,y=cy,d='M'+x+' '+y;const len=3+n+Math.floor(Math.random()*3);
+          for(let k=0;k<len;k++){const st=10+Math.random()*16,aa=a+(Math.random()-.5)*.9;x+=Math.cos(aa)*st*2;y+=Math.sin(aa)*st;d+=' L'+x.toFixed(1)+' '+y.toFixed(1)}
+          const p=document.createElementNS(NS,'path');p.setAttribute('d',d);p.setAttribute('stroke-width',String(3.2-n*.7));p.setAttribute('opacity','.95');g.appendChild(p);
+          const sh=document.createElementNS(NS,'path');sh.setAttribute('d',d);sh.setAttribute('stroke','#fffc');sh.setAttribute('stroke-width','1');sh.setAttribute('transform','translate(1.2 1.2)');g.insertBefore(sh,p);
+        }
+        svg.appendChild(g);
+        card.animate([{transform:'translate(0,0)'},{transform:'translate(-6px,3px) rotate(-1.5deg)'},{transform:'translate(5px,-3px) rotate(1.2deg)'},{transform:'translate(-3px,2px)'},{transform:'translate(0,0)'}],{duration:260+n*70});
+      };
+      stage(0);setTimeout(()=>stage(1),650);setTimeout(()=>stage(2),1300);
+      setTimeout(()=>{card.animate([{transform:'scale(1)',opacity:1},{transform:'scale(1.35) rotate(4deg)',opacity:0}],{duration:200,fill:'forwards'}).onfinish=()=>{ti.remove()};blast()},2000);
     };
     const blast=()=>{
       const f=document.createElement('div');f.className='sbFlash';f.style.cssText='left:'+(bx-40)+'px;top:'+(by-40)+'px;width:80px;height:80px';T.appendChild(f);
@@ -2947,6 +2974,10 @@ async function dsoLocPage(){
 const APV_KEY='dso_login_approval';
 async function getApv(){try{const r=await db.from('app_settings').select('value').eq('key',APV_KEY).maybeSingle();if(r.error)return null;return !!r.data&&String(r.data.value)==='on'}catch(e){return null}}
 async function setApv(on){const r=await db.from('app_settings').upsert({key:APV_KEY,value:on?'on':'off',updated_at:new Date().toISOString()},{onConflict:'key'});return r.error?r.error.message:''}
+/* time window: between FROM and TO every DSO login needs the Admin's Allow (even when the main switch is OFF). Stored as 'on|21:00|15:00' */
+const APVW_KEY='dso_login_window';
+async function getApvWin(){const v=await getSetting(APVW_KEY);const p=String(v||'').split('|');return {on:p[0]==='on',from:p[1]||'21:00',to:p[2]||'15:00',ok:v!==null}}
+function inApvWin(w){if(!w||!w.on)return false;const m=x=>{const a=String(x).split(':');return (+a[0]||0)*60+(+a[1]||0)},n=new Date(),t=n.getHours()*60+n.getMinutes(),f=m(w.from),e=m(w.to);if(f===e)return false;return f<e?(t>=f&&t<e):(t>=f||t<e)}
 async function getSetting(k){try{const r=await db.from('app_settings').select('value').eq('key',k).maybeSingle();return r.error?null:(r.data?String(r.data.value||''):'')}catch(e){return null}}
 async function setSetting(k,v){const r=await db.from('app_settings').upsert({key:k,value:v,updated_at:new Date().toISOString()},{onConflict:'key'});return r.error?r.error.message:''}
 /* phone notification through ntfy.sh (works when the Admin phone is locked); the Admin subscribes to the same secret topic in the free ntfy app */
@@ -2957,13 +2988,15 @@ async function ntfyPush(title,message){
 /* DSO side: when the switch is ON, ask the Admin and wait for the answer */
 async function dsoApprovalGate(d){
   let on;try{on=await getApv()}catch(e){on=false}
+  let timed=false;try{timed=inApvWin(await getApvWin())}catch(e){}
+  if(timed)on=true;
   if(!on){ntfyPush('DSO login',(d.full_name||'A DSO')+' logged in to the app.');return true} /* switch OFF: no approval, but you still get a phone notification */
   const ins=await db.from('dso_login_requests').insert({dso_id:d.id}).select('id').single();
   if(ins.error)return false;
-  ntfyPush('DSO login request',(d.full_name||'A DSO')+' wants to log in. Open the app and tap Approve.');
+  ntfyPush('DSO login request',(d.full_name||'A DSO')+' wants to log in. Open the app and tap Allow.');
   const id=ins.data.id,box=document.createElement('div');
   box.style.cssText='position:fixed;inset:0;z-index:300;background:#0b1a33cc;display:flex;align-items:center;justify-content:center;padding:20px';
-  box.innerHTML='<div style="background:#fff;border-radius:14px;padding:22px;max-width:340px;text-align:center"><div style="font-size:34px">⏳</div><b>Waiting for Admin approval…</b><p class="muted" style="margin:8px 0 14px">A request was sent to the Admin. Keep this screen open.</p><button class="secondary" id="apvCancel">Cancel</button></div>';
+  box.innerHTML='<div style="background:#fff;border-radius:14px;padding:22px;max-width:340px;text-align:center"><div style="font-size:34px">⏳</div><b>'+(timed?'Login is closed at this time':'Waiting for Admin approval…')+'</b><p class="muted" style="margin:8px 0 14px">'+(timed?'A request was sent to the Admin. You can log in after the Admin taps Allow. Keep this screen open.':'A request was sent to the Admin. Keep this screen open.')+'</p><button class="secondary" id="apvCancel">Cancel</button></div>';
   document.body.appendChild(box);
   let stop=false;$('apvCancel').onclick=()=>{stop=true};
   const t0=Date.now();let res=false;
@@ -2991,7 +3024,7 @@ async function apwPoll(){
   (r.data||[]).forEach(q=>{
     if(box.querySelector('[data-id="'+q.id+'"]'))return;
     const nm=APW.names[q.dso_id]||'A DSO',c=document.createElement('div');c.className='apwCard';c.dataset.id=q.id;
-    c.innerHTML='<b>DSO login request</b><div style="margin-bottom:10px"><b style="display:inline">'+esc(nm)+'</b> wants to log in.</div><button data-a="approved">Approve</button><button class="danger" data-a="denied">Deny</button>';
+    c.innerHTML='<b>DSO login request</b><div style="margin-bottom:10px"><b style="display:inline">'+esc(nm)+'</b> wants to log in.</div><button data-a="approved">Allow</button><button class="danger" data-a="denied">Deny</button>';
     c.onclick=async e=>{const b=e.target.closest('button[data-a]');if(!b)return;b.disabled=true;await db.from('dso_login_requests').update({status:b.dataset.a,decided_at:new Date().toISOString()}).eq('id',q.id);c.remove()};
     box.appendChild(c);
     if(!APW.shown.has(q.id)){APW.shown.add(q.id);try{if(window.Notification&&Notification.permission==='granted')new Notification('DSO login request',{body:nm+' wants to log in'});if(navigator.vibrate)navigator.vibrate(200)}catch(e){}}
