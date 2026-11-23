@@ -2795,7 +2795,7 @@ function buildBrandFloat(){
   /* moving phone pictures (real elements): drifting phones (no click zoom) */
   if(document.getElementById('phoneLayer'))return;
   const keys=['vivo','samsung','nokia','oppo','zte'],H=62;
-  const css=document.createElement('style');css.textContent='#phoneLayer{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}#phoneTop{position:fixed;inset:0;z-index:60;pointer-events:none;overflow:hidden}.bph{position:absolute;left:0;top:0;will-change:transform;opacity:0}.bph.on{opacity:1}.bph .in{display:flex;flex-direction:column;align-items:center}.bph img.ph{display:block;height:'+H+'px;width:auto}.bph .lg{margin-top:3px;background:#ffffffeb;border-radius:5px;padding:1px 4px;height:15px;display:flex;align-items:center}.bph .lg img{height:11px;width:auto;max-width:36px;object-fit:contain}.sbTitle{position:absolute;left:50%;top:0;width:clamp(150px,22vw,230px);will-change:transform}.sbCard{position:relative;background:#fff;border-radius:12px;padding:10px 14px;box-shadow:0 0 28px #3b82f6,0 8px 24px #000a}.sbCard img{display:block;width:100%;height:auto}.sbCrack{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.sbFlash{position:absolute;border-radius:50%;background:radial-gradient(circle,#fff 0,#fde68a 35%,#f97316aa 60%,transparent 72%);will-change:transform,opacity}.sbSpark{position:absolute;width:8px;height:8px;border-radius:50%;will-change:transform,opacity}@media print{#phoneLayer,#phoneTop{display:none!important}}';
+  const css=document.createElement('style');css.textContent='#phoneLayer{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}#phoneTop{position:fixed;inset:0;z-index:60;pointer-events:none;overflow:hidden}.bph{position:absolute;left:0;top:0;will-change:transform;opacity:0}.bph.on{opacity:1}.bph .in{display:flex;flex-direction:column;align-items:center}.bph img.ph{display:block;height:'+H+'px;width:auto}.bph .lg{margin-top:3px;background:#ffffffeb;border-radius:5px;padding:1px 4px;height:15px;display:flex;align-items:center}.bph .lg img{height:11px;width:auto;max-width:36px;object-fit:contain}.sbTitle{position:absolute;left:0;top:0;text-align:center;will-change:transform}.sbWord{font:800 clamp(40px,9vw,92px)/1.05 Georgia,Times New Roman,serif;letter-spacing:3px;color:#fff;-webkit-text-stroke:2px #1e3a8a;paint-order:stroke fill;text-shadow:0 0 18px #3b82f6,0 0 42px #2563eb,0 6px 14px #000a;white-space:nowrap}.sbWord span{display:inline-block;animation:sbWave 1.5s ease-in-out infinite}.sbWord .sp{animation:none}.sbSub{margin-top:4px;font:italic 600 clamp(14px,2.6vw,26px)/1.2 Georgia,serif;color:#e0f2fe;-webkit-text-stroke:.6px #1e3a8a;text-shadow:0 0 10px #3b82f6,0 2px 6px #000a;letter-spacing:2px}@keyframes sbWave{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-14px) rotate(2deg)}}.sbFlash{position:absolute;border-radius:50%;background:radial-gradient(circle,#fff 0,#fde68a 35%,#f97316aa 60%,transparent 72%);will-change:transform,opacity}.sbSpark{position:absolute;width:8px;height:8px;border-radius:50%;will-change:transform,opacity}@media print{#phoneLayer,#phoneTop{display:none!important}}';
   document.head.appendChild(css);
   const L=document.createElement('div');L.id='phoneLayer';document.body.appendChild(L);const T=document.createElement('div');T.id='phoneTop';document.body.appendChild(T);
   const W=()=>innerWidth,Hh=()=>innerHeight,N=Math.max(40,Math.min(80,Math.round(W()*Hh()/15000))),P=[];
@@ -2825,33 +2825,54 @@ function buildBrandFloat(){
     requestAnimationFrame(tick);
     /* intro: "Sheba Telecom" slides down from the top, blasts at the bottom, and the phones fly out of the blast */
     const ti=document.createElement('div');ti.className='sbTitle';
-    ti.innerHTML='<div class="sbCard"><img src="'+LOGO+'" alt=""><svg class="sbCrack" viewBox="0 0 200 100" preserveAspectRatio="none"></svg></div>';T.appendChild(ti);
-    const card=ti.firstChild,svg=ti.querySelector('svg'),tw=ti.offsetWidth||200,bx=W()/2,dur=5600,t0=performance.now();
-    let sc=1.2;let by=Hh()-100;const dims=()=>{const th=ti.offsetHeight||90,ey=Hh()-th*sc-18;by=ey+th*sc/2;return {th,ey}};
-    const pos=(y,scale)=>{ti.style.transform='translate('+(-tw/2).toFixed(0)+'px,'+y.toFixed(0)+'px) scale('+scale.toFixed(2)+')'};
+    ti.innerHTML='<div class="sbWord">'+'Sheba Telecom'.split('').map((c,k)=>c===' '?'<span class="sp">&nbsp;</span>':'<span style="animation-delay:'+(k*0.09).toFixed(2)+'s">'+c+'</span>').join('')+'</div><div class="sbSub">The Home of Mobile Phones</div>';T.appendChild(ti);
+    const bx=W()/2,dur=5600,t0=performance.now();
+    let by=Hh()-100;
+    const dims=()=>{const th=ti.offsetHeight||90,tw=ti.offsetWidth||300;by=Hh()-th-30;return {th,tw}};
+    const pos=y=>{const {tw}=dims();ti.style.transform='translate('+(W()/2-tw/2).toFixed(0)+'px,'+y.toFixed(0)+'px)'};
     const fall=now=>{
-      const u=Math.min(1,(now-t0)/dur),e=u*u*(3-2*u)*0.6+u*0.4;
-      const {th,ey}=dims();pos(-130+(ey+(th*(sc-1))/2+130)*e,1+(sc-1)*u);
+      const u=Math.min(1,(now-t0)/dur),e=u*u*(3-2*u)*0.6+u*0.4,{th}=dims();
+      pos(-th-30+((Hh()-th-30)+th+30)*e);
       if(u<1)return requestAnimationFrame(fall);
       crackIt();
     };
-    /* three glass cracks (crack, crack, crack), then the blast */
+    /* sound (browsers only allow it once the page has had a tap or click; otherwise it stays silent) */
+    let AC=null;const ac=()=>{try{if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();return AC}catch(e){return null}};
+    const noise=(C,len)=>{const b=C.createBuffer(1,Math.max(1,Math.floor(C.sampleRate*len)),C.sampleRate),d=b.getChannelData(0);for(let k=0;k<d.length;k++)d[k]=Math.random()*2-1;const n=C.createBufferSource();n.buffer=b;return n};
+    const crackSound=n=>{const C=ac();if(!C)return;try{const t=C.currentTime;
+      const x=noise(C,.5),hp=C.createBiquadFilter(),g=C.createGain();hp.type='highpass';hp.frequency.value=1800+n*500;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.9,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+.28+n*.06);x.connect(hp);hp.connect(g);g.connect(C.destination);x.start(t);
+      for(let k=0;k<4+n*2;k++){const o=noise(C,.03),f=C.createBiquadFilter(),h=C.createGain(),at=t+.02+Math.random()*.25;f.type='bandpass';f.frequency.value=2500+Math.random()*4500;h.gain.setValueAtTime(.7,at);h.gain.exponentialRampToValueAtTime(.0001,at+.03);o.connect(f);f.connect(h);h.connect(C.destination);o.start(at)}
+      const th=C.createOscillator(),tg=C.createGain();th.type='sine';th.frequency.setValueAtTime(130,t);th.frequency.exponentialRampToValueAtTime(45,t+.2);tg.gain.setValueAtTime(.6,t);tg.gain.exponentialRampToValueAtTime(.0001,t+.25);th.connect(tg);tg.connect(C.destination);th.start(t);th.stop(t+.3)}catch(e){}};
+    const boomSound=()=>{const C=ac();if(!C)return;try{const t=C.currentTime;
+      const x=noise(C,1.4),lp=C.createBiquadFilter(),g=C.createGain();lp.type='lowpass';lp.frequency.setValueAtTime(3500,t);lp.frequency.exponentialRampToValueAtTime(200,t+1.2);g.gain.setValueAtTime(1,t);g.gain.exponentialRampToValueAtTime(.0001,t+1.3);x.connect(lp);lp.connect(g);g.connect(C.destination);x.start(t);
+      const o=C.createOscillator(),og=C.createGain();o.type='sine';o.frequency.setValueAtTime(110,t);o.frequency.exponentialRampToValueAtTime(30,t+.7);og.gain.setValueAtTime(1,t);og.gain.exponentialRampToValueAtTime(.0001,t+.8);o.connect(og);og.connect(C.destination);o.start(t);o.stop(t+.85)}catch(e){}};
+    ac();
+    /* glass cracks that run across the whole screen: three hits, each from a different point */
     const crackIt=()=>{
-      const cx=60+Math.random()*80,cy=30+Math.random()*40,NS='http://www.w3.org/2000/svg';
-      const stage=n=>{
-        const g=document.createElementNS(NS,'g');g.setAttribute('stroke','#111');g.setAttribute('fill','none');g.setAttribute('stroke-linecap','round');g.setAttribute('stroke-linejoin','round');
-        const rays=3+n*2;
-        for(let r=0;r<rays;r++){
-          const a=Math.random()*Math.PI*2;let x=cx,y=cy,d='M'+x+' '+y;const len=3+n+Math.floor(Math.random()*3);
-          for(let k=0;k<len;k++){const st=10+Math.random()*16,aa=a+(Math.random()-.5)*.9;x+=Math.cos(aa)*st*2;y+=Math.sin(aa)*st;d+=' L'+x.toFixed(1)+' '+y.toFixed(1)}
-          const p=document.createElementNS(NS,'path');p.setAttribute('d',d);p.setAttribute('stroke-width',String(3.2-n*.7));p.setAttribute('opacity','.95');g.appendChild(p);
-          const sh=document.createElementNS(NS,'path');sh.setAttribute('d',d);sh.setAttribute('stroke','#fffc');sh.setAttribute('stroke-width','1');sh.setAttribute('transform','translate(1.2 1.2)');g.insertBefore(sh,p);
-        }
-        svg.appendChild(g);
-        card.animate([{transform:'translate(0,0)'},{transform:'translate(-6px,3px) rotate(-1.5deg)'},{transform:'translate(5px,-3px) rotate(1.2deg)'},{transform:'translate(-3px,2px)'},{transform:'translate(0,0)'}],{duration:260+n*70});
+      const NS='http://www.w3.org/2000/svg',w=W(),h=Hh(),svg=document.createElementNS(NS,'svg');
+      svg.setAttribute('viewBox','0 0 '+w+' '+h);svg.style.cssText='position:absolute;inset:0;width:100%;height:100%';T.appendChild(svg);
+      const mk=(d,wd,col,delay,dd)=>{const p=document.createElementNS(NS,'path');p.setAttribute('d',d);p.setAttribute('pathLength','1');p.setAttribute('fill','none');p.setAttribute('stroke',col);p.setAttribute('stroke-width',wd);p.setAttribute('stroke-linecap','round');p.setAttribute('stroke-linejoin','round');p.style.strokeDasharray='1';p.style.strokeDashoffset='1';svg.appendChild(p);p.animate([{strokeDashoffset:1},{strokeDashoffset:0}],{duration:dd,delay,easing:'cubic-bezier(.1,.9,.2,1)',fill:'forwards'});return p};
+      const ray=(x,y,a,len,n,delay,wd)=>{let d='M'+x.toFixed(0)+' '+y.toFixed(0),px=x,py=y,tot=0;const pts=[];
+        while(tot<len){const st=25+Math.random()*55;a+=(Math.random()-.5)*.7;px+=Math.cos(a)*st;py+=Math.sin(a)*st;tot+=st;d+=' L'+px.toFixed(0)+' '+py.toFixed(0);pts.push([px,py,a]);if(px<-40||px>w+40||py<-40||py>h+40)break}
+        mk(d,wd+1.6,'#0a1a3acc',delay,420+len);mk(d,wd,'#ffffff',delay,420+len);
+        if(n>0)pts.filter((_,k)=>k%3===1).forEach(q=>{ray(q[0],q[1],q[2]+(Math.random()<.5?-1:1)*(.5+Math.random()*.7),len*.35,n-1,delay+60,Math.max(.8,wd-.8))})};
+      const hit=(n,x,y)=>{
+        crackSound(n);
+        const fl=document.createElement('div');fl.style.cssText='position:absolute;inset:0;background:#fff';T.appendChild(fl);fl.animate([{opacity:.5},{opacity:0}],{duration:180}).onfinish=()=>fl.remove();
+        T.animate([{transform:'translate(0,0)'},{transform:'translate(-9px,5px)'},{transform:'translate(8px,-6px)'},{transform:'translate(-5px,3px)'},{transform:'translate(0,0)'}],{duration:320});
+        const rays=7+n*3,R=Math.max(w,h)*(.55+n*.2);
+        for(let r=0;r<rays;r++)ray(x,y,(r/rays)*Math.PI*2+Math.random()*.5,R*(.5+Math.random()*.6),2,0,2.6-n*.3);
+        const rg=document.createElementNS(NS,'path');let dd='';for(let k=0;k<=14;k++){const a=k/14*Math.PI*2,rr=26+n*14+Math.random()*10;dd+=(k?' L':'M')+(x+Math.cos(a)*rr).toFixed(0)+' '+(y+Math.sin(a)*rr).toFixed(0)}
+        mk(dd,2,'#fff',0,300);
       };
-      stage(0);setTimeout(()=>stage(1),650);setTimeout(()=>stage(2),1300);
-      setTimeout(()=>{card.animate([{transform:'scale(1)',opacity:1},{transform:'scale(1.35) rotate(4deg)',opacity:0}],{duration:200,fill:'forwards'}).onfinish=()=>{ti.remove()};blast()},2000);
+      hit(0,w/2,h-60);
+      setTimeout(()=>hit(1,w*(.15+Math.random()*.25),h*(.25+Math.random()*.3)),700);
+      setTimeout(()=>hit(2,w*(.6+Math.random()*.25),h*(.3+Math.random()*.3)),1400);
+      setTimeout(()=>{
+        ti.animate([{opacity:1},{opacity:0}],{duration:160,fill:'forwards'}).onfinish=()=>ti.remove();
+        boomSound();blast();
+        svg.animate([{opacity:1},{opacity:1,offset:.45},{opacity:0}],{duration:1700,fill:'forwards'}).onfinish=()=>svg.remove();
+      },2200);
     };
     const blast=()=>{
       const f=document.createElement('div');f.className='sbFlash';f.style.cssText='left:'+(bx-40)+'px;top:'+(by-40)+'px;width:80px;height:80px';T.appendChild(f);
