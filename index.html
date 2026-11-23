@@ -2355,7 +2355,7 @@ const fmtDate=d=>{const [y,m,dd]=String(d).split('-');return Number(dd)+' '+MON[
 async function cashPage(){
   const tok=navToken;
   if(!document.getElementById('csCss')){const st=document.createElement('style');st.id='csCss';st.textContent='@page cs{size:A4 portrait;margin:9mm}.cswrap{page:cs}.cs-sheet{background:#fff;color:#000;padding:16px;max-width:860px;margin:16px auto;border:1px solid #cfd8e6;border-radius:10px;font-size:12px}.cs-h{text-align:center;font-weight:800;font-size:20px}.cs-a{text-align:center;font-size:12px;margin:2px 0 6px}.cs-d{border:1px solid #000;padding:3px 8px;font-weight:800;margin-bottom:8px;text-align:center}.cs-cols{display:grid;grid-template-columns:1.2fr 1fr;gap:10px;align-items:start;margin-bottom:10px}.cs-cols>div{min-width:0}table.cst{border-collapse:collapse;width:100%;min-width:0!important;table-layout:fixed;margin-bottom:8px}table.cst td,table.cst th{overflow-wrap:anywhere}table.cst th,table.cst td{border:1px solid #000;padding:3px 5px;font-size:12px;background:#fff;color:#000;text-align:left;text-transform:none;letter-spacing:0}table.cst th{background:#eef1f5;font-weight:800;text-align:center}table.cst td.n{text-align:right;font-variant-numeric:tabular-nums}table.cst tr.tt td{font-weight:800;background:#f1f1f1}.cs-ttl{font-weight:800;margin:0 0 3px}.cs-edit table input,.cs-edit table select{width:100%;min-width:70px}.cs-edit td{vertical-align:middle}.cs-auto td{background:#f3f7ff}@media print{.cs-sheet{border:0;border-radius:0;margin:0;padding:0;max-width:none}.cs-cols{break-inside:avoid}}';document.head.appendChild(st)}
-  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Daily Cash Status</h1><div class="sub">Collection is taken from the Daily Sales Sheet figures (per DSO and brand). Add the other lines by hand. The sheet below is what prints (A4).</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="csDate"></div><div><label>Opening cash</label><input type="number" id="csOpen" step="any"><div class="muted" id="csOpenNote" style="margin-top:4px"></div></div></div><div class="form-actions" style="margin-top:10px"><button id="csPrev" class="secondary hidden">Use previous day's closing</button><button id="csPrint">Print</button></div><div id="csMsg"></div></div><div id="csEdit" class="cs-edit"></div></div><div class="cswrap" id="csSheet"></div>`;
+  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Daily Cash Status</h1><div class="sub">Collection is taken from the Daily Sales Sheet figures (per DSO and brand). Add the other lines by hand. The sheet below is what prints (A4).</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="csDate"></div><div><label>Opening cash</label><input type="number" id="csOpen" step="any"><div class="muted" id="csOpenNote" style="margin-top:4px"></div></div></div><div class="form-actions" style="margin-top:10px"><button id="csPrev" class="secondary hidden">Use previous day's closing</button><button id="csPrint">Print</button><button id="csShareImg" class="secondary">Share picture</button><button id="csShareTxt" class="secondary">Share as text</button></div><div id="csMsg"></div></div><div id="csEdit" class="cs-edit"></div></div><div class="cswrap" id="csSheet"></div>`;
   $('csDate').value=today();
   const idm=a=>Object.fromEntries(a.map(x=>[x.id,x]));
   const num=v=>{const n=Number(String(v==null?'':v).replace(/,/g,''));return Number.isFinite(n)?n:0};
@@ -2404,6 +2404,7 @@ async function cashPage(){
       sec('withdraw','Bank withdrawal (money taken out of the bank into cash)',['Bank name','Amount'],x=>`<td>${pick(x,BANKS,OTHER.bank,'Bank name')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td>`);
   };
   const refresh=()=>{
+    pendImg=null;if($('csShareImg'))$('csShareImg').textContent='Share picture';
     $('csOpen').value=S.open||'';
     $('csOpenNote').textContent=S.manual?'Typed by you.':(S.hasPrev?"Taken from the previous day's closing cash.":'No earlier day found: type the opening cash.');
     $('csPrev').classList.toggle('hidden',!(S.manual&&S.hasPrev));
@@ -2437,6 +2438,44 @@ async function cashPage(){
   };
   $('csDate').onchange=load;
   $('csPrint').onclick=()=>{if(S)window.print()};
+  /* Share: as a picture (WhatsApp / Viber / WeChat from the phone's share menu) or as plain text */
+  let pendImg=null;
+  const txt=()=>{
+    const c=calc(),L=k=>S.lines.filter(x=>x.kind===k&&(x.name||Number(x.amount)));
+    const col=[...S.auto.map(x=>[x.dso+(x.brand?' ('+x.brand+')':''),x.qty,x.amt]),...S.lines.filter(x=>x.kind==='collection'&&(x.name||Number(x.amount))).map(x=>[x.name+(x.brand?' ('+x.brand+')':''),Number(x.qty||0),Number(x.amount||0)])];
+    const o=['Sheba Distribution Daily Cash Status','Date: '+fmtDate(S.day),'','COLLECTION'];
+    col.forEach((x,i)=>o.push((i+1)+'. '+x[0]+(x[1]?' | Qty '+f(x[1]):'')+' | '+f(x[2])));
+    o.push('Total collection: '+f(c.coll));
+    if(L('deposit').length){o.push('','BANK DEPOSIT');L('deposit').forEach((x,i)=>o.push((i+1)+'. '+x.name+': '+f(x.amount)));o.push('Total bank deposit: '+f(c.dep))}
+    if(L('expense').length){o.push('','EXPENSE');L('expense').forEach((x,i)=>o.push((i+1)+'. '+x.name+': '+f(x.amount)));o.push('Total expense: '+f(c.exp))}
+    if(L('withdraw').length){o.push('','BANK WITHDRAWAL');L('withdraw').forEach(x=>o.push(x.name+': '+f(x.amount)))}
+    o.push('','CASH SUMMARY','Opening cash: '+f(S.open),'Collection: '+f(c.coll),'Bank withdraw: '+f(c.wd),'Total balance: '+f(c.bal),'Bank deposit: '+f(c.dep),'Expense: '+f(c.exp),'Closing cash: '+f(c.close));
+    return o.join('\n');
+  };
+  $('csShareTxt').onclick=()=>{if(!S)return msg($('csMsg'),'Choose a date first.');shareText('Daily Cash Status '+fmtDate(S.day),txt())};
+  const sendImg=async file=>{
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Daily Cash Status'});return}
+    const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),8000);
+    msg($('csMsg'),'The picture was saved on this device. Send it from Downloads or Gallery.','success');
+  };
+  $('csShareImg').onclick=async()=>{
+    if(!S)return msg($('csMsg'),'Choose a date first.');
+    const b=$('csShareImg');
+    if(pendImg){const fl=pendImg;pendImg=null;b.textContent='Share picture';try{await sendImg(fl)}catch(e){if(!e||e.name!=='AbortError')msg($('csMsg'),'Could not share: '+(e.message||e))}return}
+    b.disabled=true;b.textContent='Preparing…';$('csMsg').innerHTML='';
+    try{
+      await loadH2C();
+      const el=document.querySelector('#csSheet .cs-sheet');
+      const cv=await html2canvas(el,{scale:2,backgroundColor:'#ffffff',useCORS:true});
+      const blob=await new Promise(ok=>cv.toBlob(ok,'image/png'));
+      const fl=new File([blob],'Daily_Cash_Status_'+S.day+'.png',{type:'image/png'});
+      b.disabled=false;b.textContent='Share picture';
+      try{await sendImg(fl)}catch(e){
+        if(e&&e.name==='NotAllowedError'){pendImg=fl;b.textContent='Picture ready - tap to share'}
+        else if(e&&e.name!=='AbortError')msg($('csMsg'),'Could not share: '+(e.message||e));
+      }
+    }catch(e){b.disabled=false;b.textContent='Share picture';msg($('csMsg'),e.message||String(e))}
+  };
   $('csOpen').onchange=()=>{if(!S)return;S.open=num($('csOpen').value);S.manual=true;refresh();saveDay()};
   $('csPrev').onclick=async()=>{if(!S)return;S.manual=false;await db.from('cash_days').upsert({day:S.day,opening_manual:false,opening_cash:S.open,closing_cash:0});load()};
   $('csEdit').onclick=async e=>{
@@ -2753,7 +2792,7 @@ async function ntfyPush(title,message){
 /* DSO side: when the switch is ON, ask the Admin and wait for the answer */
 async function dsoApprovalGate(d){
   let on;try{on=await getApv()}catch(e){on=false}
-  if(!on)return true;
+  if(!on){ntfyPush('DSO login',(d.full_name||'A DSO')+' logged in to the app.');return true} /* switch OFF: no approval, but you still get a phone notification */
   const ins=await db.from('dso_login_requests').insert({dso_id:d.id}).select('id').single();
   if(ins.error)return false;
   ntfyPush('DSO login request',(d.full_name||'A DSO')+' wants to log in. Open the app and tap Approve.');
