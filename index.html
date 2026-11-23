@@ -2596,6 +2596,10 @@ async function sheetPage(){
   const bm=await loadDsoBrandMap();
   const by1=a=>Object.fromEntries(a.map(x=>[x.id,x]));
   const L={brand:by1(brands),dso:by1(dsos),road:by1(roads),ret:by1(rets),prod:by1(prods)};
+  const rmap=await loadDsoRoadMap();if(tok!==navToken)return;
+  /* the hand-written collection block is only for DSOs working the Proper Market or Moheshkhali road */
+  const CALC_ROAD=/proper\s*market|mo?he?shkha?li/i;
+  const calcOn=g=>{const d=L.dso[g.dso_id]||{},ids=new Set([...(rmap[g.dso_id]||[]),d.road_id,...g.entries.map(e=>e.road_id)].filter(Boolean));return [...ids].some(id=>CALC_ROAD.test((L.road[id]||{}).name||''))};
   $('shBrand').innerHTML+=onlyMyBrands(brands).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
   const fillShDso=()=>{
     if(!$('shDso'))return;
@@ -2688,7 +2692,7 @@ async function sheetPage(){
     const body=m.list.map((r,i)=>`<tr><td>${i+1}</td><td class="l">${esc(r.name)}</td>${m.cols.map(id=>`<td>${r.q[id]||''}</td>`).join('')}<td><b>${fmtN(r.qty)}</b></td><td class="n">${fmtN(r.val)}</td><td class="n">${fmtN(r.tp)}</td><td class="n">${fmtN(r.col+r.due)}</td><td class="n">${fmtN(r.out)}</td><td class="l">${esc(r.notes.join('; '))}</td></tr>`).join('');
     const foot=`<tr class="gt"><td></td><td class="l">Grand Total</td>${m.cols.map(id=>`<td>${t.q[id]||''}</td>`).join('')}<td>${fmtN(t.qty)}</td><td class="n">${fmtN(t.val)}</td><td class="n">${fmtN(t.tp)}</td><td class="n">${fmtN(t.col+t.due)}</td><td class="n">${fmtN(t.out)}</td><td></td></tr>`;
     SHT[date+'|'+g.dso_id+'|'+g.brand_id]=t.col+t.due;
-    return `<div class="sheet"><div class="stitle">SHEBA DISTRIBUTION SALES &amp; CREDIT MANAGEMENT SYSTEM</div><table class="sh hd"><tr><td class="co"><img class="logo" src="${LOGO}" alt="${esc(COMPANY.name)}"></td><td class="ti"><div class="shbrand">${brandLogo(mt.brand,46)}<span>${brandLogo(mt.brand,46)?'':esc(mt.brand.toUpperCase())+' '}DAILY SALES SHEET</span></div></td></tr><tr><td colspan="2" class="ad">${esc(COMPANY.address)}</td></tr></table><table class="sh sm"><thead><tr><th>DSO NAME</th><th>DATE</th><th>BRAND</th></tr></thead><tbody><tr><td>${esc(mt.dso)}</td><td>${fmtDate(date)}</td><td>${brandLogo(mt.brand,30)||esc(mt.brand)}</td></tr></tbody></table><div class="table-wrap"><table class="sh mx ${m.cols.length>12?'dense':''}"><thead><tr><th>SL</th><th class="l">Outlet Name</th>${th}<th>Total Qty</th><th>Total Sales Value (Tk)</th><th>TPP</th><th>Collection</th><th>Outstanding</th><th class="l">Remarks</th></tr></thead><tbody>${body}${foot}</tbody></table></div><div class="sheetfoot"><div><span><b>${esc(mt.dso)}</b><br>Distribution Sales Officer</span></div><div><span><b>Safayth Hossen Bulbul</b><br>Manager Operation &amp; Finance</span></div><div><span><b>Monirul Islam</b><br>Store Incharge</span></div></div></div>`;
+    return `<div class="sheet"><div class="stitle">SHEBA DISTRIBUTION SALES &amp; CREDIT MANAGEMENT SYSTEM</div><table class="sh hd"><tr><td class="co"><img class="logo" src="${LOGO}" alt="${esc(COMPANY.name)}"></td><td class="ti"><div class="shbrand">${brandLogo(mt.brand,46)}<span>${brandLogo(mt.brand,46)?'':esc(mt.brand.toUpperCase())+' '}DAILY SALES SHEET</span></div></td></tr><tr><td colspan="2" class="ad">${esc(COMPANY.address)}</td></tr></table><table class="sh sm"><thead><tr><th>DSO NAME</th><th>DATE</th><th>BRAND</th></tr></thead><tbody><tr><td>${esc(mt.dso)}</td><td>${fmtDate(date)}</td><td>${brandLogo(mt.brand,30)||esc(mt.brand)}</td></tr></tbody></table><div class="table-wrap"><table class="sh mx ${m.cols.length>12?'dense':''}"><thead><tr><th>SL</th><th class="l">Outlet Name</th>${th}<th>Total Qty</th><th>Total Sales Value (Tk)</th><th>TPP</th><th>Collection</th><th>Outstanding</th><th class="l">Remarks</th></tr></thead><tbody>${body}${foot}</tbody></table></div><div class="sheetfoot"><div><span><b>${esc(mt.dso)}</b><br>Distribution Sales Officer</span></div><div><span><b>Safayth Hossen Bulbul</b><br>Manager Operation &amp; Finance</span></div><div><span><b>Monirul Islam</b><br>Store Incharge</span></div></div>${calcOn(g)?`<div class="shcalc" data-k="${date}|${g.dso_id}|${g.brand_id}">${calcHtml(date+'|'+g.dso_id+'|'+g.brand_id)}</div>`:''}</div>`;
   };
   const run=async()=>{
     const m=$('shMsg'),date=$('shDate').value;
@@ -2709,7 +2713,7 @@ async function sheetPage(){
       const gm=new Map();
       entries.forEach(e=>{const k=e.dso_id+'|'+e.brand_id;if(!gm.has(k))gm.set(k,{dso_id:e.dso_id,brand_id:e.brand_id,entries:[]});gm.get(k).entries.push(e)});
       last=[...gm.values()].sort((a,b)=>cmp(L.dso[a.dso_id]?.full_name||'',L.dso[b.dso_id]?.full_name||'')||cmp(L.brand[a.brand_id]?.name||'',L.brand[b.brand_id]?.name||'')).map(g=>({g,m:model(g.entries,by),date}));
-      if(tok!==navToken)return;
+      await loadLists();await cload(date,last.map(x=>date+"|"+x.g.dso_id+"|"+x.g.brand_id));if(tok!==navToken)return;
       cwire();
       $('shOut').innerHTML=last.map(x=>html(x.g,x.m,date)).join('');
     }catch(err){msg(m,err.message||String(err))}
@@ -2783,28 +2787,62 @@ const PHONE_PICS={"vivo": {"d": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA
 function buildBrandFloat(){
   /* moving phone pictures (real elements): drifting phones (no click zoom) */
   if(document.getElementById('phoneLayer'))return;
-  const keys=['vivo','samsung','nokia','oppo','zte'],H=130;
-  const css=document.createElement('style');css.textContent='#phoneLayer{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}#phoneTop{position:fixed;inset:0;z-index:60;pointer-events:none;overflow:hidden}.bph{position:absolute;left:0;top:0;will-change:transform}.bph .in{display:flex;flex-direction:column;align-items:center;transition:transform .7s cubic-bezier(.2,.8,.2,1);transform-origin:50% 40%}.bph.zoom .in{transform:scale(3)}.bph img.ph{display:block;height:'+H+'px;width:auto}.bph .lg{margin-top:6px;background:#ffffffeb;border-radius:6px;padding:2px 6px;height:26px;display:flex;align-items:center}.bph .lg img{height:20px;width:auto;max-width:64px;object-fit:contain}@media print{#phoneLayer,#phoneTop{display:none!important}}';
+  const keys=['vivo','samsung','nokia','oppo','zte'],H=62;
+  const css=document.createElement('style');css.textContent='#phoneLayer{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}#phoneTop{position:fixed;inset:0;z-index:60;pointer-events:none;overflow:hidden}.bph{position:absolute;left:0;top:0;will-change:transform;opacity:0}.bph.on{opacity:1}.bph .in{display:flex;flex-direction:column;align-items:center}.bph img.ph{display:block;height:'+H+'px;width:auto}.bph .lg{margin-top:3px;background:#ffffffeb;border-radius:5px;padding:1px 4px;height:15px;display:flex;align-items:center}.bph .lg img{height:11px;width:auto;max-width:36px;object-fit:contain}.sbTitle{position:absolute;left:50%;top:0;font:800 clamp(28px,6vw,54px)/1 Georgia,serif;letter-spacing:2px;color:#fff;white-space:nowrap;text-shadow:0 0 14px #3b82f6,0 0 30px #2563eb,0 3px 6px #000a;will-change:transform}.sbFlash{position:absolute;border-radius:50%;background:radial-gradient(circle,#fff 0,#fde68a 35%,#f97316aa 60%,transparent 72%);will-change:transform,opacity}.sbSpark{position:absolute;width:8px;height:8px;border-radius:50%;will-change:transform,opacity}@media print{#phoneLayer,#phoneTop{display:none!important}}';
   document.head.appendChild(css);
   const L=document.createElement('div');L.id='phoneLayer';document.body.appendChild(L);const T=document.createElement('div');T.id='phoneTop';document.body.appendChild(T);
-  const W=()=>innerWidth,Hh=()=>innerHeight,N=Math.max(15,Math.min(35,Math.round(W()*Hh()/42000))),P=[];
+  const W=()=>innerWidth,Hh=()=>innerHeight,N=Math.max(40,Math.min(80,Math.round(W()*Hh()/15000))),P=[];
+  const still=matchMedia('(prefers-reduced-motion:reduce)').matches;
   for(let i=0;i<N;i++){
     const k=keys[i%5],d=document.createElement('div');d.className='bph';
     d.innerHTML='<div class="in"><img class="ph" src="'+PHONE_PICS[k].d+'" alt=""><div class="lg"><img src="'+BRAND_LOGOS[k]+'" alt=""></div></div>';
     L.appendChild(d);
     const a=Math.random()*Math.PI*2,sp=10+Math.random()*16;
-    P.push({d,x:Math.random()*W(),y:Math.random()*Hh(),vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:-6+Math.random()*12,z:false});
+    P.push({d,x:Math.random()*W(),y:Math.random()*Hh(),vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,ex:0,ey:0,r:-8+Math.random()*16,live:false});
   }
+  const show=p=>{p.live=true;p.d.classList.add('on')};
   let last=performance.now();
   const tick=t=>{
-    const dt=Math.min(.1,(t-last)/1000);last=t;
+    const dt=Math.min(.1,(t-last)/1000);last=t;const dec=Math.exp(-1.7*dt);
     P.forEach(p=>{
-      if(!p.z){p.x+=p.vx*dt;p.y+=p.vy*dt;if(p.x>W()+30)p.x=-110;if(p.x<-140)p.x=W()+20;if(p.y>Hh()+30)p.y=-190;if(p.y<-200)p.y=Hh()+20}
+      if(!p.live)return;
+      p.ex*=dec;p.ey*=dec;
+      p.x+=(p.vx+p.ex)*dt;p.y+=(p.vy+p.ey)*dt;
+      if(p.x>W()+30)p.x=-60;if(p.x<-80)p.x=W()+20;if(p.y>Hh()+30)p.y=-110;if(p.y<-120)p.y=Hh()+20;
       p.d.style.transform='translate('+p.x.toFixed(1)+'px,'+p.y.toFixed(1)+'px) rotate('+p.r+'deg)';
     });
     requestAnimationFrame(tick);
   };
-  if(!matchMedia('(prefers-reduced-motion:reduce)').matches)requestAnimationFrame(tick);else P.forEach(p=>p.d.style.transform='translate('+p.x+'px,'+p.y+'px)');
+  if(still){P.forEach(p=>{show(p);p.d.style.transform='translate('+p.x+'px,'+p.y+'px)'})}
+  else{
+    requestAnimationFrame(tick);
+    /* intro: "Sheba Telecom" slides down from the top, blasts at the bottom, and the phones fly out of the blast */
+    const ti=document.createElement('div');ti.className='sbTitle';ti.textContent='Sheba Telecom';T.appendChild(ti);
+    const tw=ti.offsetWidth,bx=W()/2,by=Hh()-70,dur=5200,t0=performance.now();
+    const fall=now=>{
+      const u=Math.min(1,(now-t0)/dur),e=u*u*(3-2*u)*0.6+u*0.4,y=-70+(by+70)*e;
+      ti.style.transform='translate('+(-tw/2).toFixed(0)+'px,'+y.toFixed(0)+'px) scale('+(1+0.25*u).toFixed(2)+')';
+      ti.style.opacity=u>.93?String(Math.max(0,(1-u)/.07)):'1';
+      if(u<1)return requestAnimationFrame(fall);
+      ti.remove();blast();
+    };
+    const blast=()=>{
+      const f=document.createElement('div');f.className='sbFlash';f.style.cssText='left:'+(bx-40)+'px;top:'+(by-40)+'px;width:80px;height:80px';T.appendChild(f);
+      f.animate([{transform:'scale(.2)',opacity:1},{transform:'scale(9)',opacity:0}],{duration:900,easing:'ease-out'}).onfinish=()=>f.remove();
+      const cols=['#f97316','#facc15','#ef4444','#60a5fa','#fff'];
+      for(let i=0;i<36;i++){
+        const s=document.createElement('div');s.className='sbSpark';s.style.cssText='left:'+bx+'px;top:'+by+'px;background:'+cols[i%5];T.appendChild(s);
+        const a=Math.random()*Math.PI*2,r=90+Math.random()*260;
+        s.animate([{transform:'translate(0,0) scale(1)',opacity:1},{transform:'translate('+Math.cos(a)*r+'px,'+Math.sin(a)*r+'px) scale(.2)',opacity:0}],{duration:900+Math.random()*500,easing:'ease-out'}).onfinish=()=>s.remove();
+      }
+      P.forEach(p=>{
+        const a=Math.PI+Math.random()*Math.PI,sp=380+Math.random()*620;/* upward half-circle */
+        p.x=bx;p.y=by;p.ex=Math.cos(a)*sp*(1+Math.random()*.4);p.ey=Math.sin(a)*sp;show(p);
+        p.d.style.transform='translate('+p.x+'px,'+p.y+'px) rotate('+p.r+'deg)';
+      });
+    };
+    requestAnimationFrame(fall);
+  }
 }
 async function addBrandNames(){try{const {data}=await db.from('brands').select('name').eq('is_active',true);if(data&&data.length)buildBrandFloat(data.map(x=>x.name))}catch(e){}}
 
@@ -2960,24 +2998,6 @@ async function apwPoll(){
   });
 }
 try{buildBrandFloat()}catch(e){}
-/* welcome voice: first click/touch on the login page says the welcome line once (browsers do not allow sound before a click) */
-(function(){
-  let spoken=false,on=true;try{on=localStorage.getItem('welcomeSound')!=='0'}catch(e){}
-  const btn=document.createElement('button');btn.id='wsBtn';btn.type='button';
-  btn.style.cssText='position:fixed;right:14px;bottom:14px;z-index:70;padding:8px 12px;border-radius:99px;background:#ffffffe6;color:#1d4ed8;border:2px solid #2563eb;font-size:13px;box-shadow:0 4px 14px #0004';
-  const paint=()=>{btn.textContent=on?'🔊 Sound on':'🔇 Sound off';btn.style.display=document.getElementById('loginView').classList.contains('hidden')?'none':'block'};
-  /* a short chime (always works after a click) + the spoken welcome (needs a voice installed on the device) */
-  const chime=()=>{try{const C=new (window.AudioContext||window.webkitAudioContext)(),t=C.currentTime;[[659,0],[784,.16],[1047,.32]].forEach(n=>{const o=C.createOscillator(),g=C.createGain();o.type='sine';o.frequency.value=n[0];g.gain.setValueAtTime(0,t+n[1]);g.gain.linearRampToValueAtTime(.25,t+n[1]+.03);g.gain.exponentialRampToValueAtTime(.001,t+n[1]+.6);o.connect(g);g.connect(C.destination);o.start(t+n[1]);o.stop(t+n[1]+.65)})}catch(e){}};
-  const say=()=>{chime();try{if(!window.speechSynthesis)return;const go=()=>{const u=new SpeechSynthesisUtterance('Welcome to Shay-bah Telecom. The home of Mobile Phone.');const vs=speechSynthesis.getVoices()||[];const en=vs.filter(x=>/^en/i.test(x.lang)),fem=/(aria|jenny|zira|hazel|susan|libby|sonia|michelle|natasha|neerja|heera|samantha|karen|moira|tessa|victoria|fiona|serena|allison|ava|google (us|uk) english|female|woman)/i,v=en.find(x=>/(aria|jenny)/i.test(x.name))||en.find(x=>fem.test(x.name))||en[0]||vs[0];if(v){u.voice=v;u.lang=v.lang}else u.lang='en-US';u.rate=.7;u.pitch=1.2;u.volume=1;setTimeout(()=>speechSynthesis.speak(u),450)};if((speechSynthesis.getVoices()||[]).length)go();else{let d=false;const f=()=>{if(d)return;d=true;go()};speechSynthesis.onvoiceschanged=f;setTimeout(f,800)}}catch(e){}};
-  btn.onclick=e=>{e.stopPropagation();on=!on;try{localStorage.setItem('welcomeSound',on?'1':'0')}catch(x){}if(!on){try{speechSynthesis.cancel()}catch(x){}}paint()};
-  document.body.appendChild(btn);paint();
-  new MutationObserver(paint).observe(document.getElementById('loginView'),{attributes:true,attributeFilter:['class']});
-  document.addEventListener('click',e=>{
-    if(spoken||!on||e.target===btn||document.getElementById('loginView').classList.contains('hidden'))return;
-    spoken=true;say();
-  },true);
-})();
-
 checkSession();
 </script>
 <script>
