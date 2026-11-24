@@ -2570,7 +2570,7 @@ async function cardSalePage(){
   const tot=k=>R.reduce((a,r)=>a+(Number(r[k])||0),0);
   const sheet=()=>{
     const body=R.map((r,i)=>`<tr><td>${i+1}</td><td class="l">${esc(r.showroom)}</td><td>${cell(r.open)}</td><td>${esc(r.pos)}</td><td>${cell(r.sale)}</td><td>${r.saleDate?esc(fmtDate(r.saleDate)):''}</td><td>${cell(r.credit)}</td><td>${r.creditDate?esc(fmtDate(r.creditDate)):''}</td><td>${cell(r.charge)}</td><td>${f(r.close)}</td><td>${esc(r.remarks)}</td></tr>`).join('');
-    $('cdSheet').innerHTML=`<div class="cd-sheet"><div class="cd-t">Card Sale &amp; Bkash Sale Info ${esc(fmtDate(S.day))}</div><table class="cdt"><colgroup><col style="width:4%"><col style="width:16%"><col style="width:8%"><col style="width:13%"><col style="width:7%"><col style="width:8%"><col style="width:8%"><col style="width:8%"><col style="width:7%"><col style="width:8%"><col style="width:13%"></colgroup><thead><tr><th rowspan="2">SL No.</th><th colspan="2">Opening Info</th><th colspan="7">Today Card Sale Info</th><th rowspan="2">Remarks</th></tr><tr><th>Showroom Name</th><th>Opening Transit(Card)</th><th>POS Name/ Card Type</th><th>Sale Amount</th><th>Sale Date</th><th>Credit Amount</th><th>Credit Date</th><th>Card Sale Charge</th><th>Closing Transit</th></tr></thead><tbody>${body}<tr class="tt"><td colspan="2">Total</td><td>${f(tot('open'))}</td><td></td><td>${f(tot('sale'))}</td><td></td><td>${f(tot('credit'))}</td><td></td><td>${f(tot('charge'))}</td><td>${f(tot('close'))}</td><td></td></tr></tbody></table></div>`;
+    $('cdSheet').innerHTML=`<div class="cd-sheet"><div class="cd-t">Card Sale &amp; Bkash Sale Info ${esc(fmtDate(S.day))}</div><table class="cdt"><colgroup><col style="width:4%"><col style="width:16%"><col style="width:8%"><col style="width:13%"><col style="width:7%"><col style="width:8%"><col style="width:8%"><col style="width:8%"><col style="width:7%"><col style="width:8%"><col style="width:13%"></colgroup><thead><tr><th rowspan="2">SL No.</th><th colspan="2">Opening Info</th><th colspan="7">Today Card Sale Info</th><th rowspan="2">Remarks</th></tr><tr><th>Showroom Name</th><th>Opening Transit(Card)</th><th>POS Name/ Card Type</th><th>Sale Amount</th><th>Sale Date</th><th>Credit Amount</th><th>Credit Date</th><th>Card Sale Charge</th><th>Closing Transit</th></tr></thead><tbody>${body}</tbody></table></div>`;
   };
   const inp=(i,fl,v,type,ph)=>`<input data-i="${i}" data-f="${fl}" type="${type||'text'}" ${type==='number'?'step="any"':''} value="${esc(v==null||v===0?'':v)}" placeholder="${ph||''}">`;
   const edit=()=>{
@@ -2615,7 +2615,6 @@ async function cardSalePage(){
   const txt=()=>{
     const o=['Card Sale & Bkash Sale Info '+fmtDate(S.day),''];
     R.forEach((r,i)=>o.push((i+1)+'. '+r.showroom+' | Opening '+f(r.open)+(r.sale?' | Sale '+f(r.sale)+(r.pos?' ('+r.pos+')':''):'')+(r.credit?' | Credit '+f(r.credit):'')+(r.charge?' | Charge '+f(r.charge):'')+' | Closing '+f(r.close)+(r.remarks?' | '+r.remarks:'')));
-    o.push('','Total: Opening '+f(tot('open'))+' | Sale '+f(tot('sale'))+' | Credit '+f(tot('credit'))+' | Charge '+f(tot('charge'))+' | Closing '+f(tot('close')));
     return o.join('\n');
   };
   $('cdShareTxt').onclick=()=>{if(!S)return msg($('cdMsg'),'Choose a date first.');shareText('Card Sale & Bkash Sale Info '+fmtDate(S.day),txt())};
