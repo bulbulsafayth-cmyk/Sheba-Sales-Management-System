@@ -320,39 +320,9 @@ async function showDsoPicker(){
   $('appView').classList.add('hidden');$('loginView').classList.remove('hidden');
   $('authFields').classList.add('hidden');$('dsoStep').classList.remove('hidden');$('loginMsg').innerHTML='';
 }
-/* Welcome voice for DSOs (Bangla, by pet name): spoken by the phone's own voice (no sound file), only on a fresh login */
-function unlockVoice(){try{if(!('speechSynthesis' in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}}
-/* Pet names (ডাক নাম) in Bangla for the welcome voice. Each row: [Bangla name, spellings found in the DSO's name]. Add a row for a new DSO. */
-const DSO_NICK=[
-  ['সাজ্জাদ',['sajjad','sazzad']],['নোবেল',['nobel','nobil','noble']],['মোবারক',['mobarrak','mobarak','mubarak','mubarrak']],
-  ['হামিদ',['hamid']],['হাবিব',['habib']],['জয়নুল',['joynul','joynal','zainul','jainul']],['ইমরান',['imran']],
-  ['ফরহাদ',['farhad','farhaad']],['দিদার',['didar','deedar']],['তৌফিক',['tawfik','tawfiq','taufiq','toufiq','tofiq']],
-  ['ফাহিম',['fahim','faheem']],['মুকিত',['mukit','mukith','muqit']],['সাইফুল',['saiful','shaiful']]
-];
-function welcomeVoice(d){
-  try{
-    if(!('speechSynthesis' in window))return;
-    const parts=String(d.full_name||d.name||'').trim().split(/\s+/).filter(Boolean).map(w=>w.replace(/[.,]/g,''));
-    const low=parts.map(w=>w.toLowerCase());
-    const hit=DSO_NICK.find(n=>n[1].some(x=>low.includes(x)));
-    const first=parts.find(w=>!/^(md|mohammad|mohammed|muhammad|mr)$/i.test(w))||parts[0];
-    if(!hit&&!first)return;
-    /* greeting by Bangladesh time: morning 5-12, afternoon 12-5, evening 5-8, night 8-5 */
-    let hr=0;try{hr=parseInt(new Intl.DateTimeFormat('en-GB',{hour:'numeric',hour12:false,timeZone:'Asia/Dhaka'}).format(new Date()),10)%24}catch(e){hr=new Date().getHours()}
-    const slot=hr>=5&&hr<12?0:hr>=12&&hr<17?1:hr>=17&&hr<20?2:3;
-    const gBn=['শুভ সকাল','শুভ অপরাহ্ন','শুভ সন্ধ্যা','শুভ রাত্রি'][slot],gEn=['Good morning','Good afternoon','Good evening','Good evening'][slot];
-    const vs=speechSynthesis.getVoices()||[];
-    const bn=vs.find(v=>/^bn/i.test(v.lang));
-    const useBn=!!hit&&(!!bn||!vs.length);   /* Bangla if the phone has a Bangla voice (or has not listed its voices yet) */
-    const u=new SpeechSynthesisUtterance(useBn?gBn+', '+hit[0]+' ভাই। আবার স্বাগতম।':gEn+', '+first+'. Welcome back.');
-    if(useBn){u.lang=bn?bn.lang:'bn-BD';if(bn)u.voice=bn}else u.lang='en-US';
-    u.rate=.95;u.pitch=1;u.volume=1;
-    speechSynthesis.cancel();speechSynthesis.speak(u);
-  }catch(e){}
-}
-async function enterDso(d,welcome){d.brandIds=await dsoBrandIds(d);d.roadIds=await dsoRoadIds(d);currentDso=d;store.set('dsoId',d.id);
-  showApp('dso');if(welcome)welcomeVoice(d)}
-async function useDso(id,gate){const {data}=await db.from('dsos').select(DSO_COLS).eq('id',id).eq('is_active',true).maybeSingle();if(!data)return false;if(gate&&!(await dsoApprovalGate(data)))return 'denied';await enterDso(data,!!gate);return true}
+async function enterDso(d){d.brandIds=await dsoBrandIds(d);d.roadIds=await dsoRoadIds(d);currentDso=d;store.set('dsoId',d.id);
+  showApp('dso')}
+async function useDso(id,gate){const {data}=await db.from('dsos').select(DSO_COLS).eq('id',id).eq('is_active',true).maybeSingle();if(!data)return false;if(gate&&!(await dsoApprovalGate(data)))return 'denied';await enterDso(data);return true}
 /* FIX 2: DSO sessions are restored on refresh too */
 async function checkSession(){
   const {data:{session}}=await db.auth.getSession();if(!session)return;
@@ -365,7 +335,6 @@ async function checkSession(){
 $('loginType').onchange=()=>{$('loginMsg').innerHTML='';$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden')};
 $('password').addEventListener('keydown',e=>{if(e.key==='Enter')$('loginBtn').click()});
 $('loginBtn').onclick=async()=>{
-  unlockVoice();
   userMode=$('loginType').value;
   const {data,error}=await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
   if(error)return msg($('loginMsg'),error.message);
@@ -386,11 +355,10 @@ $('loginBtn').onclick=async()=>{
   }
 };
 $('dsoContinueBtn').onclick=async()=>{
-  unlockVoice();
   const d=(window._availableDsos||[]).find(x=>x.id===$('dsoSelect').value);
   if(!d)return msg($('loginMsg'),'Please select your DSO name.');
   if(!(await dsoApprovalGate(d)))return msg($('loginMsg'),'Admin did not approve this login.');
-  await enterDso(d,true);
+  await enterDso(d);
 };
 $('backLoginBtn').onclick=async()=>{await db.auth.signOut();store.del('dsoId');store.del('loggedDso');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
 $('logoutBtn').onclick=async()=>{stopLocTracking();stopApprovalWatch();currentDso=null;store.del('dsoId');store.del('loggedDso');await db.auth.signOut();$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
