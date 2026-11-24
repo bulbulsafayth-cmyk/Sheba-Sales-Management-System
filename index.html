@@ -2519,6 +2519,7 @@ async function askPage(){
   const tok=navToken;
   if(!document.getElementById('qqCss')){const st=document.createElement('style');st.id='qqCss';st.textContent='.qq-res table{width:100%;border-collapse:collapse}.qq-res th,.qq-res td{border-bottom:1px solid var(--line,#e5e7eb);padding:6px 8px;text-align:right;white-space:nowrap}.qq-res th:first-child,.qq-res td:first-child{text-align:left;white-space:normal}.qq-res tr.tt td{font-weight:700;background:#f3f4f6}.qq-sum{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}.qq-sum span{background:#eef2ff;border-radius:8px;padding:6px 10px}.qq-ans{white-space:pre-wrap;line-height:1.55;margin-top:12px;padding:12px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0}.qq-q{margin-top:10px;font-weight:700}';document.head.appendChild(st)}
   const t0=today(),m0=t0.slice(0,8)+'01',f=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:0});
+  const cleanModel=m=>String(m||'').trim().replace(/^models\//i,'').split(/[\s,;]+/)[0].replace(/[^A-Za-z0-9._-]/g,'')||'gemini-2.5-flash';
   const LS=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k)||'';localStorage.setItem(k,v)}catch(e){return ''}};
   $('page').innerHTML=`<h1 class="page-title">Quick Questions</h1>
   <div class="panel"><h3>Ask in your own words (Gemini, free)</h3>
@@ -2600,10 +2601,10 @@ async function askPage(){
   $('qqShare').onclick=()=>{if(last)shareText('Sheba Distribution - Quick Question',last)};
 
   /* ---------- Gemini (free tier) ---------- */
-  $('gKey').value=LS('gem_key');$('gModel').value=LS('gem_model')||'gemini-2.5-flash';
+  $('gKey').value=LS('gem_key');$('gModel').value=cleanModel(LS('gem_model'));
   $('gSetBtn').onclick=()=>{$('gSet').style.display=$('gSet').style.display==='none'?'block':'none'};
   if(!LS('gem_key'))$('gSet').style.display='block';
-  $('gSave').onclick=()=>{LS('gem_key',$('gKey').value.trim());LS('gem_model',($('gModel').value.trim()||'gemini-2.5-flash'));msg($('gMsg'),'Saved on this device.','success')};
+  $('gSave').onclick=()=>{LS('gem_key',$('gKey').value.trim());const mm=cleanModel($('gModel').value);$('gModel').value=mm;LS('gem_model',mm);msg($('gMsg'),'Saved on this device. Model: '+mm,'success')};
   $('gClear').onclick=()=>{LS('gem_key','');$('gKey').value='';msg($('gMsg'),'Key removed from this device.','success')};
   $('gList').onclick=async()=>{
     const k=$('gKey').value.trim();if(!k)return msg($('gMsg'),'Paste the key first.');
@@ -2611,6 +2612,15 @@ async function askPage(){
     try{const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=100',{headers:{'x-goog-api-key':k}});const j=await r.json();if(!r.ok)throw new Error(j.error&&j.error.message||r.status);
       $('gListOut').textContent='Models you can type above: '+(j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')).map(m=>m.name.replace('models/','')).filter(n=>/flash|lite/i.test(n)&&!/image|tts|live|audio|embed/i.test(n)).join(', ')}
     catch(e){$('gListOut').textContent='Could not read the list: '+(e.message||e)}
+  };
+  /* ask Google which models this key may use and pick the newest stable Flash one */
+  const pickModel=async key=>{
+    const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':key}});const j=await r.json();
+    if(!r.ok)throw new Error(j.error&&j.error.message||('HTTP '+r.status));
+    const ok=(j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')).map(m=>m.name.replace('models/','')).filter(n=>/flash/i.test(n)&&!/image|tts|live|audio|embed|thinking|robot|computer|native|vision/i.test(n));
+    const score=n=>{const v=parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/)||[])[1])||0;return v*10+(/lite/i.test(n)?0:2)+(/preview|exp/i.test(n)?-5:0)+(/latest$/i.test(n)?1:0)};
+    ok.sort((a,b)=>score(b)-score(a));
+    return ok[0]||'';
   };
   const decls=up=>{const T=x=>up?String(x).toUpperCase():x;return [{
     name:'sales_summary',
@@ -2632,23 +2642,34 @@ async function askPage(){
     return {rows_found:r.count,rows:r.list.slice(0,Number(a.limit)||15).map(x=>({name:x.name,qty:Math.round(x.a.qty),sales:Math.round(x.a.sale),collection:Math.round(x.a.col)})),total:{qty:Math.round(r.T.qty),sales:Math.round(r.T.sale),collection:Math.round(r.T.col)}};
   };
   const callG=async(key,model,body)=>{
-    const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body)});
+    const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body)});
     const j=await r.json().catch(()=>({}));
     if(!r.ok){const m=(j.error&&j.error.message)||('HTTP '+r.status);const e=new Error(m);e.status=r.status;throw e}
     return j;
   };
+  const callGauto=async(key,body)=>{
+    let model=cleanModel($('gModel').value||LS('gem_model'));
+    try{return await callG(key,model,body)}
+    catch(e){
+      if(e.status!==404&&!/not found|not supported|unexpected model/i.test(e.message))throw e;
+      const m2=await pickModel(key);
+      if(!m2||m2===model)throw e;
+      $('gModel').value=m2;LS('gem_model',m2);$('gMsg').innerHTML='<div class="notice">Model changed to '+esc(m2)+' (the old one was not available).</div>';
+      return await callG(key,m2,body);
+    }
+  };
   $('gAsk').onclick=async()=>{
-    const key=LS('gem_key'),model=LS('gem_model')||'gemini-2.5-flash',question=$('gQ').value.trim();
+    const key=LS('gem_key'),model=cleanModel($('gModel').value||LS('gem_model')),question=$('gQ').value.trim();
     if(!question)return msg($('gMsg'),'Type your question first.');
     if(!key){$('gSet').style.display='block';return msg($('gMsg'),'Paste your free Gemini key first (open "Gemini key & model").')}
     $('gAsk').disabled=true;$('gMsg').innerHTML='<div class="notice">Thinking…</div>';
     try{
-      const sys='You answer questions for the owner of a mobile phone distribution company in Bangladesh using ONLY the numbers returned by the sales_summary tool. Today is '+t0+' (Asia/Dhaka). "This month" means '+m0+' to '+t0+'. Reply in the same language the user wrote in (Bengali if they wrote Bengali or Banglish), short and clear, with amounts in taka and thousands separators. Never invent numbers. If the tool returns nothing, say so. Dues, cheques, credit and cash status are not available through your tool: say so and tell the user to open the Verbal Due or Credit & Cheque report instead.';
+      let sys='You answer questions for the owner of a mobile phone distribution company in Bangladesh using ONLY the numbers returned by the sales_summary tool. Today is '+t0+' (Asia/Dhaka). "This month" means '+m0+' to '+t0+'. Reply in the same language the user wrote in (Bengali if they wrote Bengali or Banglish), short and clear, with amounts in taka and thousands separators. Never invent numbers. If the tool returns nothing, say so. Dues, cheques, credit and cash status are not available through your tool: say so and tell the user to open the Verbal Due or Credit & Cheque report instead.';
       let contents=[{role:'user',parts:[{text:question}]}],text='',up=false;
       for(let step=0;step<5;step++){
         let j;
-        try{j=await callG(key,model,{systemInstruction:{parts:[{text:sys}]},contents,tools:[{functionDeclarations:decls(up)}]})}
-        catch(e){if(e.status===400&&!up&&/type|enum|schema/i.test(e.message)){up=true;j=await callG(key,model,{systemInstruction:{parts:[{text:sys}]},contents,tools:[{functionDeclarations:decls(true)}]})}else throw e}
+        try{j=await callGauto(key,{systemInstruction:{parts:[{text:sys}]},contents,tools:[{functionDeclarations:decls(up)}]})}
+        catch(e){if(e.status===400&&!up&&/type|enum|schema/i.test(e.message)){up=true;j=await callGauto(key,{systemInstruction:{parts:[{text:sys}]},contents,tools:[{functionDeclarations:decls(true)}]})}else throw e}
         const parts=(((j.candidates||[])[0]||{}).content||{}).parts||[];
         const calls=parts.filter(p=>p.functionCall);
         if(!calls.length){text=parts.map(p=>p.text||'').join('').trim();break}
