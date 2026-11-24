@@ -2379,8 +2379,11 @@ async function cashPage(){
   const OTHER={bank:'Other bank (type name)',exp:'Other expense (type description)'};
   let S=null;
   const sum=(k)=>S.lines.filter(x=>x.kind===k).reduce((a,x)=>a+Number(x.amount||0),0);
+  /* showroom rows: the amount typed is the showroom's total sale; the card / bKash / Nagad part (from the Card & Cashless Sale page) is taken out, so only real cash counts */
+  const SHOWROOMS_DEFAULT=['Sheba Brand Shop-Honor','Sheba Brand Shop - Vivo','Sheba Brand Shop - Samsung','Sheba Brand Shop - Oppo','Sheba Brand Shop - Realme','Sheba Smartphone Café'];
+  const effs=()=>{const m=new Map(),used=new Set();S.lines.filter(x=>x.kind==='collection').forEach(x=>{const amt=Number(x.amount||0),key=String(x.name||'').trim().toLowerCase();let card=0;if(key&&S.cs&&S.cs[key]!=null&&!used.has(key)){used.add(key);card=Math.min(Math.max(0,S.cs[key]),amt>0?amt:0)}m.set(String(x.id),{amt,card,cash:amt-card})});return m};
   const calc=()=>{
-    const aC=S.auto.reduce((a,x)=>a+x.amt,0),mC=sum('collection'),coll=aC+mC,wd=sum('withdraw'),dep=sum('deposit'),exp=sum('expense');
+    const aC=S.auto.reduce((a,x)=>a+x.amt,0),mC=[...effs().values()].reduce((a,e)=>a+e.cash,0),coll=aC+mC,wd=sum('withdraw'),dep=sum('deposit'),exp=sum('expense');
     const bal=S.open+coll+wd;return {coll,wd,dep,exp,bal,close:bal-dep-exp,aQ:S.auto.reduce((a,x)=>a+x.qty,0),mQ:S.lines.filter(x=>x.kind==='collection').reduce((a,x)=>a+Number(x.qty||0),0)};
   };
   const saveDay=async()=>{
@@ -2389,9 +2392,9 @@ async function cashPage(){
   };
   const sheet=()=>{
     const c=calc(),L=k=>S.lines.filter(x=>x.kind===k);
-    const col=[...S.auto.map(x=>({n:x.dso,b:x.brand,q:x.qty,a:x.amt})),...L('collection').map(x=>({n:x.name,b:x.brand,q:Number(x.qty||0),a:Number(x.amount||0)}))];
+    const col=[...S.auto.map(x=>({n:x.dso,b:x.brand,q:x.qty,a:x.amt})),...L('collection').map(x=>{const e=effs().get(String(x.id))||{amt:Number(x.amount||0),card:0,cash:Number(x.amount||0)};return {n:x.name,b:x.brand,q:Number(x.qty||0),a:e.cash,card:e.card,tot:e.amt}})];
     const rows=(arr,fn,min)=>{let h=arr.map(fn).join('');for(let i=arr.length;i<(min||0);i++)h+=fn(null,i);return h};
-    const left=`<table class="cst"><colgroup><col style="width:8%"><col style="width:32%"><col style="width:20%"><col style="width:14%"><col style="width:26%"></colgroup><thead><tr><th>SL</th><th>Depositor's Name</th><th>Brand Info</th><th>Qty</th><th>Collection</th></tr></thead><tbody>${col.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.n)}</td><td>${esc(x.b)}</td><td class="n">${x.q?f(x.q):''}</td><td class="n">${f(x.a)}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center">—</td></tr>'}<tr class="tt"><td colspan="3" style="text-align:right">Total</td><td class="n">${f(c.aQ+c.mQ)}</td><td class="n">${f(c.coll)}</td></tr></tbody></table>`;
+    const left=`<table class="cst"><colgroup><col style="width:8%"><col style="width:32%"><col style="width:20%"><col style="width:14%"><col style="width:26%"></colgroup><thead><tr><th>SL</th><th>Depositor's Name</th><th>Brand Info</th><th>Qty</th><th>Collection</th></tr></thead><tbody>${col.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.n)}${x.card?`<div style="font-size:10px">Total ${f(x.tot)} - Card/Bkash/Nagad ${f(x.card)}</div>`:''}</td><td>${esc(x.b)}</td><td class="n">${x.q?f(x.q):''}</td><td class="n">${f(x.a)}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center">—</td></tr>'}<tr class="tt"><td colspan="3" style="text-align:right">Total</td><td class="n">${f(c.aQ+c.mQ)}</td><td class="n">${f(c.coll)}</td></tr></tbody></table>`;
     const dep=L('deposit'),exp=L('expense'),wd=L('withdraw');
     const right=`<div class="cs-ttl">Bank Deposit</div><table class="cst"><colgroup><col style="width:9%"><col style="width:41%"><col style="width:26%"><col style="width:24%"></colgroup><thead><tr><th>SL</th><th>Bank Name</th><th>Amount</th><th>Remarks</th></tr></thead><tbody>${dep.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td class="n">${f(x.amount)}</td><td>${esc(x.remarks)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center">—</td></tr>'}<tr class="tt"><td colspan="2" style="text-align:right">Total Bank Deposit</td><td class="n">${f(c.dep)}</td><td></td></tr></tbody></table><div class="cs-ttl">Expense</div><table class="cst"><colgroup><col style="width:9%"><col style="width:41%"><col style="width:26%"><col style="width:24%"></colgroup><thead><tr><th>SL</th><th>Expense Description</th><th>Amount</th><th>Remarks</th></tr></thead><tbody>${exp.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td class="n">${f(x.amount)}</td><td>${esc(x.remarks)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center">—</td></tr>'}<tr class="tt"><td colspan="2" style="text-align:right">Total Expense</td><td class="n">${f(c.exp)}</td><td></td></tr></tbody></table>`;
     const summ=`<div class="cs-ttl" style="text-align:center">Cash Summary</div><table class="cst"><colgroup><col style="width:62%"><col style="width:38%"></colgroup><tbody><tr><td>Total Collection</td><td class="n">${f(c.coll)}</td></tr><tr><td>Total Bank Withdraw</td><td class="n">${f(c.wd)}</td></tr><tr><td>Total Opening Cash</td><td class="n">${f(S.open)}</td></tr><tr class="tt"><td>Total Balance</td><td class="n">${f(c.bal)}</td></tr><tr><td>Total Bank Deposit</td><td class="n">${f(c.dep)}</td></tr><tr><td>Total Expense</td><td class="n">${f(c.exp)}</td></tr><tr class="tt"><td>Total Closing Cash</td><td class="n">${f(c.close)}</td></tr></tbody></table>`;
@@ -2411,7 +2414,7 @@ async function cashPage(){
   };
   const edit=()=>{
     $('csEdit').innerHTML=
-      sec('collection','Collection (DSO rows come from sales; add other depositors here)',['Depositor\'s name','Brand','Sales qty','Collection amount'],x=>`<td>${inp(x.id,'name',x.name,'text','e.g. Lohagara Office')}</td><td>${inp(x.id,'brand',x.brand)}</td><td>${inp(x.id,'qty',x.qty||'','number')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td>`,'<div class="muted" style="margin:0 0 8px">Blue rows are filled automatically from this day\'s sales entries (cash + due collection, same as the Daily Sales Sheet). Cheque recovery is not included. Lohagara office sales are left out: add the money received from Lohagara office as one row by hand.</div>')+
+      sec('collection','Collection (DSO rows come from sales; add other depositors here)',['Depositor\'s name','Brand','Sales qty','Collection amount'],x=>`<td>${pick(x,S.showrooms,'Other (type name)','e.g. Lohagara Office')}</td><td>${inp(x.id,'brand',x.brand)}</td><td>${inp(x.id,'qty',x.qty||'','number')}</td><td>${inp(x.id,'amount',x.amount||'','number')}<div class="muted" data-note="${x.id}" style="margin-top:4px"></div></td>`,'<div class="muted" style="margin:0 0 8px">Blue rows are filled automatically from this day\'s sales entries (cash + due collection, same as the Daily Sales Sheet). Cheque recovery is not included. Lohagara office sales are left out: add the money received from Lohagara office as one row by hand. For a showroom, type the showroom\'s TOTAL sale; the Card / bKash / Nagad amount saved on the Card &amp; Cashless Sale page for that day is taken out automatically and only the cash is counted.</div>')+
       sec('deposit','Bank deposit',['Bank name','Amount','Remarks'],x=>`<td>${pick(x,BANKS,OTHER.bank,'Bank name')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td><td>${inp(x.id,'remarks',x.remarks)}</td>`)+
       sec('expense','Expense (Top Pay, daily expense, etc.)',['Description','Amount','Remarks'],x=>`<td>${pick(x,EXPS,OTHER.exp,'Expense description')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td><td>${inp(x.id,'remarks',x.remarks)}</td>`)+
       sec('withdraw','Bank withdrawal (money taken out of the bank into cash)',['Bank name','Amount'],x=>`<td>${pick(x,BANKS,OTHER.bank,'Bank name')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td>`);
@@ -2422,6 +2425,7 @@ async function cashPage(){
     $('csOpenNote').textContent=S.manual?'Typed by you.':(S.hasPrev?"Taken from the previous day's closing cash.":'No earlier day found: type the opening cash.');
     $('csPrev').classList.toggle('hidden',!(S.manual&&S.hasPrev));
     sheet();
+    const E=effs();document.querySelectorAll('#csEdit [data-note]').forEach(el=>{const e=E.get(el.dataset.note);el.textContent=e&&e.card?('Card/Bkash/Nagad '+f(e.card)+' taken out, cash counted: '+f(e.cash)):''});
   };
   const load=async()=>{
     const day=$('csDate').value;if(!day)return;
@@ -2441,10 +2445,12 @@ async function cashPage(){
       if(lr.error)throw new Error(/does not exist|schema cache|relation/i.test(lr.error.message||'')?'Daily Cash Status is not set up yet. Run cash-status-setup.sql in Supabase, then reload.':lr.error.message);
       const dr=await db.from('cash_days').select('*').eq('day',day).limit(1);
       const pr=await db.from('cash_days').select('day,closing_cash').lt('day',day).order('day',{ascending:false}).limit(1);
+      let cs={},names=[...SHOWROOMS_DEFAULT];
+      try{const cr=await db.from('card_sales').select('day,showroom,sale_amount');(cr.data||[]).forEach(r=>{if(r.showroom&&!names.includes(r.showroom))names.push(r.showroom);if(r.day===day)cs[String(r.showroom).trim().toLowerCase()]=Number(r.sale_amount||0)})}catch(e){}
       if(tok!==navToken)return;
       const row=(dr.data||[])[0],prev=(pr.data||[])[0];
       const manual=!!(row&&row.opening_manual),open=manual?Number(row.opening_cash||0):(prev?Number(prev.closing_cash||0):(row?Number(row.opening_cash||0):0));
-      S={day,auto,other:new Set(),lines:lr.data||[],open,manual:manual||(!prev&&!!row&&Number(row.opening_cash)>0),hasPrev:!!prev};
+      S={day,auto,cs,showrooms:names,other:new Set(),lines:lr.data||[],open,manual:manual||(!prev&&!!row&&Number(row.opening_cash)>0),hasPrev:!!prev};
       $('csMsg').innerHTML='';
       refresh();edit();saveDay();
     }catch(e){S=null;msg($('csMsg'),e.message||String(e))}
@@ -2455,7 +2461,7 @@ async function cashPage(){
   let pendImg=null;
   const txt=()=>{
     const c=calc(),L=k=>S.lines.filter(x=>x.kind===k&&(x.name||Number(x.amount)));
-    const col=[...S.auto.map(x=>[x.dso+(x.brand?' ('+x.brand+')':''),x.qty,x.amt]),...S.lines.filter(x=>x.kind==='collection'&&(x.name||Number(x.amount))).map(x=>[x.name+(x.brand?' ('+x.brand+')':''),Number(x.qty||0),Number(x.amount||0)])];
+    const col=[...S.auto.map(x=>[x.dso+(x.brand?' ('+x.brand+')':''),x.qty,x.amt]),...S.lines.filter(x=>x.kind==='collection'&&(x.name||Number(x.amount))).map(x=>{const e=effs().get(String(x.id))||{card:0,cash:Number(x.amount||0),amt:Number(x.amount||0)};return [x.name+(x.brand?' ('+x.brand+')':'')+(e.card?' [Total '+f(e.amt)+' - Card/Bkash/Nagad '+f(e.card)+']':''),Number(x.qty||0),e.cash]})];
     const o=['Sheba Distribution Daily Cash Status','Date: '+fmtDate(S.day),'','COLLECTION'];
     col.forEach((x,i)=>o.push((i+1)+'. '+x[0]+(x[1]?' | Qty '+f(x[1]):'')+' | '+f(x[2])));
     o.push('Total collection: '+f(c.coll));
@@ -2501,7 +2507,7 @@ async function cashPage(){
     if(sl&&S){
       const row=S.lines.find(x=>String(x.id)===sl.dataset.id);if(!row)return;
       const v=sl.value,id=String(row.id);
-      if(v==='__other'){S.other.add(id);if(row.name&&![...BANKS,...EXPS].includes(row.name)){}else{row.name='';const r0=await db.from('cash_lines').update({name:''}).eq('id',row.id);if(r0.error)return msg($('csMsg'),r0.error.message)}}
+      if(v==='__other'){S.other.add(id);if(row.name&&![...BANKS,...EXPS,...S.showrooms].includes(row.name)){}else{row.name='';const r0=await db.from('cash_lines').update({name:''}).eq('id',row.id);if(r0.error)return msg($('csMsg'),r0.error.message)}}
       else{S.other.delete(id);row.name=v;const r1=await db.from('cash_lines').update({name:v}).eq('id',row.id);if(r1.error)return msg($('csMsg'),r1.error.message)}
       edit();refresh();saveDay();return;
     }
@@ -2517,8 +2523,8 @@ async function cashPage(){
 /* ---------- Card & Cashless Sale (Admin) ---------- */
 async function cardSalePage(){
   const tok=navToken;
-  if(!document.getElementById('cdCss')){const st=document.createElement('style');st.id='cdCss';st.textContent=`@page cd{size:A4 landscape;margin:8mm}.cdwrap{page:cd;overflow-x:auto}.cd-sheet{background:#fff;color:#000;min-width:980px;max-width:1200px;margin:16px auto;border:1px solid #000;font-size:13px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.cd-t{background:#ff0;text-align:center;font-weight:800;font-size:22px;padding:16px 6px 8px;border-bottom:1px solid #000;color:#000}table.cdt{border-collapse:collapse;width:100%;min-width:0!important;table-layout:fixed;margin:0}table.cdt th,table.cdt td{border:1px solid #000;padding:6px;text-align:center;color:#000;background:#fff;text-transform:none;letter-spacing:0;font-size:13px;overflow-wrap:anywhere}table.cdt th,table.cdt tr.tt td{background:#92d050;font-weight:800}table.cdt td.l{text-align:left}table.cdt tbody tr{height:42px}.cd-edit input{min-width:92px;width:100%}.cd-edit input[type=date]{min-width:140px}.cd-edit td.cl{font-weight:700;white-space:nowrap}@media print{.cd-sheet{margin:0;max-width:none;min-width:0}table.cdt th,table.cdt td{font-size:11px;padding:3px 4px}}`;document.head.appendChild(st)}
-  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Card &amp; Cashless Sale</h1><div class="sub">One line per showroom. Opening transit is the previous day's closing. Closing transit = opening + sale amount - credit amount - card sale charge.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="cdDate"></div></div><div class="form-actions" style="margin-top:10px"><button id="cdPrint">Print</button><button id="cdShareImg" class="secondary">Share picture</button><button id="cdShareTxt" class="secondary">Share as text</button><button id="cdAdd" class="secondary">+ Add showroom</button></div><div id="cdMsg"></div></div><div id="cdEdit" class="cd-edit"></div></div><div class="cdwrap" id="cdSheet"></div>`;
+  if(!document.getElementById('cdCss')){const st=document.createElement('style');st.id='cdCss';st.textContent=`@page cd{size:A4 landscape;margin:8mm}.cdwrap{page:cd;overflow-x:auto}.cd-sheet{background:#fff;color:#000;min-width:980px;max-width:1200px;margin:16px auto;border:1px solid #000;font-size:13px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.cd-t{background:#ff0;text-align:center;font-weight:800;font-size:22px;padding:16px 6px 8px;border-bottom:1px solid #000;color:#000}table.cdt{border-collapse:collapse;width:100%;min-width:0!important;table-layout:fixed;margin:0}table.cdt th,table.cdt td{border:1px solid #000;padding:6px;text-align:center;color:#000;background:#fff;text-transform:none;letter-spacing:0;font-size:13px;overflow-wrap:anywhere}table.cdt th,table.cdt tr.tt td{background:#92d050;font-weight:800}table.cdt td.l{text-align:left}table.cdt tbody tr{height:42px}.cd-edit input{min-width:92px;width:100%}.cd-edit input[type=date]{min-width:140px}.cd-edit td.cl{font-weight:700;white-space:nowrap}@media print{.cd-sheet{margin:0;max-width:none;min-width:0;break-inside:avoid;page-break-inside:avoid}table.cdt th,table.cdt td{font-size:11px;padding:3px 4px}table.cdt tbody tr{height:30px}.cd-t{font-size:18px;padding:8px 6px 4px}}`;document.head.appendChild(st)}
+  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Card &amp; Cashless Sale</h1><div class="sub">One line per showroom. Opening transit is the previous day's closing. Closing transit = opening + sale amount - credit amount - card sale charge.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="cdDate"></div></div><div class="form-actions" style="margin-top:10px"><button id="cdPrint">Print</button><button id="cdShareImg" class="secondary">Share picture</button><button id="cdShareTxt" class="secondary">Share as text</button><button id="cdCopy" class="secondary">Copy previous POS names</button><button id="cdAdd" class="secondary">+ Add showroom</button></div><div id="cdMsg"></div></div><div id="cdEdit" class="cd-edit"></div></div><div class="cdwrap" id="cdSheet"></div>`;
   $('cdDate').value=today();
   const DEFAULTS=['Sheba Brand Shop-Honor','Sheba Brand Shop - Vivo','Sheba Brand Shop - Samsung','Sheba Brand Shop - Oppo','Sheba Brand Shop - Realme','Sheba Smartphone Café'];
   const num=v=>{const n=Number(String(v==null?'':v).replace(/,/g,''));return Number.isFinite(n)?n:0};
@@ -2528,6 +2534,8 @@ async function cardSalePage(){
   const dbErr=e=>/card_sales|does not exist|schema cache|relation/i.test(e.message||'')?SETUP:(e.message||String(e));
   let S=null,R=[],pendImg=null;
   const recalc=r=>{r.open=r.manual?r.openAmt:r.auto;r.close=r.open+r.sale-r.credit-r.charge};
+  /* charge = the card money that was waiting (opening transit) minus what the bank really paid in */
+  const autoCh=r=>r.credit>0&&r.credit<r.open?Math.round((r.open-r.credit)*100)/100:0;
   const tot=k=>R.reduce((a,r)=>a+(Number(r[k])||0),0);
   const sheet=()=>{
     const body=R.map((r,i)=>`<tr><td>${i+1}</td><td class="l">${esc(r.showroom)}</td><td>${cell(r.open)}</td><td>${esc(r.pos)}</td><td>${cell(r.sale)}</td><td>${r.saleDate?esc(fmtDate(r.saleDate)):''}</td><td>${cell(r.credit)}</td><td>${r.creditDate?esc(fmtDate(r.creditDate)):''}</td><td>${cell(r.charge)}</td><td>${f(r.close)}</td><td>${esc(r.remarks)}</td></tr>`).join('');
@@ -2535,7 +2543,7 @@ async function cardSalePage(){
   };
   const inp=(i,fl,v,type,ph)=>`<input data-i="${i}" data-f="${fl}" type="${type||'text'}" ${type==='number'?'step="any"':''} value="${esc(v==null||v===0?'':v)}" placeholder="${ph||''}">`;
   const edit=()=>{
-    $('cdEdit').innerHTML=`<div class="panel" style="margin-top:12px"><div class="table-wrap"><table><thead><tr><th>Showroom</th><th>Opening transit</th><th>POS name / card type</th><th>Sale amount</th><th>Sale date</th><th>Credit amount</th><th>Credit date</th><th>Card sale charge</th><th>Closing transit</th><th>Remarks</th><th></th></tr></thead><tbody>${R.map((r,i)=>`<tr><td>${esc(r.showroom)}</td><td>${inp(i,'open',r.open,'number')}</td><td>${inp(i,'pos',r.pos,'text','e.g. Bkash To One Bank-4500')}</td><td>${inp(i,'sale',r.sale,'number')}</td><td>${inp(i,'saleDate',r.saleDate,'date')}</td><td>${inp(i,'credit',r.credit,'number')}</td><td>${inp(i,'creditDate',r.creditDate,'date')}</td><td>${inp(i,'charge',r.charge,'number')}</td><td class="cl" id="cdC${i}">${f(r.close)}</td><td>${inp(i,'remarks',r.remarks)}</td><td>${DEFAULTS.includes(r.showroom)?'':`<button class="secondary" data-del="${i}">Remove</button>`}</td></tr>`).join('')}</tbody></table></div><div class="muted" style="margin-top:8px">Opening transit fills itself from the previous day's closing. Type a figure there to use your own number for this day only; clear the box to go back to automatic.</div></div>`;
+    $('cdEdit').innerHTML=`<div class="panel" style="margin-top:12px"><div class="table-wrap"><table><thead><tr><th>Showroom</th><th>Opening transit</th><th>POS name / card type</th><th>Sale amount</th><th>Sale date</th><th>Credit amount</th><th>Credit date</th><th>Card sale charge</th><th>Closing transit</th><th>Remarks</th><th></th></tr></thead><tbody>${R.map((r,i)=>`<tr><td>${esc(r.showroom)}</td><td>${inp(i,'open',r.open,'number')}</td><td>${inp(i,'pos',r.pos,'text','e.g. Bkash To One Bank-4500')}</td><td>${inp(i,'sale',r.sale,'number')}</td><td>${inp(i,'saleDate',r.saleDate,'date')}</td><td>${inp(i,'credit',r.credit,'number')}</td><td>${inp(i,'creditDate',r.creditDate,'date')}</td><td>${inp(i,'charge',r.charge,'number')}</td><td class="cl" id="cdC${i}">${f(r.close)}</td><td>${inp(i,'remarks',r.remarks)}</td><td>${DEFAULTS.includes(r.showroom)?'':`<button class="secondary" data-del="${i}">Remove</button>`}</td></tr>`).join('')}</tbody></table></div><div class="muted" style="margin-top:8px">Opening transit fills itself from the previous day's closing. Type a figure there to use your own number for this day only; clear the box to go back to automatic. Card sale charge fills itself as opening minus credit when the credit is smaller than the opening; type your own figure to override.</div></div>`;
   };
   const refresh=()=>{pendImg=null;if($('cdShareImg'))$('cdShareImg').textContent='Share picture';sheet()};
   const saveRow=async r=>{
@@ -2552,19 +2560,27 @@ async function cardSalePage(){
       if(tok!==navToken)return;
       const names=[...DEFAULTS];all.forEach(x=>{if(x.showroom&&!names.includes(x.showroom))names.push(x.showroom)});
       R=names.map(n=>{
-        const mine=all.filter(x=>x.showroom===n);let prev=0,cur=null;
+        const mine=all.filter(x=>x.showroom===n);let prev=0,cur=null,prevPos='';
         mine.forEach(x=>{
-          if(x.day<day){const o=x.opening_manual?num(x.opening_amount):prev;prev=o+num(x.sale_amount)-num(x.credit_amount)-num(x.charge)}
+          if(x.day<day){const o=x.opening_manual?num(x.opening_amount):prev;prev=o+num(x.sale_amount)-num(x.credit_amount)-num(x.charge);if(x.pos_name)prevPos=x.pos_name}
           else if(x.day===day)cur=x;
         });
-        const r={showroom:n,auto:prev,manual:!!(cur&&cur.opening_manual),openAmt:cur?num(cur.opening_amount):0,pos:cur?.pos_name||'',sale:cur?num(cur.sale_amount):0,saleDate:cur?.sale_date||'',credit:cur?num(cur.credit_amount):0,creditDate:cur?.credit_date||'',charge:cur?num(cur.charge):0,remarks:cur?.remarks||''};
-        recalc(r);return r;
+        const r={showroom:n,auto:prev,manual:!!(cur&&cur.opening_manual),openAmt:cur?num(cur.opening_amount):0,pos:cur?.pos_name||'',sale:cur?num(cur.sale_amount):0,saleDate:cur?.sale_date||'',credit:cur?num(cur.credit_amount):0,creditDate:cur?.credit_date||'',charge:cur?num(cur.charge):0,remarks:cur?.remarks||'',prevPos,lastAuto:0};
+        recalc(r);r.lastAuto=autoCh(r);return r;
       });
       S={day};$('cdMsg').innerHTML='';edit();refresh();
     }catch(e){$('cdMsg').innerHTML='';msg($('cdMsg'),dbErr(e))}
   };
   $('cdDate').onchange=load;
-  $('cdPrint').onclick=()=>{if(S)window.print()};
+  $('cdPrint').onclick=()=>{
+    if(!S)return;
+    /* keep the sheet on ONE page even with many showrooms */
+    const el=document.querySelector('#cdSheet .cd-sheet'),n=R.length;
+    if(el&&n>16)el.style.zoom=String(Math.max(.5,16/n));
+    const back=()=>{if(el)el.style.zoom='';window.removeEventListener('afterprint',back)};
+    window.addEventListener('afterprint',back);
+    window.print();
+  };
   const txt=()=>{
     const o=['Card Sale & Bkash Sale Info '+fmtDate(S.day),''];
     R.forEach((r,i)=>o.push((i+1)+'. '+r.showroom+' | Opening '+f(r.open)+(r.sale?' | Sale '+f(r.sale)+(r.pos?' ('+r.pos+')':''):'')+(r.credit?' | Credit '+f(r.credit):'')+(r.charge?' | Charge '+f(r.charge):'')+' | Closing '+f(r.close)+(r.remarks?' | '+r.remarks:'')));
@@ -2596,6 +2612,13 @@ async function cardSalePage(){
       }
     }catch(e){b.disabled=false;b.textContent='Share picture';msg($('cdMsg'),e.message||String(e))}
   };
+  $('cdCopy').onclick=async()=>{
+    if(!S)return msg($('cdMsg'),'Choose a date first.');
+    const rows=R.filter(r=>!r.pos&&r.prevPos);
+    if(!rows.length)return msg($('cdMsg'),'Nothing to copy: every POS name is already filled, or there is no earlier day.','');
+    for(const r of rows){r.pos=r.prevPos;if(!(await saveRow(r)))return}
+    edit();refresh();msg($('cdMsg'),rows.length+' POS name'+(rows.length>1?'s':'')+' copied from the earlier day.','success');
+  };
   $('cdAdd').onclick=async()=>{
     if(!S)return msg($('cdMsg'),'Choose a date first.');
     const n=(prompt('Showroom name:')||'').trim();if(!n)return;
@@ -2618,6 +2641,11 @@ async function cardSalePage(){
     else if(fl==='sale'||fl==='credit'||fl==='charge')r[fl]=num(v);
     else r[fl]=v.trim();
     recalc(r);
+    if(fl==='credit'||fl==='open'){
+      const a=autoCh(r);
+      if(r.charge===0||r.charge===r.lastAuto){r.charge=a;const ci=document.querySelector('#cdEdit input[data-i="'+i+'"][data-f="charge"]');if(ci)ci.value=r.charge?f(r.charge):''}
+      r.lastAuto=a;recalc(r);
+    }
     if(fl==='open')t.value=r.open?f(r.open):'';
     const c=$('cdC'+i);if(c)c.textContent=f(r.close);
     refresh();
