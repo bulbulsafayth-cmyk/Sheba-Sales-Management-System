@@ -267,7 +267,7 @@ table.crt td.cract button{display:block;width:100%;margin:0 0 3px;padding:3px 4p
 .shcalc .ctc{border-bottom:2px solid #000;margin-bottom:8px;padding:4px 0}.shcalc .ctc b{flex:1}.shcalc .ctc .cadd{margin:0;white-space:nowrap}</style></head>
 <body>
 <div id="loginView" class="login-wrap"><div class="login"><h1>Sheba Distribution Sales &amp; Credit Management System</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
-<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="target">◉ &nbsp; Target vs Achievement</button><button data-page="cash">▤ &nbsp; Daily Cash Status</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
+<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="target">◉ &nbsp; Target vs Achievement</button><button data-page="cash">▤ &nbsp; Daily Cash Status</button><button data-page="cardsale">▤ &nbsp; Card &amp; Cashless Sale</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
 <script>
 const SUPABASE_URL='https://nvnogsganemysvbqmcpo.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_tyWf1VnXMzNVBs22Qgs3wg_SBy6HegJ';
@@ -373,8 +373,8 @@ function showApp(mode='admin'){
   if(mode==='admin')startApprovalWatch();else stopApprovalWatch();
 }
 $('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(b)go(b.dataset.page)});
-const titles={dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location',cash:'Daily Cash Status',target:'Target vs Achievement'};
-const pages={dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage(),dsoloc:()=>dsoLocPage(),cash:()=>cashPage(),target:()=>targetPage()};
+const titles={dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location',cash:'Daily Cash Status',cardsale:'Card & Cashless Sale',target:'Target vs Achievement'};
+const pages={dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage(),dsoloc:()=>dsoLocPage(),cash:()=>cashPage(),cardsale:()=>cardSalePage(),target:()=>targetPage()};
 function go(p,arg){
   if(userMode==='dso'&&!DSO_PAGES.includes(p))p='sales';
   if(userMode!=='dso'&&p==='target')p='dashboard';
@@ -2510,6 +2510,118 @@ async function cashPage(){
     const row=S.lines.find(x=>String(x.id)===i.dataset.id);if(!row)return;
     const r=await db.from('cash_lines').update({[fld]:v}).eq('id',row.id);if(r.error)return msg($('csMsg'),r.error.message);
     row[fld]=v;refresh();saveDay();
+  };
+  load();
+}
+
+/* ---------- Card & Cashless Sale (Admin) ---------- */
+async function cardSalePage(){
+  const tok=navToken;
+  if(!document.getElementById('cdCss')){const st=document.createElement('style');st.id='cdCss';st.textContent=`@page cd{size:A4 landscape;margin:8mm}.cdwrap{page:cd;overflow-x:auto}.cd-sheet{background:#fff;color:#000;min-width:980px;max-width:1200px;margin:16px auto;border:1px solid #000;font-size:13px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.cd-t{background:#ff0;text-align:center;font-weight:800;font-size:22px;padding:16px 6px 8px;border-bottom:1px solid #000;color:#000}table.cdt{border-collapse:collapse;width:100%;min-width:0!important;table-layout:fixed;margin:0}table.cdt th,table.cdt td{border:1px solid #000;padding:6px;text-align:center;color:#000;background:#fff;text-transform:none;letter-spacing:0;font-size:13px;overflow-wrap:anywhere}table.cdt th,table.cdt tr.tt td{background:#92d050;font-weight:800}table.cdt td.l{text-align:left}table.cdt tbody tr{height:42px}.cd-edit input{min-width:92px;width:100%}.cd-edit input[type=date]{min-width:140px}.cd-edit td.cl{font-weight:700;white-space:nowrap}@media print{.cd-sheet{margin:0;max-width:none;min-width:0}table.cdt th,table.cdt td{font-size:11px;padding:3px 4px}}`;document.head.appendChild(st)}
+  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Card &amp; Cashless Sale</h1><div class="sub">One line per showroom. Opening transit is the previous day's closing. Closing transit = opening + sale amount - credit amount - card sale charge.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="cdDate"></div></div><div class="form-actions" style="margin-top:10px"><button id="cdPrint">Print</button><button id="cdShareImg" class="secondary">Share picture</button><button id="cdShareTxt" class="secondary">Share as text</button><button id="cdAdd" class="secondary">+ Add showroom</button></div><div id="cdMsg"></div></div><div id="cdEdit" class="cd-edit"></div></div><div class="cdwrap" id="cdSheet"></div>`;
+  $('cdDate').value=today();
+  const DEFAULTS=['Sheba Brand Shop-Honor','Sheba Brand Shop - Vivo','Sheba Brand Shop - Samsung','Sheba Brand Shop - Oppo','Sheba Brand Shop - Realme','Sheba Smartphone Café'];
+  const num=v=>{const n=Number(String(v==null?'':v).replace(/,/g,''));return Number.isFinite(n)?n:0};
+  const f=n=>String(Math.round((Number(n)||0)*100)/100);
+  const cell=n=>n?f(n):'';
+  const SETUP='Card & Cashless Sale is not set up yet. Run card-sale-setup.sql in Supabase, then try again.';
+  const dbErr=e=>/card_sales|does not exist|schema cache|relation/i.test(e.message||'')?SETUP:(e.message||String(e));
+  let S=null,R=[],pendImg=null;
+  const recalc=r=>{r.open=r.manual?r.openAmt:r.auto;r.close=r.open+r.sale-r.credit-r.charge};
+  const tot=k=>R.reduce((a,r)=>a+(Number(r[k])||0),0);
+  const sheet=()=>{
+    const body=R.map((r,i)=>`<tr><td>${i+1}</td><td class="l">${esc(r.showroom)}</td><td>${cell(r.open)}</td><td>${esc(r.pos)}</td><td>${cell(r.sale)}</td><td>${r.saleDate?esc(fmtDate(r.saleDate)):''}</td><td>${cell(r.credit)}</td><td>${r.creditDate?esc(fmtDate(r.creditDate)):''}</td><td>${cell(r.charge)}</td><td>${f(r.close)}</td><td>${esc(r.remarks)}</td></tr>`).join('');
+    $('cdSheet').innerHTML=`<div class="cd-sheet"><div class="cd-t">Card Sale &amp; Bkash Sale Info ${esc(fmtDate(S.day))}</div><table class="cdt"><colgroup><col style="width:4%"><col style="width:16%"><col style="width:8%"><col style="width:13%"><col style="width:7%"><col style="width:8%"><col style="width:8%"><col style="width:8%"><col style="width:7%"><col style="width:8%"><col style="width:13%"></colgroup><thead><tr><th rowspan="2">SL No.</th><th colspan="2">Opening Info</th><th colspan="7">Today Card Sale Info</th><th rowspan="2">Remarks</th></tr><tr><th>Showroom Name</th><th>Opening Transit(Card)</th><th>POS Name/ Card Type</th><th>Sale Amount</th><th>Sale Date</th><th>Credit Amount</th><th>Credit Date</th><th>Card Sale Charge</th><th>Closing Transit</th></tr></thead><tbody>${body}<tr class="tt"><td colspan="2">Total</td><td>${f(tot('open'))}</td><td></td><td>${f(tot('sale'))}</td><td></td><td>${f(tot('credit'))}</td><td></td><td>${f(tot('charge'))}</td><td>${f(tot('close'))}</td><td></td></tr></tbody></table></div>`;
+  };
+  const inp=(i,fl,v,type,ph)=>`<input data-i="${i}" data-f="${fl}" type="${type||'text'}" ${type==='number'?'step="any"':''} value="${esc(v==null||v===0?'':v)}" placeholder="${ph||''}">`;
+  const edit=()=>{
+    $('cdEdit').innerHTML=`<div class="panel" style="margin-top:12px"><div class="table-wrap"><table><thead><tr><th>Showroom</th><th>Opening transit</th><th>POS name / card type</th><th>Sale amount</th><th>Sale date</th><th>Credit amount</th><th>Credit date</th><th>Card sale charge</th><th>Closing transit</th><th>Remarks</th><th></th></tr></thead><tbody>${R.map((r,i)=>`<tr><td>${esc(r.showroom)}</td><td>${inp(i,'open',r.open,'number')}</td><td>${inp(i,'pos',r.pos,'text','e.g. Bkash To One Bank-4500')}</td><td>${inp(i,'sale',r.sale,'number')}</td><td>${inp(i,'saleDate',r.saleDate,'date')}</td><td>${inp(i,'credit',r.credit,'number')}</td><td>${inp(i,'creditDate',r.creditDate,'date')}</td><td>${inp(i,'charge',r.charge,'number')}</td><td class="cl" id="cdC${i}">${f(r.close)}</td><td>${inp(i,'remarks',r.remarks)}</td><td>${DEFAULTS.includes(r.showroom)?'':`<button class="secondary" data-del="${i}">Remove</button>`}</td></tr>`).join('')}</tbody></table></div><div class="muted" style="margin-top:8px">Opening transit fills itself from the previous day's closing. Type a figure there to use your own number for this day only; clear the box to go back to automatic.</div></div>`;
+  };
+  const refresh=()=>{pendImg=null;if($('cdShareImg'))$('cdShareImg').textContent='Share picture';sheet()};
+  const saveRow=async r=>{
+    const rec={day:S.day,showroom:r.showroom,opening_manual:r.manual,opening_amount:r.manual?r.openAmt:null,pos_name:r.pos||null,sale_amount:r.sale||0,sale_date:r.saleDate||null,credit_amount:r.credit||0,credit_date:r.creditDate||null,charge:r.charge||0,remarks:r.remarks||null};
+    const res=await db.from('card_sales').upsert(rec,{onConflict:'day,showroom'});
+    if(res.error){msg($('cdMsg'),dbErr(res.error));return false}
+    return true;
+  };
+  const load=async()=>{
+    const day=$('cdDate').value;if(!day)return;
+    $('cdMsg').innerHTML='<div class="notice">Loading…</div>';$('cdEdit').innerHTML='';$('cdSheet').innerHTML='';
+    try{
+      const all=await fetchAll(()=>db.from('card_sales').select('*').lte('day',day).order('day').order('id'));
+      if(tok!==navToken)return;
+      const names=[...DEFAULTS];all.forEach(x=>{if(x.showroom&&!names.includes(x.showroom))names.push(x.showroom)});
+      R=names.map(n=>{
+        const mine=all.filter(x=>x.showroom===n);let prev=0,cur=null;
+        mine.forEach(x=>{
+          if(x.day<day){const o=x.opening_manual?num(x.opening_amount):prev;prev=o+num(x.sale_amount)-num(x.credit_amount)-num(x.charge)}
+          else if(x.day===day)cur=x;
+        });
+        const r={showroom:n,auto:prev,manual:!!(cur&&cur.opening_manual),openAmt:cur?num(cur.opening_amount):0,pos:cur?.pos_name||'',sale:cur?num(cur.sale_amount):0,saleDate:cur?.sale_date||'',credit:cur?num(cur.credit_amount):0,creditDate:cur?.credit_date||'',charge:cur?num(cur.charge):0,remarks:cur?.remarks||''};
+        recalc(r);return r;
+      });
+      S={day};$('cdMsg').innerHTML='';edit();refresh();
+    }catch(e){$('cdMsg').innerHTML='';msg($('cdMsg'),dbErr(e))}
+  };
+  $('cdDate').onchange=load;
+  $('cdPrint').onclick=()=>{if(S)window.print()};
+  const txt=()=>{
+    const o=['Card Sale & Bkash Sale Info '+fmtDate(S.day),''];
+    R.forEach((r,i)=>o.push((i+1)+'. '+r.showroom+' | Opening '+f(r.open)+(r.sale?' | Sale '+f(r.sale)+(r.pos?' ('+r.pos+')':''):'')+(r.credit?' | Credit '+f(r.credit):'')+(r.charge?' | Charge '+f(r.charge):'')+' | Closing '+f(r.close)+(r.remarks?' | '+r.remarks:'')));
+    o.push('','Total: Opening '+f(tot('open'))+' | Sale '+f(tot('sale'))+' | Credit '+f(tot('credit'))+' | Charge '+f(tot('charge'))+' | Closing '+f(tot('close')));
+    return o.join('\n');
+  };
+  $('cdShareTxt').onclick=()=>{if(!S)return msg($('cdMsg'),'Choose a date first.');shareText('Card Sale & Bkash Sale Info '+fmtDate(S.day),txt())};
+  const sendImg=async file=>{
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Card Sale & Bkash Sale Info'});return}
+    const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),8000);
+    msg($('cdMsg'),'The picture was saved on this device. Send it from Downloads or Gallery.','success');
+  };
+  $('cdShareImg').onclick=async()=>{
+    if(!S)return msg($('cdMsg'),'Choose a date first.');
+    const b=$('cdShareImg');
+    if(pendImg){const fl=pendImg;pendImg=null;b.textContent='Share picture';try{await sendImg(fl)}catch(e){if(!e||e.name!=='AbortError')msg($('cdMsg'),'Could not share: '+(e.message||e))}return}
+    b.disabled=true;b.textContent='Preparing…';$('cdMsg').innerHTML='';
+    try{
+      await loadH2C();
+      const el=document.querySelector('#cdSheet .cd-sheet');
+      const cv=await html2canvas(el,{scale:2,backgroundColor:'#ffffff',useCORS:true});
+      const blob=await new Promise(ok=>cv.toBlob(ok,'image/png'));
+      if(!blob||blob.size<500)throw new Error('This phone could not draw the picture. Try Print or Share as text.');
+      const fl=new File([blob],'Card_Sale_'+S.day+'.png',{type:'image/png'});
+      b.disabled=false;b.textContent='Share picture';
+      try{await sendImg(fl)}catch(e){
+        if(e&&e.name==='NotAllowedError'){pendImg=fl;b.textContent='Picture ready - tap to share'}
+        else if(e&&e.name!=='AbortError')msg($('cdMsg'),'Could not share: '+(e.message||e));
+      }
+    }catch(e){b.disabled=false;b.textContent='Share picture';msg($('cdMsg'),e.message||String(e))}
+  };
+  $('cdAdd').onclick=async()=>{
+    if(!S)return msg($('cdMsg'),'Choose a date first.');
+    const n=(prompt('Showroom name:')||'').trim();if(!n)return;
+    if(R.some(r=>r.showroom.toLowerCase()===n.toLowerCase()))return msg($('cdMsg'),'This showroom is already in the list.');
+    const r={showroom:n,auto:0,manual:false,openAmt:0,pos:'',sale:0,saleDate:'',credit:0,creditDate:'',charge:0,remarks:''};recalc(r);
+    if(await saveRow(r))load();
+  };
+  $('cdEdit').onclick=async e=>{
+    const d=e.target.closest('button[data-del]');if(!d||!S)return;
+    const r=R[+d.dataset.del];if(!r)return;
+    if(!confirm('Remove "'+r.showroom+'" and all its saved days?'))return;
+    const res=await db.from('card_sales').delete().eq('showroom',r.showroom);
+    if(res.error)return msg($('cdMsg'),dbErr(res.error));
+    load();
+  };
+  $('cdEdit').onchange=async e=>{
+    const t=e.target.closest('input[data-i]');if(!t||!S)return;
+    const i=+t.dataset.i,r=R[i],fl=t.dataset.f,v=t.value;if(!r)return;
+    if(fl==='open'){if(v===''||num(v)===r.auto){r.manual=false;r.openAmt=0}else{r.manual=true;r.openAmt=num(v)}}
+    else if(fl==='sale'||fl==='credit'||fl==='charge')r[fl]=num(v);
+    else r[fl]=v.trim();
+    recalc(r);
+    if(fl==='open')t.value=r.open?f(r.open):'';
+    const c=$('cdC'+i);if(c)c.textContent=f(r.close);
+    refresh();
+    await saveRow(r);
   };
   load();
 }
