@@ -267,7 +267,7 @@ table.crt td.cract button{display:block;width:100%;margin:0 0 3px;padding:3px 4p
 .shcalc .ctc{border-bottom:2px solid #000;margin-bottom:8px;padding:4px 0}.shcalc .ctc b{flex:1}.shcalc .ctc .cadd{margin:0;white-space:nowrap}</style></head>
 <body>
 <div id="loginView" class="login-wrap"><div class="login"><h1>Sheba Distribution Sales &amp; Credit Management System</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
-<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="target">◉ &nbsp; Target vs Achievement</button><button data-page="cash">▤ &nbsp; Daily Cash Status</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
+<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="ask">? &nbsp; Quick Questions</button><button data-page="target">◉ &nbsp; Target vs Achievement</button><button data-page="cash">▤ &nbsp; Daily Cash Status</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
 <script>
 const SUPABASE_URL='https://nvnogsganemysvbqmcpo.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_tyWf1VnXMzNVBs22Qgs3wg_SBy6HegJ';
@@ -373,8 +373,8 @@ function showApp(mode='admin'){
   if(mode==='admin')startApprovalWatch();else stopApprovalWatch();
 }
 $('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(b)go(b.dataset.page)});
-const titles={dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location',cash:'Daily Cash Status',target:'Target vs Achievement'};
-const pages={dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage(),dsoloc:()=>dsoLocPage(),cash:()=>cashPage(),target:()=>targetPage()};
+const titles={ask:'Quick Questions',dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location',cash:'Daily Cash Status',target:'Target vs Achievement'};
+const pages={ask:()=>askPage(),dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage(),dsoloc:()=>dsoLocPage(),cash:()=>cashPage(),target:()=>targetPage()};
 function go(p,arg){
   if(userMode==='dso'&&!DSO_PAGES.includes(p))p='sales';
   if(userMode!=='dso'&&p==='target')p='dashboard';
@@ -2512,6 +2512,77 @@ async function cashPage(){
     row[fld]=v;refresh();saveDay();
   };
   load();
+}
+
+/* ---------- Quick Questions (Admin): ready-made questions answered from the sales data, no AI and nothing leaves the app ---------- */
+async function askPage(){
+  const tok=navToken;
+  if(!document.getElementById('qqCss')){const st=document.createElement('style');st.id='qqCss';st.textContent='.qq-res table{width:100%;border-collapse:collapse}.qq-res th,.qq-res td{border-bottom:1px solid var(--line,#e5e7eb);padding:6px 8px;text-align:right;white-space:nowrap}.qq-res th:first-child,.qq-res td:first-child{text-align:left;white-space:normal}.qq-res tr.tt td{font-weight:700;background:#f3f4f6}.qq-sum{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}.qq-sum span{background:#eef2ff;border-radius:8px;padding:6px 10px}';document.head.appendChild(st)}
+  const t0=today(),m0=t0.slice(0,8)+'01',f=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:0});
+  $('page').innerHTML=`<h1 class="page-title">Quick Questions</h1><div class="panel"><div class="form-grid">
+    <div style="grid-column:1/-1"><label>Question</label><select id="qqQ">
+      <option value="dso">DSO-wise sales &amp; collection</option>
+      <option value="dsolow">Which DSOs collected the least?</option>
+      <option value="brand">Brand-wise sales &amp; collection</option>
+      <option value="ret">Top retailers by sales</option>
+      <option value="rsearch">One retailer: sales &amp; collection</option>
+      <option value="day">Day-by-day totals</option>
+    </select></div>
+    <div><label>From</label><input type="date" id="qqFrom" value="${m0}"></div><div><label>To</label><input type="date" id="qqTo" value="${t0}"></div>
+    <div><label>Brand (optional)</label><select id="qqBrand"><option value="">All brands</option></select></div>
+    <div><label>DSO (optional)</label><select id="qqDso"><option value="">All DSOs</option></select></div>
+    <div id="qqRetBox" style="display:none;grid-column:1/-1"><label>Retailer name (part of the name)</label><input id="qqRet" placeholder="e.g. Rahman Telecom"></div>
+  </div><div class="form-actions"><button id="qqRun">Show answer</button><button class="secondary" id="qqToday">Today</button><button class="secondary" id="qqMonth">This month</button><button class="secondary" id="qqShare" disabled>Share as text</button></div>
+  <div class="muted" style="margin-top:8px">Dues are not listed here. Use Verbal Due and Credit &amp; Cheque Report in Reports for those.</div></div><div id="qqMsg"></div><div class="panel qq-res" id="qqOut" style="display:none"></div>`;
+  try{
+    const [b,d]=await Promise.all([db.from('brands').select('id,name').order('name'),db.from('dsos').select('id,full_name').order('full_name')]);
+    if(tok!==navToken)return;
+    $('qqBrand').innerHTML+=(b.data||[]).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
+    $('qqDso').innerHTML+=(d.data||[]).map(x=>`<option value="${x.id}">${esc(x.full_name)}</option>`).join('');
+  }catch(e){}
+  const sync=()=>{$('qqRetBox').style.display=$('qqQ').value==='rsearch'?'block':'none'};
+  $('qqQ').onchange=sync;sync();
+  $('qqToday').onclick=()=>{$('qqFrom').value=t0;$('qqTo').value=t0};
+  $('qqMonth').onclick=()=>{$('qqFrom').value=m0;$('qqTo').value=t0};
+  let last='';
+  $('qqRun').onclick=async()=>{
+    const q=$('qqQ').value,from=$('qqFrom').value,to=$('qqTo').value,br=$('qqBrand').value,ds=$('qqDso').value,rt=$('qqRet').value.trim().toLowerCase();
+    if(!from||!to||from>to)return msg($('qqMsg'),'Choose a correct From and To date.');
+    if(q==='rsearch'&&!rt)return msg($('qqMsg'),'Type the retailer name first.');
+    $('qqMsg').innerHTML='<div class="notice">Loading…</div>';$('qqOut').style.display='none';$('qqShare').disabled=true;
+    try{
+      let rows=await fetchAll(()=>scopedReport().gte('sale_date',from).lte('sale_date',to).order('sale_date').order('id'));
+      if(tok!==navToken)return;
+      if(br)rows=rows.filter(x=>x.brand_id===br);
+      if(ds)rows=rows.filter(x=>x.dso_id===ds);
+      if(q==='rsearch')rows=rows.filter(x=>String(x.retailer||'').toLowerCase().includes(rt));
+      const ids=rows.filter(x=>Number(x.item_count)!==0).map(x=>x.id),qtyBy={};
+      for(let i=0;i<ids.length;i+=100){
+        const part=ids.slice(i,i+100);
+        const it=await fetchAll(()=>db.from('sales_items').select('sales_entry_id,quantity').in('sales_entry_id',part).order('sales_entry_id'));
+        if(tok!==navToken)return;
+        it.forEach(r=>{qtyBy[r.sales_entry_id]=(qtyBy[r.sales_entry_id]||0)+Number(r.quantity||0)});
+      }
+      const agg=l=>{const a={qty:0,sale:0,col:0,n:0};l.forEach(x=>{a.col+=Number(x.received_amount||0);if(Number(x.item_count)!==0){a.qty+=qtyBy[x.id]||0;a.sale+=Number(x.total_sales||0);a.n++}});return a};
+      let title,head,list;
+      const grp=(kf,nf)=>[...groupBy(rows,kf).values()].map(l=>({name:nf(l[0])||'—',a:agg(l)}));
+      if(q==='dso'||q==='dsolow'){list=grp(x=>x.dso_id,x=>x.dso_name);list.sort((x,y)=>q==='dso'?y.a.sale-x.a.sale:x.a.col-y.a.col);title=q==='dso'?'DSO-wise sales & collection':'DSOs by lowest collection';head='DSO'}
+      else if(q==='brand'){list=grp(x=>x.brand_id,x=>x.brand);list.sort((x,y)=>y.a.sale-x.a.sale);title='Brand-wise sales & collection';head='Brand'}
+      else if(q==='ret'||q==='rsearch'){list=grp(x=>x.retailer_id,x=>x.retailer);list.sort((x,y)=>y.a.sale-x.a.sale);if(q==='ret')list=list.slice(0,30);title=q==='ret'?'Top retailers by sales':'Retailer: '+$('qqRet').value.trim();head='Retailer'}
+      else{list=grp(x=>x.sale_date,x=>fmtDate(x.sale_date));list.sort((x,y)=>(x.name<y.name?-1:1));list=[...groupBy(rows,x=>x.sale_date).entries()].sort((a,b)=>a[0]<b[0]?-1:1).map(([k,l])=>({name:fmtDate(k),a:agg(l)}));title='Day-by-day totals';head='Date'}
+      const filt=[br&&$('qqBrand').selectedOptions[0].textContent,ds&&$('qqDso').selectedOptions[0].textContent].filter(Boolean).join(', ');
+      const T=agg(rows);
+      $('qqMsg').innerHTML='';
+      if(!rows.length){$('qqOut').style.display='block';$('qqOut').innerHTML='<b>'+esc(title)+'</b><div class="muted" style="margin-top:6px">No sales found for this choice.</div>';return}
+      $('qqOut').style.display='block';
+      $('qqOut').innerHTML=`<h3>${esc(title)}</h3><div class="muted">${esc(fmtDate(from))} to ${esc(fmtDate(to))}${filt?' · '+esc(filt):''}</div>
+        <div class="qq-sum"><span>Sales <b>${f(T.sale)}</b></span><span>Collection <b>${f(T.col)}</b></span><span>Quantity <b>${f(T.qty)}</b></span></div>
+        <div class="table-wrap"><table><thead><tr><th>${head}</th><th>Qty</th><th>Sales</th><th>Collection</th></tr></thead><tbody>${list.map(r=>`<tr><td>${esc(r.name)}</td><td>${f(r.a.qty)}</td><td>${f(r.a.sale)}</td><td>${f(r.a.col)}</td></tr>`).join('')}<tr class="tt"><td>Total</td><td>${f(T.qty)}</td><td>${f(T.sale)}</td><td>${f(T.col)}</td></tr></tbody></table></div>`;
+      last=[title,fmtDate(from)+' to '+fmtDate(to)+(filt?' ('+filt+')':''),'',...list.map((r,i)=>(i+1)+'. '+r.name+' | Qty '+f(r.a.qty)+' | Sales '+f(r.a.sale)+' | Collection '+f(r.a.col)),'','Total | Qty '+f(T.qty)+' | Sales '+f(T.sale)+' | Collection '+f(T.col)].join('\n');
+      $('qqShare').disabled=false;
+    }catch(e){$('qqMsg').innerHTML='';msg($('qqMsg'),e.message||String(e))}
+  };
+  $('qqShare').onclick=()=>{if(last)shareText('Sheba Distribution - Quick Question',last)};
 }
 
 /* ---------- Target vs Achievement (DSO login only) ---------- */
