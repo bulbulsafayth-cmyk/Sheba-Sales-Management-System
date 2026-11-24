@@ -320,18 +320,34 @@ async function showDsoPicker(){
   $('appView').classList.add('hidden');$('loginView').classList.remove('hidden');
   $('authFields').classList.add('hidden');$('dsoStep').classList.remove('hidden');$('loginMsg').innerHTML='';
 }
-/* Welcome voice for DSOs: spoken by the phone's own voice (no sound file), only on a fresh login */
+/* Welcome voice for DSOs (Bangla, by pet name): spoken by the phone's own voice (no sound file), only on a fresh login */
 function unlockVoice(){try{if(!('speechSynthesis' in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}}
+/* Pet names (ডাক নাম) in Bangla for the welcome voice. Each row: [Bangla name, spellings found in the DSO's name]. Add a row for a new DSO. */
+const DSO_NICK=[
+  ['সাজ্জাদ',['sajjad','sazzad']],['নোবেল',['nobel','nobil','noble']],['মোবারক',['mobarrak','mobarak','mubarak','mubarrak']],
+  ['হামিদ',['hamid']],['হাবিব',['habib']],['জয়নুল',['joynul','joynal','zainul','jainul']],['ইমরান',['imran']],
+  ['ফরহাদ',['farhad','farhaad']],['দিদার',['didar','deedar']],['তৌফিক',['tawfik','tawfiq','taufiq','toufiq','tofiq']],
+  ['ফাহিম',['fahim','faheem']],['মুকিত',['mukit','mukith','muqit']],['সাইফুল',['saiful','shaiful']]
+];
 function welcomeVoice(d){
   try{
     if(!('speechSynthesis' in window))return;
-    const parts=String(d.full_name||d.name||'').trim().split(/\s+/).filter(Boolean);
-    const first=parts.find(w=>!/^(md\.?|mohammad|mohammed|muhammad|mr\.?)$/i.test(w))||parts[0];
-    if(!first)return;
-    speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance('Welcome back, Mister '+first.replace(/[.,]/g,''));
-    u.lang='en-US';u.rate=.95;u.pitch=1;u.volume=1;
-    speechSynthesis.speak(u);
+    const parts=String(d.full_name||d.name||'').trim().split(/\s+/).filter(Boolean).map(w=>w.replace(/[.,]/g,''));
+    const low=parts.map(w=>w.toLowerCase());
+    const hit=DSO_NICK.find(n=>n[1].some(x=>low.includes(x)));
+    const first=parts.find(w=>!/^(md|mohammad|mohammed|muhammad|mr)$/i.test(w))||parts[0];
+    if(!hit&&!first)return;
+    /* greeting by Bangladesh time: morning 5-12, afternoon 12-5, evening 5-8, night 8-5 */
+    let hr=0;try{hr=parseInt(new Intl.DateTimeFormat('en-GB',{hour:'numeric',hour12:false,timeZone:'Asia/Dhaka'}).format(new Date()),10)%24}catch(e){hr=new Date().getHours()}
+    const slot=hr>=5&&hr<12?0:hr>=12&&hr<17?1:hr>=17&&hr<20?2:3;
+    const gBn=['শুভ সকাল','শুভ অপরাহ্ন','শুভ সন্ধ্যা','শুভ রাত্রি'][slot],gEn=['Good morning','Good afternoon','Good evening','Good evening'][slot];
+    const vs=speechSynthesis.getVoices()||[];
+    const bn=vs.find(v=>/^bn/i.test(v.lang));
+    const useBn=!!hit&&(!!bn||!vs.length);   /* Bangla if the phone has a Bangla voice (or has not listed its voices yet) */
+    const u=new SpeechSynthesisUtterance(useBn?gBn+', '+hit[0]+' ভাই। আবার স্বাগতম।':gEn+', '+first+'. Welcome back.');
+    if(useBn){u.lang=bn?bn.lang:'bn-BD';if(bn)u.voice=bn}else u.lang='en-US';
+    u.rate=.95;u.pitch=1;u.volume=1;
+    speechSynthesis.cancel();speechSynthesis.speak(u);
   }catch(e){}
 }
 async function enterDso(d,welcome){d.brandIds=await dsoBrandIds(d);d.roadIds=await dsoRoadIds(d);currentDso=d;store.set('dsoId',d.id);
@@ -712,14 +728,16 @@ async function creditPage(){
       const f=ms[0],sm=k=>ms.reduce((a,x)=>a+x[k],0),isN=x=>x.recd===D;
       const olds=ms.filter(x=>!isN(x)),news=ms.filter(isN);
       const open=olds.reduce((a,x)=>a+x.open,0),today=sm('today'),newAmt=news.reduce((a,x)=>a+x.amt,0),due=ms.reduce((a,x)=>a+Math.max(0,x.open-x.today),0);
-      const dbm=new Map();ms.forEach(x=>{const k=x.dso;dbm.set(k,{dso:x.dso,v:(dbm.get(k)?.v||0)+(isN(x)?x.amt:x.open)})});
-      const who=dbm.size>1?[...dbm.values()].map(x=>x.dso+'-'+Math.round(x.v)).join(', '):f.who;
+      /* a DSO whose cheque is fully paid drops out of the names while another DSO of the same shop still has a due */
+      const live=ms.filter(x=>Math.max(0,x.open-x.today)>0.005),nm=live.length&&live.length<ms.length?live:ms;
+      const dbm=new Map();nm.forEach(x=>{const k=x.dso;dbm.set(k,{dso:x.dso,v:(dbm.get(k)?.v||0)+(isN(x)?x.amt:x.open)})});
+      const who=dbm.size>1?[...dbm.values()].map(x=>x.dso+'-'+Math.round(x.v)).join(', '):nm[0].who;
       const brandTxt=(ms.find(x=>x.bo)||{}).bo||[...new Set(ms.map(x=>x.brand).filter(x=>x&&x!=='—'))].join(', ')||'—';
       const rem=[...new Set(ms.map(x=>x.rem).filter(Boolean))].join('; ');
       const uniq=a=>[...new Set(a.filter(Boolean))];
       const recDates=uniq(ms.map(x=>x.recd)).sort(),age=Math.max(...ms.map(x=>daysBetween(x.recd,D)));
       const pdOld=uniq(olds.map(x=>x.pd)).sort().map(dmy).join(', '),pdNew=uniq(news.map(x=>x.pd)).sort().map(dmy).join(', ');
-      out.push({rd:f.recd,pdr:f.pd,hl:isAdmin?(DSOM[$('crDso')?.value]?.full_name||''):((currentDso&&(currentDso.full_name||currentDso.name))||''),road:f.road,dso:[...new Set(ms.map(x=>x.dso))].join(', '),brand:[...new Set(ms.map(x=>x.brand))].join(', '),age,ids:ms.map(x=>x.id),lefts:ms.map(x=>x.left),left:sm('left'),hasRec:ms.some(x=>x.hasRec),rem,done:due<=0.005,
+      out.push({rd:f.recd,pdr:f.pd,hl:isAdmin?(DSOM[$('crDso')?.value]?.full_name||''):((currentDso&&(currentDso.full_name||currentDso.name))||''),road:f.road,dso:[...new Set(nm.map(x=>x.dso))].join(', '),brand:[...new Set(ms.map(x=>x.brand))].join(', '),age,ids:ms.map(x=>x.id),lefts:ms.map(x=>x.left),left:sm('left'),hasRec:ms.some(x=>x.hasRec),rem,done:due<=0.005,
         c:[(ms.find(x=>x.so)||{}).so||f.shop,(ms.find(x=>x.wo)||{}).wo||who,brandTxt,recDates.map(dmy).join(', '),olds.length?open:'',pdOld,news.length?newAmt:'',pdNew,today||'',due,age,rem]});
     });
     return {title:'Retailer Cheque Information List',cls:'cr-cheque',date:dmyFull(D),
