@@ -2379,12 +2379,14 @@ async function cashPage(){
   const OTHER={bank:'Other bank (type name)',exp:'Other expense (type description)'};
   let S=null;
   const sum=(k)=>S.lines.filter(x=>x.kind===k).reduce((a,x)=>a+Number(x.amount||0),0);
-  /* showroom rows: the amount typed is the showroom's total sale; the card / bKash / Nagad part (from the Card & Cashless Sale page) is taken out, so only real cash counts */
+  /* each collection row has a type: Cash (counted in the cash status) or Card / bKash / Nagad (listed, but not cash) */
   const SHOWROOMS_DEFAULT=['Sheba Brand Shop-Honor','Sheba Brand Shop - Vivo','Sheba Brand Shop - Samsung','Sheba Brand Shop - Oppo','Sheba Brand Shop - Realme','Sheba Smartphone Café'];
-  const effs=()=>{const m=new Map(),used=new Set();S.lines.filter(x=>x.kind==='collection').forEach(x=>{const amt=Number(x.amount||0),key=String(x.name||'').trim().toLowerCase();let card=0;if(key&&S.cs&&S.cs[key]!=null&&!used.has(key)){used.add(key);card=Math.min(Math.max(0,S.cs[key]),amt>0?amt:0)}m.set(String(x.id),{amt,card,cash:amt-card})});return m};
+  const PTYPES={'':'Cash',card:'Card',bkash:'bKash',nagad:'Nagad'};
+  const ptype=x=>PTYPES[x.remarks]!=null?x.remarks:'';
+  const effs=()=>{const m=new Map();S.lines.filter(x=>x.kind==='collection').forEach(x=>{const amt=Number(x.amount||0),t=ptype(x);m.set(String(x.id),{amt,t,cash:t?0:amt,cl:t?amt:0})});return m};
   const calc=()=>{
-    const aC=S.auto.reduce((a,x)=>a+x.amt,0),mC=[...effs().values()].reduce((a,e)=>a+e.cash,0),coll=aC+mC,wd=sum('withdraw'),dep=sum('deposit'),exp=sum('expense');
-    const bal=S.open+coll+wd;return {coll,wd,dep,exp,bal,close:bal-dep-exp,aQ:S.auto.reduce((a,x)=>a+x.qty,0),mQ:S.lines.filter(x=>x.kind==='collection').reduce((a,x)=>a+Number(x.qty||0),0)};
+    const aC=S.auto.reduce((a,x)=>a+x.amt,0),mC=[...effs().values()].reduce((a,e)=>a+e.cash,0),coll=aC+mC,cl=[...effs().values()].reduce((a,e)=>a+e.cl,0),wd=sum('withdraw'),dep=sum('deposit'),exp=sum('expense');
+    const bal=S.open+coll+wd;return {coll,cl,wd,dep,exp,bal,close:bal-dep-exp,aQ:S.auto.reduce((a,x)=>a+x.qty,0),mQ:S.lines.filter(x=>x.kind==='collection').reduce((a,x)=>a+Number(x.qty||0),0)};
   };
   const saveDay=async()=>{
     const c=calc();
@@ -2392,9 +2394,9 @@ async function cashPage(){
   };
   const sheet=()=>{
     const c=calc(),L=k=>S.lines.filter(x=>x.kind===k);
-    const col=[...S.auto.map(x=>({n:x.dso,b:x.brand,q:x.qty,a:x.amt})),...L('collection').map(x=>{const e=effs().get(String(x.id))||{amt:Number(x.amount||0),card:0,cash:Number(x.amount||0)};return {n:x.name,b:x.brand,q:Number(x.qty||0),a:e.cash,card:e.card,tot:e.amt}})];
+    const col=[...S.auto.map(x=>({n:x.dso,b:x.brand,q:x.qty,a:x.amt})),...L('collection').map(x=>{const e=effs().get(String(x.id))||{amt:Number(x.amount||0),t:'',cash:Number(x.amount||0),cl:0};return {n:x.name,b:x.brand,q:Number(x.qty||0),a:e.cash,t:e.t,cl:e.cl}})];
     const rows=(arr,fn,min)=>{let h=arr.map(fn).join('');for(let i=arr.length;i<(min||0);i++)h+=fn(null,i);return h};
-    const left=`<table class="cst"><colgroup><col style="width:8%"><col style="width:32%"><col style="width:20%"><col style="width:14%"><col style="width:26%"></colgroup><thead><tr><th>SL</th><th>Depositor's Name</th><th>Brand Info</th><th>Qty</th><th>Collection</th></tr></thead><tbody>${col.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.n)}${x.card?`<div style="font-size:10px">Total ${f(x.tot)} - Card/Bkash/Nagad ${f(x.card)}</div>`:''}</td><td>${esc(x.b)}</td><td class="n">${x.q?f(x.q):''}</td><td class="n">${f(x.a)}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center">—</td></tr>'}<tr class="tt"><td colspan="3" style="text-align:right">Total</td><td class="n">${f(c.aQ+c.mQ)}</td><td class="n">${f(c.coll)}</td></tr></tbody></table>`;
+    const left=`<table class="cst"><colgroup><col style="width:8%"><col style="width:32%"><col style="width:20%"><col style="width:14%"><col style="width:26%"></colgroup><thead><tr><th>SL</th><th>Depositor's Name</th><th>Brand Info</th><th>Qty</th><th>Collection</th></tr></thead><tbody>${col.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.n)}${x.t?` <b>(${PTYPES[x.t]})</b>`:''}</td><td>${esc(x.b)}</td><td class="n">${x.q?f(x.q):''}</td><td class="n">${x.t?`<i>${f(x.cl)}</i>`:f(x.a)}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center">—</td></tr>'}<tr class="tt"><td colspan="3" style="text-align:right">Total</td><td class="n">${f(c.aQ+c.mQ)}</td><td class="n">${f(c.coll)}</td></tr>${c.cl?`<tr><td colspan="4" style="text-align:right"><i>Card / bKash / Nagad (italic amounts above, not counted in cash)</i></td><td class="n"><i>${f(c.cl)}</i></td></tr>`:''}</tbody></table>`;
     const dep=L('deposit'),exp=L('expense'),wd=L('withdraw');
     const right=`<div class="cs-ttl">Bank Deposit</div><table class="cst"><colgroup><col style="width:9%"><col style="width:41%"><col style="width:26%"><col style="width:24%"></colgroup><thead><tr><th>SL</th><th>Bank Name</th><th>Amount</th><th>Remarks</th></tr></thead><tbody>${dep.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td class="n">${f(x.amount)}</td><td>${esc(x.remarks)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center">—</td></tr>'}<tr class="tt"><td colspan="2" style="text-align:right">Total Bank Deposit</td><td class="n">${f(c.dep)}</td><td></td></tr></tbody></table><div class="cs-ttl">Expense</div><table class="cst"><colgroup><col style="width:9%"><col style="width:41%"><col style="width:26%"><col style="width:24%"></colgroup><thead><tr><th>SL</th><th>Expense Description</th><th>Amount</th><th>Remarks</th></tr></thead><tbody>${exp.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td class="n">${f(x.amount)}</td><td>${esc(x.remarks)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center">—</td></tr>'}<tr class="tt"><td colspan="2" style="text-align:right">Total Expense</td><td class="n">${f(c.exp)}</td><td></td></tr></tbody></table>`;
     const summ=`<div class="cs-ttl" style="text-align:center">Cash Summary</div><table class="cst"><colgroup><col style="width:62%"><col style="width:38%"></colgroup><tbody><tr><td>Total Collection</td><td class="n">${f(c.coll)}</td></tr><tr><td>Total Bank Withdraw</td><td class="n">${f(c.wd)}</td></tr><tr><td>Total Opening Cash</td><td class="n">${f(S.open)}</td></tr><tr class="tt"><td>Total Balance</td><td class="n">${f(c.bal)}</td></tr><tr><td>Total Bank Deposit</td><td class="n">${f(c.dep)}</td></tr><tr><td>Total Expense</td><td class="n">${f(c.exp)}</td></tr><tr class="tt"><td>Total Closing Cash</td><td class="n">${f(c.close)}</td></tr></tbody></table>`;
@@ -2414,7 +2416,7 @@ async function cashPage(){
   };
   const edit=()=>{
     $('csEdit').innerHTML=
-      sec('collection','Collection (DSO rows come from sales; add other depositors here)',['Depositor\'s name','Brand','Sales qty','Collection amount'],x=>`<td>${pick(x,S.showrooms,'Other (type name)','e.g. Lohagara Office')}</td><td>${inp(x.id,'brand',x.brand)}</td><td>${inp(x.id,'qty',x.qty||'','number')}</td><td>${inp(x.id,'amount',x.amount||'','number')}<div class="muted" data-note="${x.id}" style="margin-top:4px"></div></td>`,'<div class="muted" style="margin:0 0 8px">Blue rows are filled automatically from this day\'s sales entries (cash + due collection, same as the Daily Sales Sheet). Cheque recovery is not included. Lohagara office sales are left out: add the money received from Lohagara office as one row by hand. For a showroom, type the showroom\'s TOTAL sale; the Card / bKash / Nagad amount saved on the Card &amp; Cashless Sale page for that day is taken out automatically and only the cash is counted.</div>')+
+      sec('collection','Collection (DSO rows come from sales; add other depositors here)',['Depositor\'s name','Brand','Sales qty','Collection amount','Type'],x=>`<td>${pick(x,S.showrooms,'Other (type name)','e.g. Lohagara Office')}</td><td>${inp(x.id,'brand',x.brand)}</td><td>${inp(x.id,'qty',x.qty||'','number')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td><td><select data-type="${x.id}">${Object.entries(PTYPES).map(([k,v])=>`<option value="${k}" ${ptype(x)===k?'selected':''}>${v}</option>`).join('')}</select></td>`,'<div class="muted" style="margin:0 0 8px">Blue rows are filled automatically from this day\'s sales entries (cash + due collection, same as the Daily Sales Sheet). Cheque recovery is not included. Lohagara office sales are left out: add the money received from Lohagara office as one row by hand. For each row choose the Type: Cash is counted in the cash status; Card, bKash and Nagad rows are listed on the sheet but are not counted as cash (for one showroom add a separate row for each type).</div>')+
       sec('deposit','Bank deposit',['Bank name','Amount','Remarks'],x=>`<td>${pick(x,BANKS,OTHER.bank,'Bank name')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td><td>${inp(x.id,'remarks',x.remarks)}</td>`)+
       sec('expense','Expense (Top Pay, daily expense, etc.)',['Description','Amount','Remarks'],x=>`<td>${pick(x,EXPS,OTHER.exp,'Expense description')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td><td>${inp(x.id,'remarks',x.remarks)}</td>`)+
       sec('withdraw','Bank withdrawal (money taken out of the bank into cash)',['Bank name','Amount'],x=>`<td>${pick(x,BANKS,OTHER.bank,'Bank name')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td>`);
@@ -2425,7 +2427,6 @@ async function cashPage(){
     $('csOpenNote').textContent=S.manual?'Typed by you.':(S.hasPrev?"Taken from the previous day's closing cash.":'No earlier day found: type the opening cash.');
     $('csPrev').classList.toggle('hidden',!(S.manual&&S.hasPrev));
     sheet();
-    const E=effs();document.querySelectorAll('#csEdit [data-note]').forEach(el=>{const e=E.get(el.dataset.note);el.textContent=e&&e.card?('Card/Bkash/Nagad '+f(e.card)+' taken out, cash counted: '+f(e.cash)):''});
   };
   const load=async()=>{
     const day=$('csDate').value;if(!day)return;
@@ -2461,10 +2462,10 @@ async function cashPage(){
   let pendImg=null;
   const txt=()=>{
     const c=calc(),L=k=>S.lines.filter(x=>x.kind===k&&(x.name||Number(x.amount)));
-    const col=[...S.auto.map(x=>[x.dso+(x.brand?' ('+x.brand+')':''),x.qty,x.amt]),...S.lines.filter(x=>x.kind==='collection'&&(x.name||Number(x.amount))).map(x=>{const e=effs().get(String(x.id))||{card:0,cash:Number(x.amount||0),amt:Number(x.amount||0)};return [x.name+(x.brand?' ('+x.brand+')':'')+(e.card?' [Total '+f(e.amt)+' - Card/Bkash/Nagad '+f(e.card)+']':''),Number(x.qty||0),e.cash]})];
+    const col=[...S.auto.map(x=>[x.dso+(x.brand?' ('+x.brand+')':''),x.qty,x.amt]),...S.lines.filter(x=>x.kind==='collection'&&(x.name||Number(x.amount))).map(x=>{const e=effs().get(String(x.id))||{t:'',cash:Number(x.amount||0),amt:Number(x.amount||0)};return [x.name+(x.brand?' ('+x.brand+')':'')+(e.t?' ['+PTYPES[e.t]+' - not cash]':''),Number(x.qty||0),e.t?e.amt:e.cash]})];
     const o=['Sheba Distribution Daily Cash Status','Date: '+fmtDate(S.day),'','COLLECTION'];
     col.forEach((x,i)=>o.push((i+1)+'. '+x[0]+(x[1]?' | Qty '+f(x[1]):'')+' | '+f(x[2])));
-    o.push('Total collection: '+f(c.coll));
+    o.push('Total collection (cash): '+f(c.coll));if(c.cl)o.push('Card / bKash / Nagad (not cash): '+f(c.cl));
     if(L('deposit').length){o.push('','BANK DEPOSIT');L('deposit').forEach((x,i)=>o.push((i+1)+'. '+x.name+': '+f(x.amount)));o.push('Total bank deposit: '+f(c.dep))}
     if(L('expense').length){o.push('','EXPENSE');L('expense').forEach((x,i)=>o.push((i+1)+'. '+x.name+': '+f(x.amount)));o.push('Total expense: '+f(c.exp))}
     if(L('withdraw').length){o.push('','BANK WITHDRAWAL');L('withdraw').forEach(x=>o.push(x.name+': '+f(x.amount)))}
@@ -2503,6 +2504,8 @@ async function cashPage(){
     if(d){if(!confirm('Delete this row?'))return;const r=await db.from('cash_lines').delete().eq('id',d.dataset.del);if(r.error)return msg($('csMsg'),r.error.message);S.lines=S.lines.filter(x=>String(x.id)!==d.dataset.del);edit();refresh();saveDay()}
   };
   $('csEdit').onchange=async e=>{
+    const ty=e.target.closest('select[data-type]');
+    if(ty&&S){const row=S.lines.find(x=>String(x.id)===ty.dataset.type);if(!row)return;const r=await db.from('cash_lines').update({remarks:ty.value}).eq('id',row.id);if(r.error)return msg($('csMsg'),r.error.message);row.remarks=ty.value;refresh();saveDay();return}
     const sl=e.target.closest('select[data-sel]');
     if(sl&&S){
       const row=S.lines.find(x=>String(x.id)===sl.dataset.id);if(!row)return;
