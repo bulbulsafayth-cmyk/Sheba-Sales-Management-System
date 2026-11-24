@@ -2389,8 +2389,35 @@ async function cashPage(){
     const aC=S.auto.reduce((a,x)=>a+x.amt,0),mC=[...effs().values()].reduce((a,e)=>a+e.cash,0),coll=aC+mC,tB=[...effs().values()].reduce((a,e)=>a+e.b,0),tK=[...effs().values()].reduce((a,e)=>a+e.k,0),tN=[...effs().values()].reduce((a,e)=>a+e.n,0),tAll=[...effs().values()].reduce((a,e)=>a+e.amt,0),split=[...effs().values()].some(e=>e.split),wd=sum('withdraw'),dep=sum('deposit'),exp=sum('expense');
     const bal=S.open+coll+wd;return {coll,tB,tK,tN,tAll:aC+tAll,split,wd,dep,exp,bal,close:bal-dep-exp,aQ:S.auto.reduce((a,x)=>a+x.qty,0),mQ:S.lines.filter(x=>x.kind==='collection').reduce((a,x)=>a+Number(x.qty||0),0)};
   };
+  /* the Card / bKash / Nagad part of a showroom row is copied into the Card & Cashless Sale page (sale amount of that showroom for this day) */
+  const AUTO_MARK='Auto from Daily Cash Status';
+  let syncBusy=false,syncAgain=false;
+  const syncCard=async()=>{
+    if(!S||!S.showrooms)return;
+    if(syncBusy){syncAgain=true;return}
+    syncBusy=true;
+    try{
+      do{
+        syncAgain=false;const day=S.day,E=effs(),tot=new Map(),lab=new Map();
+        S.lines.filter(x=>x.kind==='collection'&&x.name&&S.showrooms.includes(x.name)).forEach(x=>{const e=E.get(String(x.id));if(!e)return;const t=tot.get(x.name)||{b:0,k:0,n:0};t.b+=e.b;t.k+=e.k;t.n+=e.n;tot.set(x.name,t)});
+        for(const [name,t] of tot){
+          const sale=t.b+t.k+t.n,pos=[t.k?'Card '+f(t.k):'',t.b?'bKash '+f(t.b):'',t.n?'Nagad '+f(t.n):''].filter(Boolean).join(', ');
+          const ex=await db.from('card_sales').select('*').eq('day',day).eq('showroom',name).limit(1);
+          if(ex.error)return;
+          const cur=(ex.data||[])[0];
+          if(cur){
+            if(sale>0){const up={sale_amount:sale,sale_date:day};if(!cur.pos_name||cur.remarks===AUTO_MARK)up.pos_name=pos;if(!cur.remarks)up.remarks=AUTO_MARK;await db.from('card_sales').update(up).eq('day',day).eq('showroom',name)}
+            else if(cur.remarks===AUTO_MARK&&Number(cur.sale_amount||0)>0)await db.from('card_sales').update({sale_amount:0,pos_name:null,sale_date:null}).eq('day',day).eq('showroom',name);
+          }else if(sale>0){
+            await db.from('card_sales').upsert({day,showroom:name,opening_manual:false,opening_amount:null,pos_name:pos,sale_amount:sale,sale_date:day,credit_amount:0,credit_date:null,charge:0,remarks:AUTO_MARK},{onConflict:'day,showroom'});
+          }
+        }
+      }while(syncAgain);
+    }catch(e){}
+    syncBusy=false;
+  };
   const saveDay=async()=>{
-    const c=calc();
+    const c=calc();syncCard();
     try{await db.from('cash_days').upsert({day:S.day,opening_cash:S.open,opening_manual:S.manual,closing_cash:c.close,updated_at:new Date().toISOString()})}catch(e){}
   };
   const sheet=()=>{
