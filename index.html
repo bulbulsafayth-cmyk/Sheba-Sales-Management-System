@@ -267,7 +267,7 @@ table.crt td.cract button{display:block;width:100%;margin:0 0 3px;padding:3px 4p
 .shcalc .ctc{border-bottom:2px solid #000;margin-bottom:8px;padding:4px 0}.shcalc .ctc b{flex:1}.shcalc .ctc .cadd{margin:0;white-space:nowrap}</style></head>
 <body>
 <div id="loginView" class="login-wrap"><div class="login"><h1>Sheba Distribution Sales &amp; Credit Management System</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
-<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="target">◉ &nbsp; Target vs Achievement</button><button data-page="cash">▤ &nbsp; Daily Cash Status</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
+<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="attend">⏱ &nbsp; Attendance</button><button data-page="target">◉ &nbsp; Target vs Achievement</button><button data-page="cash">▤ &nbsp; Daily Cash Status</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
 <script>
 const SUPABASE_URL='https://nvnogsganemysvbqmcpo.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_tyWf1VnXMzNVBs22Qgs3wg_SBy6HegJ';
@@ -373,8 +373,8 @@ function showApp(mode='admin'){
   if(mode==='admin')startApprovalWatch();else stopApprovalWatch();
 }
 $('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(b)go(b.dataset.page)});
-const titles={tvall:'Target vs Achievement',dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location',cash:'Daily Cash Status',target:'Target vs Achievement'};
-const pages={tvall:()=>tvAdminPage(),dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage(),dsoloc:()=>dsoLocPage(),cash:()=>cashPage(),target:()=>targetPage()};
+const titles={attend:'Attendance Report',tvall:'Target vs Achievement',dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location',cash:'Daily Cash Status',target:'Target vs Achievement'};
+const pages={attend:()=>attendPage(),tvall:()=>tvAdminPage(),dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage(),dsoloc:()=>dsoLocPage(),cash:()=>cashPage(),target:()=>targetPage()};
 function go(p,arg){
   if(userMode==='dso'&&!DSO_PAGES.includes(p))p='sales';
   if(userMode!=='dso'&&p==='target')p='dashboard';
@@ -2129,7 +2129,7 @@ async function reportsPage(){
   const tok=navToken;
   const p=$('page'),isAdmin=userMode==='admin';
   rep={chq:[],rows:[],items:{},page:1,type:null,sub:'all',generated:false,prods:rep.prods||{},printAll:false};
-  p.innerHTML=`<h1 class="page-title">Sales Reports</h1><div class="sub">Choose a report, press Generate and the report will appear.</div><div class="panel"><div class="rtypes noprint" id="repTypes"><button data-t="daily">Daily sales report</button>${isAdmin?'<button data-t="dso">DSO-wise report</button>':''}<button data-t="brand">Brand-wise report</button><button data-t="sheet">Daily Sales Sheet</button><button data-t="credit">Credit &amp; Cheque Report</button>${isAdmin?'<button data-t="cash">Daily Cash Status</button><button data-t="tvall">Target vs Achievement</button>':''}</div><div id="repFilters" class="hidden noprint"><div class="form-grid" style="margin-top:14px"><div><label>From date</label><input type="date" id="rFrom"></div><div><label>To date</label><input type="date" id="rTo"></div><div id="wBrand"><label>Brand</label><select id="rBrand"><option value="">All brands</option></select></div><div id="wModel" class="hidden"><label>Model</label><select id="rModel"><option value="">All models</option></select></div>${isAdmin?'<div id="wDso"><label>DSO</label><select id="rDso"><option value="">All DSOs</option></select></div>':''}<div><label>Retailer</label><select id="rRetailer"><option value="">All retailers</option></select></div></div><div class="form-actions"><button id="runReport">Generate report</button><button class="secondary" id="printReport">Print</button><button class="secondary" id="shareReport">Share</button><button class="secondary" id="openSheet">Daily Sales Sheet</button></div></div><div id="reportSummary"></div><div id="repOut" style="margin-top:15px"></div></div>`;
+  p.innerHTML=`<h1 class="page-title">Sales Reports</h1><div class="sub">Choose a report, press Generate and the report will appear.</div><div class="panel"><div class="rtypes noprint" id="repTypes"><button data-t="daily">Daily sales report</button>${isAdmin?'<button data-t="dso">DSO-wise report</button>':''}<button data-t="brand">Brand-wise report</button><button data-t="sheet">Daily Sales Sheet</button><button data-t="credit">Credit &amp; Cheque Report</button>${isAdmin?'<button data-t="cash">Daily Cash Status</button><button data-t="tvall">Target vs Achievement</button><button data-t="attend">Attendance Report</button>':''}</div><div id="repFilters" class="hidden noprint"><div class="form-grid" style="margin-top:14px"><div><label>From date</label><input type="date" id="rFrom"></div><div><label>To date</label><input type="date" id="rTo"></div><div id="wBrand"><label>Brand</label><select id="rBrand"><option value="">All brands</option></select></div><div id="wModel" class="hidden"><label>Model</label><select id="rModel"><option value="">All models</option></select></div>${isAdmin?'<div id="wDso"><label>DSO</label><select id="rDso"><option value="">All DSOs</option></select></div>':''}<div><label>Retailer</label><select id="rRetailer"><option value="">All retailers</option></select></div></div><div class="form-actions"><button id="runReport">Generate report</button><button class="secondary" id="printReport">Print</button><button class="secondary" id="shareReport">Share</button><button class="secondary" id="openSheet">Daily Sales Sheet</button></div></div><div id="reportSummary"></div><div id="repOut" style="margin-top:15px"></div></div>`;
   const [b,d,rtl,pl]=await Promise.all([queryAll('brands'),isAdmin?queryAll('dsos'):Promise.resolve([]),queryAll('retailers'),queryAll('products').catch(()=>[])]);
   const bm=isAdmin?await loadDsoBrandMap():{};
   if(tok!==navToken)return;
@@ -2179,6 +2179,7 @@ async function reportsPage(){
     if(t.dataset.t==='credit')return go('credit');
     if(t.dataset.t==='cash')return go('cash');
     if(t.dataset.t==='tvall')return go('tvall');
+    if(t.dataset.t==='attend')return go('attend');
     rep.type=t.dataset.t;rep.generated=false;rep.sub='all';rep.rows=[];rep.items={};rep.page=1;
     document.querySelectorAll('#repTypes button').forEach(x=>x.classList.toggle('on',x===t));
     $('repFilters').classList.remove('hidden');$('reportSummary').innerHTML='';$('repOut').innerHTML='';
@@ -2513,6 +2514,174 @@ async function cashPage(){
     row[fld]=v;refresh();saveDay();
   };
   load();
+}
+
+
+/* ---------- Attendance Report (Admin): punches of the ZKTeco machine are uploaded as a file; late penalty is worked out here ---------- */
+async function attendPage(){
+  const tok=navToken;
+  if(!document.getElementById('atCss')){const st=document.createElement('style');st.id='atCss';st.textContent='.at-wrap{overflow:auto;background:#fff;color:#000;max-width:1100px}.at{border-collapse:collapse;width:100%;font:14px Arial,sans-serif;min-width:860px}.at th,.at td{border:1px solid #333;padding:6px 6px;text-align:center;color:#000;text-transform:none;letter-spacing:0;white-space:nowrap}.at th{background:#00e000;font-weight:700;font-size:13px}.at td.nm{font-weight:700}.at .t1{background:#4a90d9;height:60px;text-align:left;border:none;padding:0}.at .t1 img{height:60px;background:#fff}.at .t2{background:#ffff00;font:700 28px Arial,sans-serif;padding:12px;border:1px solid #333}.at .t3{background:#00c8a0;height:14px;padding:0}.at .late{background:#ff0000}.at .abs{background:#000;color:#ff2020;font-weight:700}.at .off{background:#d9d9d9}.at .red{color:#e00000;font-weight:700}.at .tot td{background:#dbe5f1;font-weight:700}.at input.rm{border:none;background:transparent;font:700 13px Georgia,serif;color:#c00000;text-align:center;width:150px}@media print{@page{size:A4 portrait;margin:6mm}.at{font-size:11px;min-width:0}.at th,.at td{padding:3px}.at input.rm{width:100px}}';document.head.appendChild(st)}
+  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Attendance Report</h1><div class="sub">Upload the attendance file from the ZKTeco software (Export Attendance Checking Data), then choose a date. Late penalty: after 9:00 it is 50 taka for every 10 minutes, at most 300. Friday is the weekly off day.</div>
+  <div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="atDate"></div><div><label>Attendance file (.xlsx, .xls, .csv)</label><input type="file" id="atFile" accept=".xlsx,.xls,.csv,.txt"></div></div>
+  <div class="form-actions"><button id="atGo">Show report</button><button class="secondary" id="atUp">Upload file</button><button class="secondary" id="atPrint">Print</button><button class="secondary" id="atImg">Share picture</button><button class="secondary" id="atXls">Excel</button><button class="secondary" id="atStaffBtn">Staff list</button></div></div>
+  <div id="atMsg"></div><div id="atStaff" class="panel" style="display:none"></div></div><div class="at-wrap" id="atOut"></div>`;
+  const pad=n=>String(n).padStart(2,'0'),ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  const OFFDAY=5;
+  const penalty=t=>{const late=t-540;return late<=0?0:Math.min(300,Math.ceil(late/10)*50)};
+  const hm=t=>Math.floor(t/60)+':'+pad(t%60);
+  const SEED=[['Md.Deluar Hosen','Management Team','01842-869002','1'],['Sultan Ahmed','Management Team','01842-869004',''],['Safayth Hossen Bulbul','Management Team','01842-869005','33'],['Joynul Abedin','Office Team','01842-869006',''],['Monirul Islam','Office Team','01842-869009',''],['Suraya Afrin','Office Team','01842-869010',''],['Sajjad Hosen','Sales Team','01842-869011','4'],['Ibne Hasan Nobel','Sales Team','01842-869021','23'],['Imran Ullah Mukit','Sales Team','01842-869042',''],['Hamidul Hoque','Sales Team','01842-869027',''],['Sorwar Kamal','Sales Team','01842-869028','38'],['Saiful Islam','Sales Team','01842-869015','39'],['Md.Mubarak Ahmed','Sales Team','01842-869026','56'],['Golam Azam Nishat','Sales Team','01842-869058','58'],['Jashim Uddhin Zia','Sales Team','01842-869014','64'],['Md.Saiful Islam','Sales Team','01842-869038','69'],['Sha Jahan Habib','Sales Team','01842-869056','68'],['Md.Imran','Sales Team','',''],['Md.Joynul','Sales Team','',''],['Md.Hossain 1','Office Assistant','01842-869043',''],['Md.Hosen 2','Office Assistant','01842-869051','']];
+  let STAFF=[],SHEET=null,pend=null,tableMissing=false;
+  const loadStaff=async()=>{
+    const r=await db.from('att_staff').select('*').order('sort').order('id');
+    if(r.error){tableMissing=true;return false}
+    STAFF=r.data||[];return true;
+  };
+  /* ---- reading the uploaded file ---- */
+  const parseDT=v=>{
+    if(v==null||v==='')return null;
+    if(v instanceof Date&&!isNaN(v)){const d=new Date(Math.round(v.getTime()/1000)*1000);return {y:d.getFullYear(),m:d.getMonth()+1,d:d.getDate(),h:d.getHours(),mi:d.getMinutes(),s:d.getSeconds(),date:true}}
+    if(typeof v==='number'){const days=Math.floor(v),fr=v-days,sec=Math.round(fr*86400),d=new Date(Date.UTC(1899,11,30)+days*86400000);return {y:d.getUTCFullYear(),m:d.getUTCMonth()+1,d:d.getUTCDate(),h:Math.floor(sec/3600)%24,mi:Math.floor(sec/60)%60,s:sec%60,date:days>0}}
+    const t=String(v).trim();let m;
+    if(m=t.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})[ T]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?/i)){let h=+m[4];if(m[7]){if(/pm/i.test(m[7])&&h<12)h+=12;if(/am/i.test(m[7])&&h===12)h=0}return {y:+m[1],m:+m[2],d:+m[3],h,mi:+m[5],s:+(m[6]||0),date:true}}
+    if(m=t.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})[ T]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?/i)){let a=+m[1],b=+m[2],h=+m[4];if(m[7]){if(/pm/i.test(m[7])&&h<12)h+=12;if(/am/i.test(m[7])&&h===12)h=0}const mm=a>12?b:a,dd=a>12?a:b;return {y:+m[3],m:mm,d:dd,h,mi:+m[5],s:+(m[6]||0),date:true}}
+    if(m=t.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i)){let h=+m[1];if(m[4]){if(/pm/i.test(m[4])&&h<12)h+=12;if(/am/i.test(m[4])&&h===12)h=0}return {y:0,m:0,d:0,h,mi:+m[2],s:+(m[3]||0),date:false}}
+    if(m=t.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/))return {y:+m[1],m:+m[2],d:+m[3],h:0,mi:0,s:0,date:true,only:true};
+    if(m=t.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/)){const a=+m[1],b=+m[2];return {y:+m[3],m:a>12?b:a,d:a>12?a:b,h:0,mi:0,s:0,date:true,only:true}}
+    return null;
+  };
+  const readFile=async file=>{
+    if(!window.XLSX)throw new Error('The Excel library could not load. Check the internet connection.');
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array',cellDates:true});
+    let best=null;
+    for(const nm of wb.SheetNames){const aoa=XLSX.utils.sheet_to_json(wb.Sheets[nm],{header:1,raw:true,defval:''});if(!best||aoa.length>best.length)best=aoa}
+    if(!best||best.length<2)throw new Error('The file looks empty.');
+    /* find the header row: the first row that has a time-like heading */
+    let hi=best.findIndex(r=>r.some(c=>/s?time|date\s*time|punch|check/i.test(String(c)))&&r.some(c=>/name|ac.?no|user|id|enroll/i.test(String(c))));
+    if(hi<0)hi=0;
+    const H=best[hi].map(c=>String(c).trim());
+    const col=re=>H.findIndex(h=>re.test(h));
+    let cAc=col(/ac.?-?\s*no|user\s*id|enroll|person\s*id|^no\.?$/i);if(cAc<0)cAc=col(/^id$/i);
+    const cName=col(/^name|employee|user\s*name/i);
+    let cTime=col(/^s?time$|date\s*time|punch|check.?time|time/i);const cDate=col(/^date$|attendance\s*date/i);
+    if(cTime<0)throw new Error('I could not find the time column. The file needs a column like sTime or Time.');
+    if(cAc<0&&cName<0)throw new Error('I could not find the Ac-No or Name column.');
+    const out=[];
+    for(let i=hi+1;i<best.length;i++){
+      const r=best[i];let dt=parseDT(r[cTime]);if(!dt)continue;
+      if(!dt.date||dt.only){const d2=cDate>=0?parseDT(r[cDate]):null;if(!d2||!d2.date)continue;dt={y:d2.y,m:d2.m,d:d2.d,h:dt.h,mi:dt.mi,s:dt.s}}
+      const ac=cAc>=0?String(r[cAc]).trim().replace(/\.0+$/,''):'',nm=cName>=0?String(r[cName]).trim():'';
+      if(!ac&&!nm)continue;
+      out.push({ac:ac||('N:'+nm),nm,iso:dt.y+'-'+pad(dt.m)+'-'+pad(dt.d)+'T'+pad(dt.h)+':'+pad(dt.mi)+':'+pad(dt.s)});
+    }
+    if(!out.length)throw new Error('No punches could be read from this file.');
+    return out;
+  };
+  const upload=async()=>{
+    const fl=$('atFile').files[0];if(!fl)return msg($('atMsg'),'Choose the attendance file first.');
+    $('atMsg').innerHTML='<div class="notice">Reading the file…</div>';
+    try{
+      const rows=await readFile(fl);
+      const seen=new Set(),uniq=rows.filter(r=>{const k=r.ac+'|'+r.iso;if(seen.has(k))return false;seen.add(k);return true});
+      for(let i=0;i<uniq.length;i+=500){
+        const r=await db.from('att_punches').upsert(uniq.slice(i,i+500).map(x=>({ac_no:x.ac,mname:x.nm,punch:x.iso})),{onConflict:'ac_no,punch',ignoreDuplicates:true});
+        if(r.error)throw new Error(/relation|does not exist|schema cache/i.test(r.error.message)?'Run attendance-setup.sql in Supabase (SQL Editor) first.':r.error.message);
+      }
+      const days=[...new Set(uniq.map(x=>x.iso.slice(0,10)))].sort();
+      msg($('atMsg'),uniq.length+' punches saved ('+days[0]+' to '+days[days.length-1]+').','success');
+      if(days.length)$('atDate').value=days[days.length-1];
+      await run();
+    }catch(e){msg($('atMsg'),e.message||String(e))}
+  };
+  /* ---- the report ---- */
+  const run=async()=>{
+    const date=$('atDate').value;if(!date)return;
+    $('atMsg').querySelector&&0;
+    try{
+      if(!await loadStaff()){$('atOut').innerHTML='';return msg($('atMsg'),'Run attendance-setup.sql in Supabase (SQL Editor) once, then reload this page.')}
+      if(!STAFF.length){$('atOut').innerHTML='';$('atStaff').style.display='block';await staffPanel();return msg($('atMsg'),'The staff list is empty. Tap "Load the 21 names" below, then check the machine numbers.','success')}
+      const D=new Date(date+'T00:00:00'),m1=new Date(D.getFullYear(),D.getMonth(),1),days=[];
+      for(let d=new Date(m1);d<=D;d.setDate(d.getDate()+1))if(d.getDay()!==OFFDAY)days.push(ymd(d));
+      const nowD=new Date(),nowMin=nowD.getHours()*60+nowD.getMinutes(),pending=date>ymd(nowD)||(date===ymd(nowD)&&nowMin<660);/* before 11:00 AM today: not yet Absent */
+      clearTimeout(window.__atT);if(date===ymd(nowD)&&nowMin<660)window.__atT=setTimeout(()=>{if(tok===navToken)run()},(660-nowMin)*60000+1000);
+      const isOff=D.getDay()===OFFDAY,next=new Date(D);next.setDate(next.getDate()+1);
+      const logs=await fetchAll(()=>db.from('att_punches').select('ac_no,punch').gte('punch',ymd(m1)+'T00:00:00').lt('punch',ymd(next)+'T00:00:00').order('id'));
+      const rem=await db.from('att_remarks').select('staff_id,text').eq('day',date);
+      if(tok!==navToken)return;
+      const RM={};(rem.data||[]).forEach(x=>RM[x.staff_id]=x.text);
+      const first=new Map();/* ac|day -> earliest minute */
+      logs.forEach(l=>{const t=String(l.punch),day=t.slice(0,10),mi=+t.slice(11,13)*60+(+t.slice(14,16));const k=String(l.ac_no)+'|'+day;if(!first.has(k)||mi<first.get(k))first.set(k,mi)});
+      const rows=STAFF.filter(s=>s.active).map(s=>{
+        const ac=String(s.ac_no||'').trim();let present=0,absent=0,pen=0,today=null;
+        days.forEach(d=>{const t=ac?first.get(ac+'|'+d):undefined;if(t==null){if(!(d===date&&pending))absent++}else{present++;pen+=penalty(t)}});
+        const t0=ac?first.get(ac+'|'+date):undefined;
+        return {s,ac,absent,pen,today:t0==null?null:t0,tp:(t0==null||isOff)?0:penalty(t0),working:days.length};
+      });
+      const unk=new Set();logs.forEach(l=>{if(!STAFF.some(s=>String(s.ac_no||'').trim()===String(l.ac_no)))unk.add(l.ac_no)});
+      $('atMsg').innerHTML='';
+      if(unk.size)msg($('atMsg'),'Machine numbers not linked to any staff: '+[...unk].slice(0,20).join(', ')+'. Open "Staff list" and type the number against the right person.');
+      const nRow=rows.length,col=i=>'hsl('+Math.round(i/Math.max(1,nRow-1)*120)+',75%,70%)';
+      const dt=D,title='Attendance Report_'+dt.getDate()+' '+dt.toLocaleDateString('en-GB',{month:'long'})+"'"+dt.getFullYear();
+      let body='',tw=0,ta=0,tp=0,tm=0;const x=[['SL','Name','Department','Office Sim Number','Total Working Day','Today Present Time','Total Absent','Penalty (Today)','Penalty (Month)','Remarks']];
+      rows.forEach((r,i)=>{
+        tw+=r.working;ta+=r.absent;tp+=r.tp;tm+=r.pen;
+        const cell=isOff?'<td class="off">Off</td>':r.today==null?(pending?'<td>-</td>':'<td class="abs">Absent</td>'):`<td class="${r.today>540?'late':''}">${hm(r.today)}</td>`;
+        body+=`<tr><td style="background:${col(i)}">${i+1}</td><td class="nm">${esc(r.s.name)}</td><td>${esc(r.s.dept)}</td><td>${esc(r.s.sim||'_')}</td><td><b>${r.working}</b></td>${cell}<td class="${r.absent?'red':''}"><b>${r.absent}</b></td><td>${r.tp?'<b>'+r.tp+'</b>':'0'}</td><td>${r.pen?'<b>'+r.pen+'</b>':'0'}</td><td><input class="rm" data-id="${r.s.id}" value="${esc(RM[r.s.id]||'')}"></td></tr>`;
+        x.push([i+1,r.s.name,r.s.dept,r.s.sim||'',r.working,isOff?'Off':r.today==null?(pending?'':'Absent'):hm(r.today),r.absent,r.tp,r.pen,RM[r.s.id]||'']);
+      });
+      body+=`<tr class="tot"><td colspan="4">Total</td><td>${tw}</td><td></td><td>${ta}</td><td>${tp}</td><td>${tm}</td><td></td></tr>`;
+      x.push(['','Total','','',tw,'',ta,tp,tm,'']);
+      SHEET={x,title,date};
+      $('atOut').innerHTML=`<table class="at" id="atTbl"><thead><tr><th class="t1" colspan="10"><img src="${LOGO}" alt=""></th></tr><tr><th class="t2" colspan="10" style="background:#ffff00">${esc(title)}</th></tr><tr><th class="t3" colspan="10" style="background:#00c8a0"></th></tr>
+        <tr><th>SL</th><th>Name</th><th>Department</th><th>Office Sim Number</th><th>Total Working Day</th><th>Today Present Time</th><th>Total Absent</th><th>Penalty (Today)</th><th>Penalty (Month)</th><th>Remarks</th></tr></thead><tbody>${body}</tbody></table>`;
+    }catch(e){msg($('atMsg'),e.message||String(e))}
+  };
+  $('atOut').addEventListener('change',async e=>{
+    const i=e.target.closest('input.rm');if(!i)return;
+    const r=await db.from('att_remarks').upsert({day:$('atDate').value,staff_id:Number(i.dataset.id),text:i.value.trim()},{onConflict:'day,staff_id'});
+    if(r.error)msg($('atMsg'),r.error.message);
+  });
+  /* ---- staff list ---- */
+  const staffPanel=async()=>{
+    const box=$('atStaff');await loadStaff();
+    if(tableMissing){box.innerHTML='<div class="notice error">Run attendance-setup.sql in Supabase (SQL Editor) first.</div>';return}
+    box.innerHTML=`<h3>Staff list</h3><div class="muted" style="margin-bottom:8px">"Machine no." is the Ac-No shown in the attendance software. Change a box and it saves by itself.</div>
+      ${STAFF.length?'':'<div class="form-actions"><button id="atSeed">Load the 21 names</button></div>'}
+      <div class="table-wrap"><table><thead><tr><th>SL</th><th>Name</th><th>Department</th><th>Sim number</th><th>Machine no.</th><th>In report</th></tr></thead><tbody>${STAFF.map((s,i)=>`<tr><td>${i+1}</td>${[['name',s.name],['dept',s.dept],['sim',s.sim],['ac_no',s.ac_no]].map(([f,v])=>`<td><input data-id="${s.id}" data-f="${f}" value="${esc(v||'')}" style="min-width:${f==='name'?160:90}px"></td>`).join('')}<td><input type="checkbox" data-id="${s.id}" data-f="active" ${s.active?'checked':''}></td></tr>`).join('')}</tbody></table></div>
+      <div class="form-actions"><button class="secondary" id="atAdd">Add a person</button></div>`;
+    const sd=$('atSeed');if(sd)sd.onclick=async()=>{const r=await db.from('att_staff').insert(SEED.map((x,i)=>({name:x[0],dept:x[1],sim:x[2],ac_no:x[3],sort:i+1})));if(r.error)return msg($('atMsg'),r.error.message);await staffPanel();run()};
+    $('atAdd').onclick=async()=>{const r=await db.from('att_staff').insert({name:'New person',sort:STAFF.length+1});if(r.error)return msg($('atMsg'),r.error.message);await staffPanel()};
+  };
+  $('atStaff').addEventListener('change',async e=>{
+    const i=e.target.closest('[data-f]');if(!i)return;
+    const v=i.type==='checkbox'?i.checked:i.value.trim();
+    const r=await db.from('att_staff').update({[i.dataset.f]:v}).eq('id',Number(i.dataset.id));
+    if(r.error)msg($('atMsg'),r.error.message);else{const s=STAFF.find(x=>String(x.id)===i.dataset.id);if(s)s[i.dataset.f]=v;run()}
+  });
+  $('atStaffBtn').onclick=async()=>{const b=$('atStaff');if(b.style.display==='none'){b.style.display='block';await staffPanel()}else b.style.display='none'};
+  $('atDate').value=today();$('atGo').onclick=run;$('atDate').onchange=run;$('atUp').onclick=upload;
+  $('atFile').onchange=()=>{if($('atFile').files[0])upload()};
+  $('atPrint').onclick=()=>window.print();
+  $('atXls').onclick=()=>{if(!SHEET)return;try{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([[SHEET.title],[],...SHEET.x]),'Attendance');XLSX.writeFile(wb,'Attendance_'+SHEET.date+'.xlsx')}catch(e){msg($('atMsg'),'Could not make the Excel file: '+(e.message||e))}};
+  const sendImg=async file=>{
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Attendance Report'});return}
+    const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),8000);
+    msg($('atMsg'),'The picture was saved on this device. Send it from Downloads or Gallery.','success');
+  };
+  $('atImg').onclick=async()=>{
+    if(!SHEET)return;const b=$('atImg');
+    if(pend){const fl=pend;pend=null;b.textContent='Share picture';try{await sendImg(fl)}catch(e){if(!e||e.name!=='AbortError')msg($('atMsg'),'Could not share: '+(e.message||e))}return}
+    b.disabled=true;b.textContent='Preparing…';
+    try{
+      await loadH2C();
+      const w=$('atOut'),cv=await html2canvas(w,{scale:2,backgroundColor:'#ffffff',useCORS:true,windowWidth:Math.max(1000,w.scrollWidth),onclone:d=>{d.querySelectorAll('input.rm').forEach(i=>{const sp=d.createElement('span');sp.textContent=i.value;sp.style.cssText='font:700 13px Georgia,serif;color:#c00000';i.replaceWith(sp)})}});
+      const blob=await new Promise(ok=>cv.toBlob(ok,'image/png'));
+      const fl=new File([blob],'Attendance_'+SHEET.date+'.png',{type:'image/png'});
+      b.disabled=false;b.textContent='Share picture';
+      try{await sendImg(fl)}catch(e){if(e&&e.name==='NotAllowedError'){pend=fl;b.textContent='Picture ready - tap to share'}else if(e&&e.name!=='AbortError')msg($('atMsg'),'Could not share: '+(e.message||e))}
+    }catch(e){b.disabled=false;b.textContent='Share picture';msg($('atMsg'),e.message||String(e))}
+  };
+  run();
 }
 
 /* ---------- Target vs Achievement, all DSOs on one sheet (Admin) ---------- */
