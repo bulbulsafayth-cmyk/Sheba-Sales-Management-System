@@ -267,7 +267,7 @@ table.crt td.cract button{display:block;width:100%;margin:0 0 3px;padding:3px 4p
 .shcalc .ctc{border-bottom:2px solid #000;margin-bottom:8px;padding:4px 0}.shcalc .ctc b{flex:1}.shcalc .ctc .cadd{margin:0;white-space:nowrap}</style></head>
 <body>
 <div id="loginView" class="login-wrap"><div class="login"><h1>Sheba Distribution Sales &amp; Credit Management System</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
-<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="ask">? &nbsp; Quick Questions</button><button data-page="target">◉ &nbsp; Target vs Achievement</button><button data-page="cash">▤ &nbsp; Daily Cash Status</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
+<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="target">◉ &nbsp; Target vs Achievement</button><button data-page="cash">▤ &nbsp; Daily Cash Status</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
 <script>
 const SUPABASE_URL='https://nvnogsganemysvbqmcpo.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_tyWf1VnXMzNVBs22Qgs3wg_SBy6HegJ';
@@ -373,8 +373,8 @@ function showApp(mode='admin'){
   if(mode==='admin')startApprovalWatch();else stopApprovalWatch();
 }
 $('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(b)go(b.dataset.page)});
-const titles={ask:'Quick Questions',dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location',cash:'Daily Cash Status',target:'Target vs Achievement'};
-const pages={ask:()=>askPage(),dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage(),dsoloc:()=>dsoLocPage(),cash:()=>cashPage(),target:()=>targetPage()};
+const titles={tvall:'Target vs Achievement',dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location',cash:'Daily Cash Status',target:'Target vs Achievement'};
+const pages={tvall:()=>tvAdminPage(),dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage(),dsoloc:()=>dsoLocPage(),cash:()=>cashPage(),target:()=>targetPage()};
 function go(p,arg){
   if(userMode==='dso'&&!DSO_PAGES.includes(p))p='sales';
   if(userMode!=='dso'&&p==='target')p='dashboard';
@@ -732,7 +732,7 @@ async function creditPage(){
       if(G.length>=2&&last)extra+=tot(allRows,'Grand Total','cr-grand');
       return `<div class="cr-road">${esc(g.name)}</div><table class="crt">${cg}<thead><tr class="cr-h"><th>SL No.</th>${v.head.map(h=>`<th>${esc(h)}</th>`).join('')}${act?'<th class="noprint">Action</th>':''}</tr></thead><tbody>${g.rows.map((r,n)=>`<tr class="${r.done?'crdone':(r.age>OVERDUE_DAYS?'od':'')}"><td>${n+1}</td>${r.c.map((_,i)=>cell(r,i)).join('')}${act?actCell(r):''}</tr>`).join('')}${tot(g.rows,'Total','crsum')}${extra}</tbody></table>`;
     }).join('')||'<p class="muted" style="padding:14px;text-align:center;color:#000">Nothing to show for this date.</p>';
-    $('crOut').innerHTML=`${v.note?`<div class="notice noprint" style="margin-bottom:10px">${esc(v.note)}</div>`:''}<div class="crsheet" id="crSheet"><div class="cr-title ${v.cls}">${esc(v.title)}</div>${v.date?`<div class="cr-date">Date :  ${esc(v.date)}</div>`:''}${body}<div class="cr-credit-foot">Developed By Safayth Hossen Bulbul</div></div>`;
+    $('crOut').innerHTML=`${v.note?`<div class="notice noprint" style="margin-bottom:10px">${esc(v.note)}</div>`:''}<div class="crsheet" id="crSheet"><div class="cr-title ${v.cls}">${esc(v.title)}</div>${v.date?`<div class="cr-date">Date :  ${esc(v.date)}</div>`:''}${body}<div class="cr-credit-foot">Designed By Safayth Hossen Bulbul</div></div>`;
   };
   const run=async()=>{
     const D=$('crDate').value,m=$('crMsg');m.innerHTML='';
@@ -830,7 +830,7 @@ async function creditPage(){
       if(G.length>=2&&last)totRow('Grand Total',G.flatMap(x=>x.rows),chq?'#92d050':'#b7dee8');
     });
     items.push({h:8,d:()=>{}});
-    bar('Developed By Safayth Hossen Bulbul',12,'center','#fff','#000');
+    bar('Designed By Safayth Hossen Bulbul',12,'center','#fff','#000');
     const pages=[];let cur=[],hh=0;items.forEach(it=>{if(hh+it.h>2800&&cur.length){pages.push(cur);cur=[];hh=0}cur.push(it);hh+=it.h});if(cur.length)pages.push(cur);
     const out=[];
     for(let p=0;p<pages.length;p++){
@@ -2129,7 +2129,7 @@ async function reportsPage(){
   const tok=navToken;
   const p=$('page'),isAdmin=userMode==='admin';
   rep={chq:[],rows:[],items:{},page:1,type:null,sub:'all',generated:false,prods:rep.prods||{},printAll:false};
-  p.innerHTML=`<h1 class="page-title">Sales Reports</h1><div class="sub">Choose a report, press Generate and the report will appear.</div><div class="panel"><div class="rtypes noprint" id="repTypes"><button data-t="daily">Daily sales report</button>${isAdmin?'<button data-t="dso">DSO-wise report</button>':''}<button data-t="brand">Brand-wise report</button><button data-t="sheet">Daily Sales Sheet</button><button data-t="credit">Credit &amp; Cheque Report</button>${isAdmin?'<button data-t="cash">Daily Cash Status</button>':''}</div><div id="repFilters" class="hidden noprint"><div class="form-grid" style="margin-top:14px"><div><label>From date</label><input type="date" id="rFrom"></div><div><label>To date</label><input type="date" id="rTo"></div><div id="wBrand"><label>Brand</label><select id="rBrand"><option value="">All brands</option></select></div><div id="wModel" class="hidden"><label>Model</label><select id="rModel"><option value="">All models</option></select></div>${isAdmin?'<div id="wDso"><label>DSO</label><select id="rDso"><option value="">All DSOs</option></select></div>':''}<div><label>Retailer</label><select id="rRetailer"><option value="">All retailers</option></select></div></div><div class="form-actions"><button id="runReport">Generate report</button><button class="secondary" id="printReport">Print</button><button class="secondary" id="shareReport">Share</button><button class="secondary" id="openSheet">Daily Sales Sheet</button></div></div><div id="reportSummary"></div><div id="repOut" style="margin-top:15px"></div></div>`;
+  p.innerHTML=`<h1 class="page-title">Sales Reports</h1><div class="sub">Choose a report, press Generate and the report will appear.</div><div class="panel"><div class="rtypes noprint" id="repTypes"><button data-t="daily">Daily sales report</button>${isAdmin?'<button data-t="dso">DSO-wise report</button>':''}<button data-t="brand">Brand-wise report</button><button data-t="sheet">Daily Sales Sheet</button><button data-t="credit">Credit &amp; Cheque Report</button>${isAdmin?'<button data-t="cash">Daily Cash Status</button><button data-t="tvall">Target vs Achievement</button>':''}</div><div id="repFilters" class="hidden noprint"><div class="form-grid" style="margin-top:14px"><div><label>From date</label><input type="date" id="rFrom"></div><div><label>To date</label><input type="date" id="rTo"></div><div id="wBrand"><label>Brand</label><select id="rBrand"><option value="">All brands</option></select></div><div id="wModel" class="hidden"><label>Model</label><select id="rModel"><option value="">All models</option></select></div>${isAdmin?'<div id="wDso"><label>DSO</label><select id="rDso"><option value="">All DSOs</option></select></div>':''}<div><label>Retailer</label><select id="rRetailer"><option value="">All retailers</option></select></div></div><div class="form-actions"><button id="runReport">Generate report</button><button class="secondary" id="printReport">Print</button><button class="secondary" id="shareReport">Share</button><button class="secondary" id="openSheet">Daily Sales Sheet</button></div></div><div id="reportSummary"></div><div id="repOut" style="margin-top:15px"></div></div>`;
   const [b,d,rtl,pl]=await Promise.all([queryAll('brands'),isAdmin?queryAll('dsos'):Promise.resolve([]),queryAll('retailers'),queryAll('products').catch(()=>[])]);
   const bm=isAdmin?await loadDsoBrandMap():{};
   if(tok!==navToken)return;
@@ -2178,6 +2178,7 @@ async function reportsPage(){
     if(t.dataset.t==='sheet')return go('sheet');
     if(t.dataset.t==='credit')return go('credit');
     if(t.dataset.t==='cash')return go('cash');
+    if(t.dataset.t==='tvall')return go('tvall');
     rep.type=t.dataset.t;rep.generated=false;rep.sub='all';rep.rows=[];rep.items={};rep.page=1;
     document.querySelectorAll('#repTypes button').forEach(x=>x.classList.toggle('on',x===t));
     $('repFilters').classList.remove('hidden');$('reportSummary').innerHTML='';$('repOut').innerHTML='';
@@ -2514,180 +2515,87 @@ async function cashPage(){
   load();
 }
 
-/* ---------- Quick Questions (Admin): ready-made questions + an optional Gemini (free tier) assistant ---------- */
-async function askPage(){
+/* ---------- Target vs Achievement, all DSOs on one sheet (Admin) ---------- */
+async function tvAdminPage(){
   const tok=navToken;
-  if(!document.getElementById('qqCss')){const st=document.createElement('style');st.id='qqCss';st.textContent='.qq-res table{width:100%;border-collapse:collapse}.qq-res th,.qq-res td{border-bottom:1px solid var(--line,#e5e7eb);padding:6px 8px;text-align:right;white-space:nowrap}.qq-res th:first-child,.qq-res td:first-child{text-align:left;white-space:normal}.qq-res tr.tt td{font-weight:700;background:#f3f4f6}.qq-sum{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}.qq-sum span{background:#eef2ff;border-radius:8px;padding:6px 10px}.qq-ans{white-space:pre-wrap;line-height:1.55;margin-top:12px;padding:12px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0}.qq-q{margin-top:10px;font-weight:700}';document.head.appendChild(st)}
-  const t0=today(),m0=t0.slice(0,8)+'01',f=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:0});
-  const cleanModel=m=>String(m||'').trim().replace(/^models\//i,'').split(/[\s,;]+/)[0].replace(/[^A-Za-z0-9._-]/g,'')||'gemini-2.5-flash';
-  const LS=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k)||'';localStorage.setItem(k,v)}catch(e){return ''}};
-  $('page').innerHTML=`<h1 class="page-title">Quick Questions</h1>
-  <div class="panel"><h3>Ask in your own words (Gemini, free)</h3>
-    <div class="muted" style="margin-bottom:8px">Type a question such as "Who collected the least today?" or "Top 5 Vivo retailers this month". Gemini picks the right numbers from your sales data. Only totals (names and amounts) are sent to Google, and nothing is written or changed. Dues are not available here.</div>
-    <div class="form-grid"><div style="grid-column:1/-1"><textarea id="gQ" rows="2" placeholder="Your question…" style="width:100%"></textarea></div></div>
-    <div class="form-actions"><button id="gAsk">Ask</button><button class="secondary" id="gSetBtn">Gemini key &amp; model</button></div>
-    <div id="gSet" style="display:none;margin-top:10px"><div class="form-grid">
-      <div style="grid-column:1/-1"><label>Gemini API key (free from aistudio.google.com/apikey). It stays only in this browser.</label><input type="password" id="gKey" autocomplete="off" placeholder="AIza…"></div>
-      <div><label>Model name</label><input id="gModel" placeholder="gemini-2.5-flash"></div></div>
-      <div class="form-actions"><button id="gSave">Save</button><button class="secondary" id="gList">Show usable models</button><button class="secondary" id="gClear">Remove key</button></div><div id="gListOut" class="muted" style="margin-top:6px;word-break:break-word"></div></div>
-    <div id="gMsg"></div><div id="gOut"></div></div>
-  <div class="panel"><h3>Ready-made questions</h3><div class="form-grid">
-    <div style="grid-column:1/-1"><label>Question</label><select id="qqQ">
-      <option value="dso">DSO-wise sales &amp; collection</option>
-      <option value="dsolow">Which DSOs collected the least?</option>
-      <option value="brand">Brand-wise sales &amp; collection</option>
-      <option value="ret">Top retailers by sales</option>
-      <option value="rsearch">One retailer: sales &amp; collection</option>
-      <option value="day">Day-by-day totals</option>
-    </select></div>
-    <div><label>From</label><input type="date" id="qqFrom" value="${m0}"></div><div><label>To</label><input type="date" id="qqTo" value="${t0}"></div>
-    <div><label>Brand (optional)</label><select id="qqBrand"><option value="">All brands</option></select></div>
-    <div><label>DSO (optional)</label><select id="qqDso"><option value="">All DSOs</option></select></div>
-    <div id="qqRetBox" style="display:none;grid-column:1/-1"><label>Retailer name (part of the name)</label><input id="qqRet" placeholder="e.g. Rahman Telecom"></div>
-  </div><div class="form-actions"><button id="qqRun">Show answer</button><button class="secondary" id="qqToday">Today</button><button class="secondary" id="qqMonth">This month</button><button class="secondary" id="qqShare" disabled>Share as text</button></div>
-  <div class="muted" style="margin-top:8px">Dues are not listed here. Use Verbal Due and Credit &amp; Cheque Report in Reports for those.</div></div><div id="qqMsg"></div><div class="panel qq-res" id="qqOut" style="display:none"></div>`;
-  let BR=[],DS=[];
-  try{
-    const [b,d]=await Promise.all([db.from('brands').select('id,name').order('name'),db.from('dsos').select('id,full_name').order('full_name')]);
-    if(tok!==navToken)return;BR=b.data||[];DS=d.data||[];
-    $('qqBrand').innerHTML+=BR.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
-    $('qqDso').innerHTML+=DS.map(x=>`<option value="${x.id}">${esc(x.full_name)}</option>`).join('');
-  }catch(e){}
-  /* one place that reads the sales and adds them up: used by the ready-made questions and by Gemini */
-  const compute=async(q,from,to,br,ds,rt,limit)=>{
-    let rows=await fetchAll(()=>scopedReport().gte('sale_date',from).lte('sale_date',to).order('sale_date').order('id'));
-    if(br)rows=rows.filter(x=>x.brand_id===br);
-    if(ds)rows=rows.filter(x=>x.dso_id===ds);
-    if(rt)rows=rows.filter(x=>String(x.retailer||'').toLowerCase().includes(rt));
-    const ids=rows.filter(x=>Number(x.item_count)!==0).map(x=>x.id),qtyBy={};
-    for(let i=0;i<ids.length;i+=100){
-      const part=ids.slice(i,i+100);
-      const it=await fetchAll(()=>db.from('sales_items').select('sales_entry_id,quantity').in('sales_entry_id',part).order('sales_entry_id'));
-      it.forEach(r=>{qtyBy[r.sales_entry_id]=(qtyBy[r.sales_entry_id]||0)+Number(r.quantity||0)});
-    }
-    const agg=l=>{const a={qty:0,sale:0,col:0,n:0};l.forEach(x=>{a.col+=Number(x.received_amount||0);if(Number(x.item_count)!==0){a.qty+=qtyBy[x.id]||0;a.sale+=Number(x.total_sales||0);a.n++}});return a};
-    const grp=(kf,nf)=>[...groupBy(rows,kf).values()].map(l=>({name:nf(l[0])||'—',a:agg(l)}));
-    let title,head,list;
-    if(q==='dso'||q==='dsolow'){list=grp(x=>x.dso_id,x=>x.dso_name);list.sort((x,y)=>q==='dso'?y.a.sale-x.a.sale:x.a.col-y.a.col);title=q==='dso'?'DSO-wise sales & collection':'DSOs by lowest collection';head='DSO'}
-    else if(q==='brand'){list=grp(x=>x.brand_id,x=>x.brand);list.sort((x,y)=>y.a.sale-x.a.sale);title='Brand-wise sales & collection';head='Brand'}
-    else if(q==='ret'||q==='rsearch'){list=grp(x=>x.retailer_id,x=>x.retailer);list.sort((x,y)=>y.a.sale-x.a.sale);if(q==='ret')list=list.slice(0,limit||30);title=q==='ret'?'Top retailers by sales':'Retailer sales';head='Retailer'}
-    else{list=[...groupBy(rows,x=>x.sale_date).entries()].sort((a,b)=>a[0]<b[0]?-1:1).map(([k,l])=>({name:fmtDate(k),a:agg(l)}));title='Day-by-day totals';head='Date'}
-    return {title,head,list,T:agg(rows),count:rows.length};
-  };
-  const sync=()=>{$('qqRetBox').style.display=$('qqQ').value==='rsearch'?'block':'none'};
-  $('qqQ').onchange=sync;sync();
-  $('qqToday').onclick=()=>{$('qqFrom').value=t0;$('qqTo').value=t0};
-  $('qqMonth').onclick=()=>{$('qqFrom').value=m0;$('qqTo').value=t0};
-  let last='';
-  $('qqRun').onclick=async()=>{
-    const q=$('qqQ').value,from=$('qqFrom').value,to=$('qqTo').value,br=$('qqBrand').value,ds=$('qqDso').value,rt=$('qqRet').value.trim().toLowerCase();
-    if(!from||!to||from>to)return msg($('qqMsg'),'Choose a correct From and To date.');
-    if(q==='rsearch'&&!rt)return msg($('qqMsg'),'Type the retailer name first.');
-    $('qqMsg').innerHTML='<div class="notice">Loading…</div>';$('qqOut').style.display='none';$('qqShare').disabled=true;
+  if(!document.getElementById('tvaCss')){const st=document.createElement('style');st.id='tvaCss';st.textContent='.tva-wrap{overflow:auto;background:#fff;color:#000;padding:10px}.tva{border-collapse:collapse;font:12px Arial,sans-serif;min-width:1250px;width:100%}.tva th,.tva td{border:1px solid #9aa3ad;padding:4px 5px;text-align:center;white-space:nowrap}.tva th{background:#efefef;font-weight:700;color:#000;text-transform:none;letter-spacing:0;font-size:12px}.tva td{color:#000;font-size:12px}.tva .sub td,.tva .tot td,.tva .grp td{color:#000}.tva th.ttl{background:#bfbfbf;font:700 20px Georgia,serif;padding:8px;color:#000;text-transform:none}.tva .logo{border:none;text-align:left;background:#fff}.tva .logo img{height:54px}.tva .tg{background:#ffeb9c}.tva .pc{background:#ff66cc;font-weight:700}.tva .sub td{background:#ffff00;font-weight:700}.tva .grp td{background:#d9d9d9;font:700 18px Arial,sans-serif;padding:6px}.tva .tot td{background:#bfbfbf;font-weight:700}.tva td.nm{font-weight:700}@media print{@page{size:A4 landscape;margin:6mm}.tva{font-size:9px;min-width:0}.tva th,.tva td{padding:2px 3px}}';document.head.appendChild(st)}
+  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Target vs Achievement</h1><div class="sub">All DSOs on one sheet. Targets are what each DSO filled in on their own login; achievements come from the sales entries (or the DSO's corrected figures).</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="tvaDate"></div></div><div class="form-actions"><button id="tvaGo">Show</button><button class="secondary" id="tvaPrint">Print</button><button class="secondary" id="tvaImg">Share picture</button><button class="secondary" id="tvaXls">Excel</button></div></div><div id="tvaMsg"></div></div><div class="tva-wrap" id="tvaOut"></div>`;
+  const f=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:0});
+  const num=v=>{const n=Number(String(v==null?'':v).replace(/,/g,''));return Number.isFinite(n)?n:0};
+  const BC=n=>{n=String(n||'');return /oppo/i.test(n)?['#00c800','#000']:/vivo/i.test(n)?['#1f1fe8','#fff']:/samsung/i.test(n)?['#00205b','#fff']:/zte|huawei/i.test(n)?['#10243e','#fff']:/nokia|htc|moto/i.test(n)?['#00b0f0','#000']:/realme|honor|tecno|infinix|itel/i.test(n)?['#7c3aed','#fff']:['#e5e7eb','#000']};
+  const BO=n=>{n=String(n||'');return /oppo/i.test(n)?1:/vivo/i.test(n)?2:/samsung/i.test(n)?3:/zte|huawei/i.test(n)?4:/nokia|htc|moto/i.test(n)?5:6};
+  const pc=(a,t)=>t>0?Math.round(a/t*100):0;
+  let SHEET=null,pend=null;
+  const run=async()=>{
+    const date=$('tvaDate').value;if(!date)return;
+    $('tvaMsg').innerHTML='<div class="notice">Loading…</div>';$('tvaOut').innerHTML='';
     try{
-      const r=await compute(q,from,to,br,ds,q==='rsearch'?rt:'');
+      const [dsos,brands,roads,bm,rm,rows]=await Promise.all([fetchAll(()=>db.from('dsos').select(DSO_COLS+',is_active').order('full_name')),queryAll('brands'),queryAll('roads'),loadDsoBrandMap(),loadDsoRoadMap(),fetchAll(()=>db.from('sales_report').select('*').eq('sale_date',date).order('id'))]);
+      let tg={},missing=false;
+      try{const r=await db.from('dso_targets').select('dso_id,data').eq('day',date);if(r.error)missing=true;else (r.data||[]).forEach(x=>{tg[String(x.dso_id)]=x.data||{}})}catch(e){missing=true}
       if(tok!==navToken)return;
-      const title=q==='rsearch'?'Retailer: '+$('qqRet').value.trim():r.title,{head,list,T}=r;
-      const filt=[br&&$('qqBrand').selectedOptions[0].textContent,ds&&$('qqDso').selectedOptions[0].textContent].filter(Boolean).join(', ');
-      $('qqMsg').innerHTML='';$('qqOut').style.display='block';
-      if(!r.count){$('qqOut').innerHTML='<b>'+esc(title)+'</b><div class="muted" style="margin-top:6px">No sales found for this choice.</div>';return}
-      $('qqOut').innerHTML=`<h3>${esc(title)}</h3><div class="muted">${esc(fmtDate(from))} to ${esc(fmtDate(to))}${filt?' · '+esc(filt):''}</div>
-        <div class="qq-sum"><span>Sales <b>${f(T.sale)}</b></span><span>Collection <b>${f(T.col)}</b></span><span>Quantity <b>${f(T.qty)}</b></span></div>
-        <div class="table-wrap"><table><thead><tr><th>${head}</th><th>Qty</th><th>Sales</th><th>Collection</th></tr></thead><tbody>${list.map(x=>`<tr><td>${esc(x.name)}</td><td>${f(x.a.qty)}</td><td>${f(x.a.sale)}</td><td>${f(x.a.col)}</td></tr>`).join('')}<tr class="tt"><td>Total</td><td>${f(T.qty)}</td><td>${f(T.sale)}</td><td>${f(T.col)}</td></tr></tbody></table></div>`;
-      last=[title,fmtDate(from)+' to '+fmtDate(to)+(filt?' ('+filt+')':''),'',...list.map((x,i)=>(i+1)+'. '+x.name+' | Qty '+f(x.a.qty)+' | Sales '+f(x.a.sale)+' | Collection '+f(x.a.col)),'','Total | Qty '+f(T.qty)+' | Sales '+f(T.sale)+' | Collection '+f(T.col)].join('\n');
-      $('qqShare').disabled=false;
-    }catch(e){$('qqMsg').innerHTML='';msg($('qqMsg'),e.message||String(e))}
+      const BN={},RN={};brands.forEach(b=>BN[b.id]=b.name);roads.forEach(r=>RN[r.id]=r);
+      const sales=rows.filter(x=>!isDueRow(x)),ids=sales.map(x=>x.id),qtyBy={};
+      for(let i=0;i<ids.length;i+=100){(await fetchAll(()=>db.from('sales_items').select('sales_entry_id,quantity').in('sales_entry_id',ids.slice(i,i+100)).order('sales_entry_id'))).forEach(it=>{qtyBy[it.sales_entry_id]=(qtyBy[it.sales_entry_id]||0)+Number(it.quantity||0)})}
+      if(tok!==navToken)return;
+      const byD=new Map();rows.forEach(x=>{(byD.get(String(x.dso_id))||byD.set(String(x.dso_id),[]).get(String(x.dso_id))).push(x)});
+      const isLoh=r=>r&&/loha/i.test([r.office,r.name,r.report_group].filter(Boolean).join(' '));
+      const list=[];
+      dsos.filter(d=>d.is_active!==false||byD.has(String(d.id))||tg[String(d.id)]).forEach(d=>{
+        const T=tg[String(d.id)]||{},tar=T.tar||{},mine=byD.get(String(d.id))||[],sl=mine.filter(x=>!isDueRow(x));
+        const auto={visit:new Set(mine.map(x=>x.retailer_id).filter(Boolean)).size,memo:sl.length,vol:sl.reduce((a,x)=>a+(qtyBy[x.id]||0),0),val:sl.reduce((a,x)=>a+Number(x.total_sales||0),0),coll:mine.reduce((a,x)=>a+Number(x.received_amount||0),0)};
+        const man=T.man||{},ach=T.ach||{},A={};['visit','memo','vol','val','coll'].forEach(k=>A[k]=man[k]?num(ach[k]):auto[k]);
+        const bid=(dsoIds(d,bm,'brand_id')[0])||(mine[0]&&mine[0].brand_id),roadId=T.road||(dsoIds(d,rm,'road_id')[0]);
+        const road=RN[roadId];
+        list.push({name:d.full_name,brand:BN[bid]||'',road:road?road.name:'',loh:isLoh(road),shops:num(T.shops),t:{visit:num(tar.visit),memo:num(tar.memo),vol:num(tar.vol),val:num(tar.val),coll:num(tar.coll)},a:A,has:!!tg[String(d.id)]||mine.length>0});
+      });
+      const shown=list.filter(x=>x.has);
+      const sorter=(a,b)=>BO(a.brand)-BO(b.brand)||String(a.brand).localeCompare(b.brand)||String(a.name).localeCompare(b.name);
+      const groups=[{title:'',rows:shown.filter(x=>!x.loh).sort(sorter)},{title:'Lohagara Office',rows:shown.filter(x=>x.loh).sort(sorter)}].filter(g=>g.rows.length);
+      const K=['visit','memo','vol','val','coll'],zero=()=>({shops:0,t:{visit:0,memo:0,vol:0,val:0,coll:0},a:{visit:0,memo:0,vol:0,val:0,coll:0}});
+      const add=(S,r)=>{S.shops+=r.shops;K.forEach(k=>{S.t[k]+=r.t[k];S.a[k]+=r.a[k]})};
+      const rowTds=r=>`<td>${f(r.shops)}</td>`+K.map(k=>`<td class="tg">${f(r.t[k])}</td>`).join('')+K.map(k=>`<td>${f(r.a[k])}</td>`).join('')+K.map(k=>`<td class="pc">${pc(r.a[k],r.t[k])}</td>`).join('');
+      const G=zero();let n=0,body='';const x=[];
+      x.push(['SL','Name','Brand',"Today's Road",'Shop Qty','Visit T','Memo T','Qty T','Value T','Collection T','Visit A','Memo A','Qty A','Value A','Collection A','Visit %','Memo %','Qty %','Value %','Collection %']);
+      groups.forEach(g=>{
+        if(g.title)body+=`<tr class="grp"><td colspan="21">${esc(g.title)}</td></tr>`;
+        const S=zero();
+        g.rows.forEach(r=>{n++;add(S,r);add(G,r);const [bg,fg]=BC(r.brand);body+=`<tr><td style="background:${bg};color:${fg}">${n}</td><td class="nm" style="background:${bg};color:${fg}">${esc(r.name)}</td><td class="nm" style="background:${bg};color:${fg}">${esc(r.brand)}</td><td>${esc(r.road)}</td>${rowTds(r)}<td></td></tr>`;x.push([n,r.name,r.brand,r.road,r.shops,...K.map(k=>r.t[k]),...K.map(k=>r.a[k]),...K.map(k=>pc(r.a[k],r.t[k]))])});
+        body+=`<tr class="sub"><td colspan="4">Sub-Total</td>${rowTds(S)}<td></td></tr>`;x.push(['','Sub-Total','','',S.shops,...K.map(k=>S.t[k]),...K.map(k=>S.a[k]),...K.map(k=>pc(S.a[k],S.t[k]))]);
+      });
+      body+=`<tr class="tot"><td colspan="4">Total</td>${rowTds(G)}<td></td></tr>`;x.push(['','Total','','',G.shops,...K.map(k=>G.t[k]),...K.map(k=>G.a[k]),...K.map(k=>pc(G.a[k],G.t[k]))]);
+      const dt=new Date(date+'T00:00:00'),title="Today Target VS Achievement Info "+dt.getDate()+' '+dt.toLocaleDateString('en-GB',{month:'long'})+"'"+dt.getFullYear();
+      SHEET={x,title,date};
+      $('tvaMsg').innerHTML='';
+      if(missing)msg($('tvaMsg'),'Targets are not saved in the database yet. Run dso-targets-setup.sql in Supabase (SQL Editor). Until then only the achievements are shown.');
+      else if(!shown.length)msg($('tvaMsg'),'No DSO has filled a target or made a sale on this date.');
+      $('tvaOut').innerHTML=`<table class="tva" id="tvaTbl"><thead><tr><th class="logo" colspan="5"><img src="${LOGO}" alt=""></th><th colspan="16" class="logo"></th></tr><tr><th class="ttl" colspan="21">${esc(title)}</th></tr>
+        <tr><th rowspan="2">SL</th><th rowspan="2">Name</th><th rowspan="2">Brand</th><th rowspan="2">Today's Road</th><th rowspan="2">Shop Qty</th><th colspan="5">Morning Target Info</th><th colspan="5">Today Achievement Info</th><th colspan="5">Today Target VS Achievement Info (%)</th><th rowspan="2">Remarks</th></tr>
+        <tr>${['Shop Visit','Memo','QTY','Value','Collection'].map(h=>`<th>${h}</th>`).join('').repeat(3)}</tr></thead><tbody>${body}</tbody></table>`;
+    }catch(e){$('tvaMsg').innerHTML='';msg($('tvaMsg'),e.message||String(e))}
   };
-  $('qqShare').onclick=()=>{if(last)shareText('Sheba Distribution - Quick Question',last)};
-
-  /* ---------- Gemini (free tier) ---------- */
-  $('gKey').value=LS('gem_key');$('gModel').value=cleanModel(LS('gem_model'));
-  $('gSetBtn').onclick=()=>{$('gSet').style.display=$('gSet').style.display==='none'?'block':'none'};
-  if(!LS('gem_key'))$('gSet').style.display='block';
-  $('gSave').onclick=()=>{LS('gem_key',$('gKey').value.trim());const mm=cleanModel($('gModel').value);$('gModel').value=mm;LS('gem_model',mm);msg($('gMsg'),'Saved on this device. Model: '+mm,'success')};
-  $('gClear').onclick=()=>{LS('gem_key','');$('gKey').value='';msg($('gMsg'),'Key removed from this device.','success')};
-  $('gList').onclick=async()=>{
-    const k=$('gKey').value.trim();if(!k)return msg($('gMsg'),'Paste the key first.');
-    $('gListOut').textContent='Checking…';
-    try{const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=100',{headers:{'x-goog-api-key':k}});const j=await r.json();if(!r.ok)throw new Error(j.error&&j.error.message||r.status);
-      $('gListOut').textContent='Models you can type above: '+(j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')).map(m=>m.name.replace('models/','')).filter(n=>/flash|lite/i.test(n)&&!/image|tts|live|audio|embed/i.test(n)).join(', ')}
-    catch(e){$('gListOut').textContent='Could not read the list: '+(e.message||e)}
+  $('tvaDate').value=today();$('tvaGo').onclick=run;$('tvaDate').onchange=run;
+  $('tvaPrint').onclick=()=>window.print();
+  $('tvaXls').onclick=()=>{if(!SHEET)return;try{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([[SHEET.title],[],...SHEET.x]),'Target vs Achievement');XLSX.writeFile(wb,'Target_vs_Achievement_'+SHEET.date+'.xlsx')}catch(e){msg($('tvaMsg'),'Could not make the Excel file: '+(e.message||e))}};
+  const sendImg=async file=>{
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Target vs Achievement'});return}
+    const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),8000);
+    msg($('tvaMsg'),'The picture was saved on this device. Send it from Downloads or Gallery.','success');
   };
-  /* ask Google which models this key may use and pick the newest stable Flash one */
-  const pickModel=async key=>{
-    const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':key}});const j=await r.json();
-    if(!r.ok)throw new Error(j.error&&j.error.message||('HTTP '+r.status));
-    const ok=(j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')).map(m=>m.name.replace('models/','')).filter(n=>/flash/i.test(n)&&!/image|tts|live|audio|embed|thinking|robot|computer|native|vision/i.test(n));
-    const score=n=>{const v=parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/)||[])[1])||0;return v*10+(/lite/i.test(n)?0:2)+(/preview|exp/i.test(n)?-5:0)+(/latest$/i.test(n)?1:0)};
-    ok.sort((a,b)=>score(b)-score(a));
-    return ok[0]||'';
-  };
-  const decls=up=>{const T=x=>up?String(x).toUpperCase():x;return [{
-    name:'sales_summary',
-    description:'Adds up sales and collection from the sales records. Returns the rows (largest first, or lowest collection first) and the grand total. Sales = total sales amount, collection = money received (includes due collections).',
-    parameters:{type:T('object'),properties:{
-      kind:{type:T('string'),description:'What to group by: dso, dso_lowest_collection, brand, retailer, one_retailer, day'},
-      from:{type:T('string'),description:'Start date YYYY-MM-DD'},to:{type:T('string'),description:'End date YYYY-MM-DD'},
-      brand:{type:T('string'),description:'Optional brand name, e.g. Vivo'},dso:{type:T('string'),description:'Optional DSO name (part of the name is fine)'},
-      retailer:{type:T('string'),description:'Retailer name or part of it; needed for kind=one_retailer'},limit:{type:T('integer'),description:'Max rows to return, default 15'}},
-      required:[T('kind'),T('from'),T('to')]}}]};
-  const runTool=async a=>{
-    const kmap={dso:'dso',dso_lowest_collection:'dsolow',brand:'brand',retailer:'ret',one_retailer:'rsearch',day:'day'},q=kmap[a.kind];
-    if(!q)return {error:'unknown kind'};
-    const find=(arr,key,v)=>{if(!v)return '';const w=String(v).toLowerCase();const m=arr.find(x=>String(x[key]).toLowerCase()===w)||arr.find(x=>String(x[key]).toLowerCase().includes(w));return m?m.id:null};
-    const br=find(BR,'name',a.brand),ds=find(DS,'full_name',a.dso);
-    if(br===null)return {error:'brand not found: '+a.brand};
-    if(ds===null)return {error:'DSO not found: '+a.dso};
-    const r=await compute(q,a.from,a.to,br,ds,String(a.retailer||'').toLowerCase(),Number(a.limit)||15);
-    return {rows_found:r.count,rows:r.list.slice(0,Number(a.limit)||15).map(x=>({name:x.name,qty:Math.round(x.a.qty),sales:Math.round(x.a.sale),collection:Math.round(x.a.col)})),total:{qty:Math.round(r.T.qty),sales:Math.round(r.T.sale),collection:Math.round(r.T.col)}};
-  };
-  const callG=async(key,model,body)=>{
-    const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body)});
-    const j=await r.json().catch(()=>({}));
-    if(!r.ok){const m=(j.error&&j.error.message)||('HTTP '+r.status);const e=new Error(m);e.status=r.status;throw e}
-    return j;
-  };
-  const callGauto=async(key,body)=>{
-    let model=cleanModel($('gModel').value||LS('gem_model'));
-    try{return await callG(key,model,body)}
-    catch(e){
-      if(e.status!==404&&!/not found|not supported|unexpected model/i.test(e.message))throw e;
-      const m2=await pickModel(key);
-      if(!m2||m2===model)throw e;
-      $('gModel').value=m2;LS('gem_model',m2);$('gMsg').innerHTML='<div class="notice">Model changed to '+esc(m2)+' (the old one was not available).</div>';
-      return await callG(key,m2,body);
-    }
-  };
-  $('gAsk').onclick=async()=>{
-    const key=LS('gem_key'),model=cleanModel($('gModel').value||LS('gem_model')),question=$('gQ').value.trim();
-    if(!question)return msg($('gMsg'),'Type your question first.');
-    if(!key){$('gSet').style.display='block';return msg($('gMsg'),'Paste your free Gemini key first (open "Gemini key & model").')}
-    $('gAsk').disabled=true;$('gMsg').innerHTML='<div class="notice">Thinking…</div>';
+  $('tvaImg').onclick=async()=>{
+    if(!SHEET)return;const b=$('tvaImg');
+    if(pend){const fl=pend;pend=null;b.textContent='Share picture';try{await sendImg(fl)}catch(e){if(!e||e.name!=='AbortError')msg($('tvaMsg'),'Could not share: '+(e.message||e))}return}
+    b.disabled=true;b.textContent='Preparing…';
     try{
-      let sys='You answer questions for the owner of a mobile phone distribution company in Bangladesh using ONLY the numbers returned by the sales_summary tool. Today is '+t0+' (Asia/Dhaka). "This month" means '+m0+' to '+t0+'. Reply in the same language the user wrote in (Bengali if they wrote Bengali or Banglish), short and clear, with amounts in taka and thousands separators. Never invent numbers. If the tool returns nothing, say so. Dues, cheques, credit and cash status are not available through your tool: say so and tell the user to open the Verbal Due or Credit & Cheque report instead.';
-      let contents=[{role:'user',parts:[{text:question}]}],text='',up=false;
-      for(let step=0;step<5;step++){
-        let j;
-        try{j=await callGauto(key,{systemInstruction:{parts:[{text:sys}]},contents,tools:[{functionDeclarations:decls(up)}]})}
-        catch(e){if(e.status===400&&!up&&/type|enum|schema/i.test(e.message)){up=true;j=await callGauto(key,{systemInstruction:{parts:[{text:sys}]},contents,tools:[{functionDeclarations:decls(true)}]})}else throw e}
-        const parts=(((j.candidates||[])[0]||{}).content||{}).parts||[];
-        const calls=parts.filter(p=>p.functionCall);
-        if(!calls.length){text=parts.map(p=>p.text||'').join('').trim();break}
-        contents.push({role:'model',parts});
-        const resp=[];
-        for(const c of calls){let out;try{out=await runTool(c.functionCall.args||{})}catch(e){out={error:String(e.message||e)}}resp.push({functionResponse:{name:c.functionCall.name,response:{result:out}}})}
-        contents.push({role:'user',parts:resp});
-      }
-      if(tok!==navToken)return;
-      $('gMsg').innerHTML='';
-      $('gOut').innerHTML='<div class="qq-q">'+esc(question)+'</div><div class="qq-ans">'+esc(text||'No answer came back. Try asking in another way.')+'</div>';
-    }catch(e){
-      $('gMsg').innerHTML='';
-      const m=e.status===429?'Free limit reached for now (too many questions per minute or per day). Wait a little and try again.':e.status===400&&/API key/i.test(e.message)?'The key is not accepted. Check it in "Gemini key & model".':e.status===404?'This model name is not available. Tap "Show usable models" and type one of them.':(e.message||String(e));
-      msg($('gMsg'),m);
-    }
-    $('gAsk').disabled=false;
+      await loadH2C();
+      const cv=await html2canvas($('tvaOut'),{scale:2,backgroundColor:'#ffffff',useCORS:true,windowWidth:Math.max(1300,$('tvaOut').scrollWidth)});
+      const blob=await new Promise(ok=>cv.toBlob(ok,'image/png'));
+      const fl=new File([blob],'Target_vs_Achievement_'+SHEET.date+'.png',{type:'image/png'});
+      b.disabled=false;b.textContent='Share picture';
+      try{await sendImg(fl)}catch(e){if(e&&e.name==='NotAllowedError'){pend=fl;b.textContent='Picture ready - tap to share'}else if(e&&e.name!=='AbortError')msg($('tvaMsg'),'Could not share: '+(e.message||e))}
+    }catch(e){b.disabled=false;b.textContent='Share picture';msg($('tvaMsg'),e.message||String(e))}
   };
+  run();
 }
 
 /* ---------- Target vs Achievement (DSO login only) ---------- */
@@ -2702,7 +2610,10 @@ async function targetPage(){
   const num=v=>{const n=Number(String(v==null?'':v).replace(/,/g,''));return Number.isFinite(n)?n:0};
   let D=null,auto=null,roads=[];
   const load=()=>{try{return JSON.parse(localStorage.getItem(KEY($('tvDate').value))||'null')}catch(e){return null}};
-  const save=()=>{try{localStorage.setItem(KEY(D.date),JSON.stringify(D))}catch(e){}};
+  /* the targets are also kept in the database (table dso_targets) so the Admin can see all DSOs in one report */
+  let dbT=null;
+  const saveDb=()=>{clearTimeout(dbT);dbT=setTimeout(async()=>{try{if(D)await db.from('dso_targets').upsert({day:D.date,dso_id:String(dso.id),data:D,updated_at:new Date().toISOString()},{onConflict:'day,dso_id'})}catch(e){}},700)};
+  const save=()=>{try{localStorage.setItem(KEY(D.date),JSON.stringify(D))}catch(e){}saveDb()};
   const ach=k=>D.man[k]?num(D.ach[k]):(auto?auto[k]:num(D.ach[k]));
   const pct=(a,t)=>t>0?Math.round(a/t*100):null;
   const col=p=>p==null?'#94a3b8':p>=100?'#16a34a':p>=50?'#f59e0b':'#dc2626';
@@ -2733,7 +2644,8 @@ async function targetPage(){
       auto={visit:new Set(rows.map(x=>x.retailer_id).filter(Boolean)).size,memo:sales.length,vol:qty,val:sales.reduce((a,x)=>a+Number(x.total_sales||0),0),coll:rows.reduce((a,x)=>a+Number(x.received_amount||0),0)};
       const cnt={};rows.forEach(x=>{if(x.road_id)cnt[x.road_id]=(cnt[x.road_id]||0)+1});
       const topRoad=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
-      const sv=load();
+      let sv=load();
+      try{const r=await db.from('dso_targets').select('data').eq('day',date).eq('dso_id',String(dso.id)).maybeSingle();if(r&&r.data&&r.data.data)sv=r.data.data}catch(e){}
       D=sv||{date,road:'',shops:'',tar:{},ach:{},man:{}};
       D.date=date;D.tar=D.tar||{};D.ach=D.ach||{};D.man=D.man||{};
       if(!D.road&&topRoad)D.road=topRoad[0];
