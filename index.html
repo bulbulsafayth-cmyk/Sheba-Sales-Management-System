@@ -267,7 +267,7 @@ table.crt td.cract button{display:block;width:100%;margin:0 0 3px;padding:3px 4p
 .shcalc .ctc{border-bottom:2px solid #000;margin-bottom:8px;padding:4px 0}.shcalc .ctc b{flex:1}.shcalc .ctc .cadd{margin:0;white-space:nowrap}</style></head>
 <body>
 <div id="loginView" class="login-wrap"><div class="login"><h1>Sheba Distribution Sales &amp; Credit Management System</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
-<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="attend">⏱ &nbsp; Attendance</button><button data-page="target">◉ &nbsp; Target vs Achievement</button><button data-page="cash">▤ &nbsp; Daily Cash Status</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
+<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="attend">⏱ &nbsp; Attendance</button><button data-page="roadplan">⌖ &nbsp; Road Plan</button><button data-page="target">◉ &nbsp; Target vs Achievement</button><button data-page="cash">▤ &nbsp; Daily Cash Status</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
 <script>
 const SUPABASE_URL='https://nvnogsganemysvbqmcpo.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_tyWf1VnXMzNVBs22Qgs3wg_SBy6HegJ';
@@ -362,7 +362,7 @@ $('dsoContinueBtn').onclick=async()=>{
 };
 $('backLoginBtn').onclick=async()=>{await db.auth.signOut();store.del('dsoId');store.del('loggedDso');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
 $('logoutBtn').onclick=async()=>{stopLocTracking();stopApprovalWatch();currentDso=null;store.del('dsoId');store.del('loggedDso');await db.auth.signOut();$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
-const DSO_PAGES=['dashboard','sales','reports','sheet','credit','target'];
+const DSO_PAGES=['dashboard','sales','reports','sheet','credit','target','roadplan'];
 function showApp(mode='admin'){
   userMode=mode;$('loginView').classList.add('hidden');$('appView').classList.remove('hidden');
   if(!window._bfNames){window._bfNames=1;addBrandNames()}
@@ -373,8 +373,8 @@ function showApp(mode='admin'){
   if(mode==='admin')startApprovalWatch();else stopApprovalWatch();
 }
 $('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(b)go(b.dataset.page)});
-const titles={attend:'Attendance Report',tvall:'Target vs Achievement',dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location',cash:'Daily Cash Status',target:'Target vs Achievement'};
-const pages={attend:()=>attendPage(),tvall:()=>tvAdminPage(),dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage(),dsoloc:()=>dsoLocPage(),cash:()=>cashPage(),target:()=>targetPage()};
+const titles={roadplan:'Road Plan',attend:'Attendance Report',tvall:'Target vs Achievement',dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location',cash:'Daily Cash Status',target:'Target vs Achievement'};
+const pages={roadplan:()=>roadPlanPage(),attend:()=>attendPage(),tvall:()=>tvAdminPage(),dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage(),dsoloc:()=>dsoLocPage(),cash:()=>cashPage(),target:()=>targetPage()};
 function go(p,arg){
   if(userMode==='dso'&&!DSO_PAGES.includes(p))p='sales';
   if(userMode!=='dso'&&p==='target')p='dashboard';
@@ -2609,9 +2609,9 @@ async function attendPage(){
       const rem=await db.from('att_remarks').select('staff_id,text').eq('day',date);
       if(tok!==navToken)return;
       const RM={};(rem.data||[]).forEach(x=>RM[x.staff_id]=x.text);
-      const first=new Map(),last=new Map();/* ac|day -> earliest minute */
+      const first=new Map(),last=new Map(),allP=new Map();/* ac|day -> earliest minute */
       const nz=v=>String(v==null?'':v).trim().replace(/\.0+$/,'').replace(/^0+(?=\d)/,'');
-      logs.forEach(l=>{const t=String(l.punch),day=t.slice(0,10),mi=+t.slice(11,13)*60+(+t.slice(14,16));const k=nz(l.ac_no)+'|'+day;if(!first.has(k)||mi<first.get(k))first.set(k,mi);if(!last.has(k)||mi>last.get(k))last.set(k,mi)});
+      logs.forEach(l=>{const t=String(l.punch),day=t.slice(0,10),mi=+t.slice(11,13)*60+(+t.slice(14,16));const k=nz(l.ac_no)+'|'+day;if(!first.has(k)||mi<first.get(k))first.set(k,mi);if(!last.has(k)||mi>last.get(k))last.set(k,mi);if(day===date){if(!allP.has(k))allP.set(k,[]);allP.get(k).push(mi)}});
       /* the first punch of the day is the office-in punch; if it comes at or after 5:00 PM it is an out punch, so the day counts as Absent */
       const IN_CUTOFF=17*60,inT=k=>{const t=first.get(k);return t!=null&&t>=IN_CUTOFF?undefined:t};
       const rows=STAFF.filter(s=>s.active).map(s=>{
@@ -2639,9 +2639,24 @@ async function attendPage(){
       });
       body+=`<tr class="tot"><td colspan="4">Total</td><td>${tw}</td><td></td><td></td><td>${ta}</td><td>${tp}</td><td>${tm}</td><td></td></tr>`;
       x.push(['','Total','','',tw,'','',ta,tp,tm,'']);
-      SHEET={x,title,date};
+      /* Management Team: 4 finger punches a day = Office In, Lunch Out, Lunch In, Office Out */
+      const LUNCH_NAMES=['deluarhosen','sultanahmed','safayth','joynulabedin','monirulislam'],nn=v=>String(v||'').toLowerCase().replace(/[^a-z]/g,'');
+      const lunchRows=rows.filter(r=>r.s.dept==='Management Team'||LUNCH_NAMES.some(n=>nn(r.s.name).includes(n)));
+      const slot=r=>{/* merge double scans (within 2 min), then name the punches in order */
+        const raw=(r.ac?allP.get(r.ac+'|'+date):null)||[],p=[...raw].sort((a,b)=>a-b).filter((v,i,a)=>i===0||v-a[i-1]>2);
+        let o={in:null,lo:null,li:null,out:null};if(!p.length||p[0]>=IN_CUTOFF)return o;
+        o.in=p[0];const rest=p.slice(1);
+        if(rest.length&&(rest.length>=3||rest[rest.length-1]>=16*60)){o.out=rest.pop()}
+        if(rest.length)o.lo=rest[0];if(rest.length>1)o.li=rest[1];return o};
+      let lunchHtml='';const lx=[['SL','Name','Office In','Lunch Out','Lunch In','Lunch Time (min)','Office Out']];
+      if(lunchRows.length){
+        let lb='';lunchRows.forEach((r,i)=>{const o=isOff?{}:slot(r),c=v=>v==null?'-':hm(v),lt=(o.lo!=null&&o.li!=null)?o.li-o.lo:null;
+          lb+=`<tr><td>${i+1}</td><td class="nm">${esc(r.s.name)}</td><td class="${o.in!=null&&o.in>540?'late':''}">${isOff?'Off':c(o.in)}</td><td>${isOff?'Off':c(o.lo)}</td><td>${isOff?'Off':c(o.li)}</td><td>${lt==null?'-':'<b>'+lt+'</b>'}</td><td>${isOff?'Off':c(o.out)}</td></tr>`;
+          lx.push([i+1,r.s.name,isOff?'Off':o.in==null?'':hm(o.in),isOff?'Off':o.lo==null?'':hm(o.lo),isOff?'Off':o.li==null?'':hm(o.li),lt==null?'':lt,isOff?'Off':o.out==null?'':hm(o.out)])});
+        lunchHtml=`<table class="at" style="margin-top:14px;min-width:0"><thead><tr><th class="t2" colspan="7" style="background:#00c8a0">Management Team - Lunch In / Out (${esc(title.replace('Attendance Report_',''))})</th></tr><tr><th>SL</th><th>Name</th><th>Office In</th><th>Lunch Out</th><th>Lunch In</th><th>Lunch Time (min)</th><th>Office Out</th></tr></thead><tbody>${lb}</tbody></table>`}
+      SHEET={x,title,date,lx:lunchRows.length?lx:null};
       $('atOut').innerHTML=`<table class="at" id="atTbl"><thead><tr><th class="t1" colspan="11"><img src="${LOGO}" alt=""></th></tr><tr><th class="t2" colspan="11" style="background:#ffff00">${esc(title)}</th></tr><tr><th class="t3" colspan="11" style="background:#00c8a0"></th></tr>
-        <tr><th>SL</th><th>Name</th><th>Department</th><th>Office Sim Number</th><th>Total Working Day</th><th>Today Present Time</th><th>Today Out Time</th><th>Total Absent</th><th>Penalty (Today)</th><th>Penalty (Month)</th><th>Remarks</th></tr></thead><tbody>${body}</tbody></table>`;
+        <tr><th>SL</th><th>Name</th><th>Department</th><th>Office Sim Number</th><th>Total Working Day</th><th>Today Present Time</th><th>Today Out Time</th><th>Total Absent</th><th>Penalty (Today)</th><th>Penalty (Month)</th><th>Remarks</th></tr></thead><tbody>${body}</tbody></table>`+lunchHtml;
     }catch(e){msg($('atMsg'),e.message||String(e))}
   };
   $('atOut').addEventListener('change',async e=>{
@@ -2670,7 +2685,7 @@ async function attendPage(){
   $('atDate').value=today();$('atGo').onclick=run;$('atDate').onchange=run;$('atUp').onclick=upload;
   $('atFile').onchange=()=>{if($('atFile').files[0])upload()};
   $('atPrint').onclick=()=>window.print();
-  $('atXls').onclick=()=>{if(!SHEET)return;try{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([[SHEET.title],[],...SHEET.x]),'Attendance');XLSX.writeFile(wb,'Attendance_'+SHEET.date+'.xlsx')}catch(e){msg($('atMsg'),'Could not make the Excel file: '+(e.message||e))}};
+  $('atXls').onclick=()=>{if(!SHEET)return;try{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([[SHEET.title],[],...SHEET.x]),'Attendance');if(SHEET.lx)XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Management Team - Lunch In / Out'],[],...SHEET.lx]),'Lunch In-Out');XLSX.writeFile(wb,'Attendance_'+SHEET.date+'.xlsx')}catch(e){msg($('atMsg'),'Could not make the Excel file: '+(e.message||e))}};
   const sendImg=async file=>{
     if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Attendance Report'});return}
     const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),8000);
@@ -2691,6 +2706,17 @@ async function attendPage(){
   };
   run();
 }
+
+/* ---------- Sub roads of the Target vs Achievement entry (from the weekly road plans). Add or rename places here. ---------- */
+/* 're' decides which road (name / report group / office on the Roads page) gets which list; Lohagara is checked first */
+const SUB_ROADS=[
+  {title:'Lohagara road',re:/loha|keranihat|dohazari|satkhania|bandarban|pekua|kutubdia|anwara|banskhali|padowa/i,subs:['Lohagara','Keranihat','Dohazari','Satkhania','Padowa','Pekua','Kutubdia','Anwara','Banskhali','Bandarban']},
+  {title:'Ukhiya, Hnilla & Teknaf',re:/ukhi|teknaf|hnil|court ?baz|kut[uo]p|palongkhali/i,subs:['Hnilla/Teknaf','Ukhiya-Court Bazar','Court Bazar-Kutupalong','Kutupalong-Palongkhali']},
+  {title:'Ramu, Eidgha & Chakaria',re:/ramu|eidg|chaka|choko|badork|materbari|\blama\b|alik/i,subs:['Ramu','Eidgha','Eidgor','Chakaria','Badorkhali + Materbari','Lama/Alikhadom']},
+  {title:'Proper Market & Moheshkhali',re:/proper|heshkhali/i,subs:['Proper Market','Moheshkhali']}
+];
+const subRoadGroup=r=>r?SUB_ROADS.find(g=>g.re.test([r.name,r.report_group,r.office].filter(Boolean).join(' ')))||null:null;
+const subRoadText=d=>d&&Array.isArray(d.subs)?d.subs.join(', '):'';
 
 /* ---------- Target vs Achievement, all DSOs on one sheet (Admin) ---------- */
 async function tvAdminPage(){
@@ -2724,7 +2750,7 @@ async function tvAdminPage(){
         const man=T.man||{},ach=T.ach||{},A={};['visit','memo','vol','val','coll'].forEach(k=>A[k]=man[k]?num(ach[k]):auto[k]);
         const bid=(dsoIds(d,bm,'brand_id')[0])||(mine[0]&&mine[0].brand_id),roadId=T.road||(dsoIds(d,rm,'road_id')[0]);
         const road=RN[roadId];
-        list.push({name:d.full_name,brand:BN[bid]||'',road:road?road.name:'',loh:isLoh(road),shops:num(T.shops),t:{visit:num(tar.visit),memo:num(tar.memo),vol:num(tar.vol),val:num(tar.val),coll:num(tar.coll)},a:A,has:!!tg[String(d.id)]||mine.length>0});
+        list.push({name:d.full_name,brand:BN[bid]||'',road:road?road.name:'',sub:subRoadText(T),loh:isLoh(road),shops:num(T.shops),t:{visit:num(tar.visit),memo:num(tar.memo),vol:num(tar.vol),val:num(tar.val),coll:num(tar.coll)},a:A,has:!!tg[String(d.id)]||mine.length>0});
       });
       const shown=list.filter(x=>x.has);
       const sorter=(a,b)=>BO(a.brand)-BO(b.brand)||String(a.brand).localeCompare(b.brand)||String(a.name).localeCompare(b.name);
@@ -2733,14 +2759,14 @@ async function tvAdminPage(){
       const add=(S,r)=>{S.shops+=r.shops;K.forEach(k=>{S.t[k]+=r.t[k];S.a[k]+=r.a[k]})};
       const rowTds=r=>`<td>${f(r.shops)}</td>`+K.map(k=>`<td class="tg">${f(r.t[k])}</td>`).join('')+K.map(k=>`<td>${f(r.a[k])}</td>`).join('')+K.map(k=>`<td class="pc">${pc(r.a[k],r.t[k])}</td>`).join('');
       const G=zero();let n=0,body='';const x=[];
-      x.push(['SL','Name','Brand',"Today's Road",'Shop Qty','Visit T','Memo T','Qty T','Value T','Collection T','Visit A','Memo A','Qty A','Value A','Collection A','Visit %','Memo %','Qty %','Value %','Collection %']);
+      x.push(['SL','Name','Brand',"Today's Road",'Sub Road','Shop Qty','Visit T','Memo T','Qty T','Value T','Collection T','Visit A','Memo A','Qty A','Value A','Collection A','Visit %','Memo %','Qty %','Value %','Collection %']);
       groups.forEach(g=>{
         if(g.title)body+=`<tr class="grp"><td colspan="21">${esc(g.title)}</td></tr>`;
         const S=zero();
-        g.rows.forEach(r=>{n++;add(S,r);add(G,r);const [bg,fg]=BC(r.brand);body+=`<tr><td style="background:${bg};color:${fg}">${n}</td><td class="nm" style="background:${bg};color:${fg}">${esc(r.name)}</td><td class="nm" style="background:${bg};color:${fg}">${esc(r.brand)}</td><td>${esc(r.road)}</td>${rowTds(r)}<td></td></tr>`;x.push([n,r.name,r.brand,r.road,r.shops,...K.map(k=>r.t[k]),...K.map(k=>r.a[k]),...K.map(k=>pc(r.a[k],r.t[k]))])});
-        body+=`<tr class="sub"><td colspan="4">Sub-Total</td>${rowTds(S)}<td></td></tr>`;x.push(['','Sub-Total','','',S.shops,...K.map(k=>S.t[k]),...K.map(k=>S.a[k]),...K.map(k=>pc(S.a[k],S.t[k]))]);
+        g.rows.forEach(r=>{n++;add(S,r);add(G,r);const [bg,fg]=BC(r.brand);body+=`<tr><td style="background:${bg};color:${fg}">${n}</td><td class="nm" style="background:${bg};color:${fg}">${esc(r.name)}</td><td class="nm" style="background:${bg};color:${fg}">${esc(r.brand)}</td><td>${esc(r.road)}${r.sub?`<div style="font-size:11px;white-space:normal;max-width:220px;margin:2px auto 0">(${esc(r.sub)})</div>`:''}</td>${rowTds(r)}<td></td></tr>`;x.push([n,r.name,r.brand,r.road,r.sub,r.shops,...K.map(k=>r.t[k]),...K.map(k=>r.a[k]),...K.map(k=>pc(r.a[k],r.t[k]))])});
+        body+=`<tr class="sub"><td colspan="4">Sub-Total</td>${rowTds(S)}<td></td></tr>`;x.push(['','Sub-Total','','','',S.shops,...K.map(k=>S.t[k]),...K.map(k=>S.a[k]),...K.map(k=>pc(S.a[k],S.t[k]))]);
       });
-      body+=`<tr class="tot"><td colspan="4">Total</td>${rowTds(G)}<td></td></tr>`;x.push(['','Total','','',G.shops,...K.map(k=>G.t[k]),...K.map(k=>G.a[k]),...K.map(k=>pc(G.a[k],G.t[k]))]);
+      body+=`<tr class="tot"><td colspan="4">Total</td>${rowTds(G)}<td></td></tr>`;x.push(['','Total','','','',G.shops,...K.map(k=>G.t[k]),...K.map(k=>G.a[k]),...K.map(k=>pc(G.a[k],G.t[k]))]);
       const dt=new Date(date+'T00:00:00'),title="Today Target VS Achievement Info "+dt.getDate()+' '+dt.toLocaleDateString('en-GB',{month:'long'})+"'"+dt.getFullYear();
       SHEET={x,title,date};
       $('tvaMsg').innerHTML='';
@@ -2775,12 +2801,82 @@ async function tvAdminPage(){
   run();
 }
 
+
+/* ---------- Road Plan (DSO sees only his own row; Admin sees and edits all) ---------- */
+const RP_DAYS=['Saturday','Sunday','Monday','Tuesday','Wednesday','Thursday'],RP_KEYS=['sat','sun','mon','tue','wed','thu'],RP_JS=[6,0,1,2,3,4];
+const RP_SEED=(()=>{const C='Cox\'s Bazar',L='Lohagara';const r=(g,n,b,d,m)=>({grp:g,name:n,brand:b,sat:d[0],sun:d[1],mon:d[2],tue:d[3],wed:d[4],thu:d[5],mobile:m||'',remarks:''});
+const P='Proper',PM='Proper\nMoheshkhali';
+return [
+r(C,'Sajjad Hosen','OPPO',[P,'Proper\nMoheshkhali (W-2,4)',P,P,P,P]),
+r(C,'Saiful Islam','ZTE, Huawei, Nokia',[P,P,'Proper\nMoheshkhali (W-1,3)',P,P,'Proper\nMoheshkhali (W-2,4)']),
+r(C,'Md. Saiful Islam','Samsung',[P,'Ramu/Eidgha',P,'Ramu/Eidgha',P,'Ramu/Eidgha\nMoheshkhali (W-1,3)']),
+r(C,'Shahajan Habib','vivo',['Proper\nMoheshkhali (W-1,3)',P,P,'Proper\nMoheshkhali (W-2,4)',P,P]),
+r(C,'Jashim Uddin Zia','vivo',['Ramu','Eidgha\nEidgor (W 2)','Chakaria\n(Badorkhali +Materbari (W-1,2,3)','Chakaria\n(Badorkhali +Materbari (W-2)','Ramu/Eidgha\nLama/Alikhadom (W-2,4)','Chakaria\n(Badorkhali +Materbari (W-4)']),
+r(C,'Mukit','OPPO',['Chakaria\nBadorkhali +Materbari (W-2)','Chakaria\nLama/Alikhadom (W-1,3)','Chakaria\nBadorkhali +Materbari (W-4)','Chakaria','Ramu/Eidgha','Chakaria\nBadorkhali +Materbari (W-3)']),
+r(C,'Hamidul Hoque','ZTE/Huawei',['Chakaria\nBadorkhali +Materbari (W-1,3,4)','Chakaria','Ramu/Eidgha','Chakaria\nLama/Alikhadom (W-1,3)','Chakaria','Ramu']),
+r(C,'Md. Imran','Nokia/Salextra',['Eidgha','Chakaria\nLama/Alikhadom (W-2,4)','Ramu/Eidgha','Chakaria','Chakaria\nBadorkhali +Materbari (W-1,2,4)','Ramu/Eidgha']),
+r(C,'Ibne Hasan Nobel','ViVO',['Hnilla/Teknaf','Kutopalong-Palongkhali','Hnilla/Teknaf','Ukhiya-Court Bazar','Hnilla/Teknaf','Court Bazar-Kutupalong']),
+r(C,'Golam Azam Nishat','ZTE/Huawei',['Ukhiya-Court Bazar','Hnilla/Teknaf','Kutopalong-Palongkhali','Ukhiya-Court Bazar','Hnilla/Teknaf','Kutopalong-Palongkhali']),
+r(C,'Sarwar Kamal','Samsung',['Kutopalong-Palongkhali','Ukhiya-Court Bazar','Hnilla/Teknaf','Kutopalong-Palongkhali','Ukhiya-Court Bazar','Hnilla/Teknaf']),
+r(C,'Mubarak Ahmad','OPPO',['Ukhiya-Court Bazar','Hnilla/Teknaf','Court Bazar-Kutupalong','Hnilla/Teknaf','Kutopalong-Palongkhali','Hnilla/Teknaf']),
+r(C,'Md. Joynul','Nokia/Salextra',['Hnilla/Teknaf','Ukhiya-Court Bazar','Kutopalong-Palongkhali','Hnilla/Teknaf','Kutopalong-Palongkhali','Ukhiya-Court Bazar']),
+r(L,'Farhad','Vivo',['Keranihat\nLohagara','Anwara\nBanskhali','Pekua\nKutubdia','Bandarban','Keranihat\nLohagara','Padowa\nLohagara'],'01842869034'),
+r(L,'Didar','Oppo',['Bandarban','Lohagara','Keranihat\nDohazari','Pekua\nLohagara','Kutubdia (W-1,3)\nBandarban/Keranihat','Keranihat\nDohazari'],'01866913958'),
+r(L,'Fahim','ZTE',['Pekua\nKutubdia','Keranihat\nDohazari','Padowa\nLohagara','Keranihat','Pekua\nLohagara','Bandarban'],'01732904953'),
+r(L,'Twfik','Nokia',['Dohazari\nKeranihat\nSatkhania','Pekua\nLohagara','Bandarban\nKeranihat','Dohazari\nKeranihat\nSatkhania','Kutubdia (W-2,4)\nAnwara/Banskhali','Pekua\nLohagara'],'01690046075')
+].map((x,i)=>(x.sort=i+1,x))})();
+async function roadPlanPage(){
+  const tok=navToken,isAdmin=userMode==='admin',dso=currentDso;
+  const nn=s=>String(s||'').toLowerCase().replace(/[^a-z]/g,'');
+  const r=await db.from('road_plans').select('*').order('sort').order('id');
+  if(tok!==navToken)return;
+  const tableMissing=!!r.error,fromDb=!r.error&&(r.data||[]).length>0;
+  const rows=fromDb?r.data:RP_SEED.map(x=>({...x}));
+  if(!document.getElementById('rpCss')){const st=document.createElement('style');st.id='rpCss';st.textContent='.rp-card{background:#fff;border:1px solid #cfd8e6;border-radius:14px;overflow:hidden;max-width:560px;margin:12px auto;box-shadow:0 2px 10px rgba(15,23,42,.08)}.rp-h{background:#14243a;color:#fff;padding:12px 14px}.rp-h b{display:block;font-size:16px}.rp-h span{font-size:12px;opacity:.8}.rp-d{display:flex;gap:10px;padding:9px 14px;border-top:1px solid #e5eaf2;align-items:flex-start}.rp-d>b{width:88px;flex:none;color:#475569;font-size:13px}.rp-d>div{white-space:pre-line;font-weight:600;color:#0f172a}.rp-d.today{background:#fff7cc}.rp-d.today>b{color:#b45309}.rp-grp{margin:16px 0 6px;font-weight:700}.rp-tb{border-collapse:collapse;min-width:1100px;width:100%;background:#fff}.rp-tb th,.rp-tb td{border:1px solid #cbd5e1;padding:4px;vertical-align:top}.rp-tb th{background:#e2e8f0;font-size:12px;text-align:center}.rp-tb textarea,.rp-tb input,.rp-tb select{width:100%;min-width:90px;font:inherit;font-size:12px;padding:4px;border:1px solid #e2e8f0;border-radius:6px}.rp-tb textarea{resize:vertical;min-height:44px}';document.head.appendChild(st)}
+  if(!isAdmin){
+    if(!dso){$('page').innerHTML='<div class="notice error">This page is for DSO logins.</div>';return}
+    let mine=rows.filter(x=>x.dso_id&&String(x.dso_id)===String(dso.id));
+    if(!mine.length){
+      const n=nn(dso.full_name);let c=rows.filter(x=>{const m=nn(x.name);return m&&n&&(m===n||m.includes(n)||n.includes(m))});
+      if(c.length>1){try{const b=await db.from('brands').select('id,name');const bn=(b.data||[]).filter(x=>(dso.brandIds||[]).includes(x.id)).map(x=>nn(x.name));
+        const f=c.filter(x=>{const xb=nn(x.brand);return bn.some(y=>y&&xb&&(xb.includes(y)||y.includes(xb)))});if(f.length)c=f}catch(e){}}
+      mine=c}
+    const td=new Date().getDay();
+    $('page').innerHTML=`<h1 class="page-title">Road Plan</h1>`+(mine.length?mine.map(x=>`<div class="rp-card"><div class="rp-h"><b>${esc(x.name)}</b><span>${esc(x.brand||'')}${x.grp?' · '+esc(x.grp):''}${x.mobile?' · '+esc(x.mobile):''}</span></div>${RP_DAYS.map((d,i)=>`<div class="rp-d ${RP_JS[i]===td?'today':''}"><b>${d}${RP_JS[i]===td?'<br><small>Today</small>':''}</b><div>${esc(x[RP_KEYS[i]]||'-')}</div></div>`).join('')}${x.remarks?`<div class="rp-d"><b>Remarks</b><div>${esc(x.remarks)}</div></div>`:''}</div>`).join(''):'<div class="notice">No road plan is set for you yet. Ask the Admin.</div>');
+    return;
+  }
+  /* Admin: one editable grid */
+  let dsos=[];try{const d=await db.from('dsos').select('id,full_name').eq('is_active',true).order('full_name');dsos=d.data||[]}catch(e){}
+  if(tok!==navToken)return;
+  const row=(x)=>`<tr data-id="${x.id||''}"><td><input class="f-sort" value="${esc(x.sort??'')}" style="min-width:40px;width:46px"></td><td><input class="f-grp" value="${esc(x.grp||'')}"></td><td><input class="f-name" value="${esc(x.name||'')}"></td><td><select class="f-dso"><option value="">auto (by name)</option>${dsos.map(d=>`<option value="${d.id}" ${String(x.dso_id||'')===String(d.id)?'selected':''}>${esc(d.full_name)}</option>`).join('')}</select></td><td><input class="f-brand" value="${esc(x.brand||'')}"></td>${RP_KEYS.map(k=>`<td><textarea class="f-${k}">${esc(x[k]||'')}</textarea></td>`).join('')}<td><input class="f-mobile" value="${esc(x.mobile||'')}"></td><td><input class="f-remarks" value="${esc(x.remarks||'')}"></td><td><button class="secondary rp-del" type="button">✕</button></td></tr>`;
+  $('page').innerHTML=`<h1 class="page-title">Road Plan</h1><div class="sub">Each DSO sees only his own row. If a name does not match automatically, pick the DSO in the "DSO" column.</div><div id="rpMsg"></div>
+  ${tableMissing?'<div class="notice error">Run road-plan-setup.sql in Supabase (SQL Editor) once, then reload. Until then DSOs see the built-in plan below and it cannot be edited.</div>':!fromDb?'<div class="notice">This is the built-in plan. Tap Save to store it in the database, then edit freely.</div>':''}
+  <div class="table-wrap"><table class="rp-tb"><thead><tr><th>#</th><th>Group</th><th>DSO name (as in plan)</th><th>DSO</th><th>Brand</th>${RP_DAYS.map(d=>`<th>${d}</th>`).join('')}<th>Mobile</th><th>Remarks</th><th></th></tr></thead><tbody id="rpBody">${rows.map(row).join('')}</tbody></table></div>
+  <div class="form-actions" style="margin-top:12px"><button class="secondary" id="rpAdd" type="button">+ Add row</button><button id="rpSave" type="button" ${tableMissing?'disabled':''}>Save</button></div>`;
+  let removed=[];
+  $('rpAdd').onclick=()=>{$('rpBody').insertAdjacentHTML('beforeend',row({sort:$('rpBody').children.length+1,grp:(rows[rows.length-1]||{}).grp||''}))};
+  $('rpBody').onclick=e=>{const b=e.target.closest('.rp-del');if(!b)return;const tr=b.closest('tr');if(tr.dataset.id)removed.push(Number(tr.dataset.id));tr.remove()};
+  $('rpSave').onclick=async()=>{
+    const b=$('rpSave');b.disabled=true;
+    try{
+      const q=(tr,c)=>tr.querySelector('.f-'+c).value.trim();
+      const recs=[...$('rpBody').children].map((tr,i)=>{const o={grp:q(tr,'grp'),name:q(tr,'name'),brand:q(tr,'brand'),mobile:q(tr,'mobile'),remarks:q(tr,'remarks'),sort:Number(q(tr,'sort'))||i+1,dso_id:q(tr,'dso')||null};RP_KEYS.forEach(k=>o[k]=tr.querySelector('.f-'+k).value.trim());if(tr.dataset.id)o.id=Number(tr.dataset.id);return o}).filter(o=>o.name);
+      if(removed.length){const d=await db.from('road_plans').delete().in('id',removed);if(d.error)throw d.error;removed=[]}
+      const old=recs.filter(o=>o.id),nw=recs.filter(o=>!o.id);
+      if(old.length){const u=await db.from('road_plans').upsert(old);if(u.error)throw u.error}
+      if(nw.length){const u=await db.from('road_plans').insert(nw);if(u.error)throw u.error}
+      msg($('rpMsg'),'Saved.','success');
+      if(tok===navToken)roadPlanPage();
+    }catch(e){msg($('rpMsg'),e.message||String(e))}finally{b.disabled=false}
+  };
+}
+
 /* ---------- Target vs Achievement (DSO login only) ---------- */
 async function targetPage(){
   const tok=navToken,dso=currentDso;
   if(!dso){$('page').innerHTML='<div class="notice error">This page is for DSO logins.</div>';return}
-  if(!document.getElementById('tvCss')){const st=document.createElement('style');st.id='tvCss';st.textContent='.tv-card{background:#fff;color:#0f172a;border-radius:16px;overflow:hidden;max-width:520px;margin:14px auto;border:1px solid #cfd8e6;box-shadow:0 10px 30px -14px #0006}.tv-hd{background:linear-gradient(135deg,#0b3a8f,#2563eb);color:#fff;padding:14px 18px}.tv-hd small{opacity:.85;display:block;font-size:12px}.tv-hd b{font-size:19px;display:block;margin-top:2px}.tv-meta{display:flex;flex-wrap:wrap;gap:6px 18px;padding:10px 18px;background:#eef3fc;font-size:13px;font-weight:600}.tv-meta span{white-space:nowrap}.tv-row{padding:10px 18px;border-top:1px solid #e5eaf3}.tv-t{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.tv-t b{font-size:14px}.tv-t em{font-style:normal;font-weight:800;font-size:13px}.tv-v{display:flex;gap:14px;margin:4px 0 6px;font-size:13px}.tv-v div{flex:1}.tv-v small{display:block;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:.04em}.tv-v strong{font-size:17px;font-variant-numeric:tabular-nums}.tv-bar{height:8px;border-radius:99px;background:#e5eaf3;overflow:hidden}.tv-bar i{display:block;height:100%;border-radius:99px}.tv-ft{padding:8px 18px;font-size:11px;color:#64748b;text-align:center;border-top:1px solid #e5eaf3}.tv-form td{padding:5px 6px}.tv-form input{width:100%;min-width:80px}@media print{.tv-card{box-shadow:none;margin:0 auto}}';document.head.appendChild(st)}
-  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Target vs Achievement</h1><div class="sub">Fill your targets, check the achievements (taken from your sales entries, you can correct them) and share the report.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="tvDate"></div><div><label>Road name</label><select id="tvRoad"></select></div><div><label>Shop quantity</label><input type="number" id="tvShops" step="any" placeholder="Total shops on the road"></div></div><div class="table-wrap" style="margin-top:10px"><table class="tv-form"><thead><tr><th></th><th>Target</th><th>Achievement</th></tr></thead><tbody id="tvRows"></tbody></table></div><div class="form-actions" style="margin-top:12px"><button id="tvImg">Share picture</button><button id="tvSave">Save</button><button id="tvTxt" class="secondary">Share as text</button><button id="tvPrint" class="secondary">Print</button><button id="tvAuto" class="secondary">Use sales figures</button></div><div id="tvMsg"></div></div></div><div id="tvCard"></div>`;
+  if(!document.getElementById('tvCss')){const st=document.createElement('style');st.id='tvCss';st.textContent='.tv-card{background:#fff;color:#0f172a;border-radius:16px;overflow:hidden;max-width:520px;margin:14px auto;border:1px solid #cfd8e6;box-shadow:0 10px 30px -14px #0006}.tv-hd{background:linear-gradient(135deg,#0b3a8f,#2563eb);color:#fff;padding:14px 18px}.tv-hd small{opacity:.85;display:block;font-size:12px}.tv-hd b{font-size:19px;display:block;margin-top:2px}.tv-meta{display:flex;flex-wrap:wrap;gap:6px 18px;padding:10px 18px;background:#eef3fc;font-size:13px;font-weight:600}.tv-meta span{white-space:nowrap}.tv-row{padding:10px 18px;border-top:1px solid #e5eaf3}.tv-t{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.tv-t b{font-size:14px}.tv-t em{font-style:normal;font-weight:800;font-size:13px}.tv-v{display:flex;gap:14px;margin:4px 0 6px;font-size:13px}.tv-v div{flex:1}.tv-v small{display:block;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:.04em}.tv-v strong{font-size:17px;font-variant-numeric:tabular-nums}.tv-bar{height:8px;border-radius:99px;background:#e5eaf3;overflow:hidden}.tv-bar i{display:block;height:100%;border-radius:99px}.tv-ft{padding:8px 18px;font-size:11px;color:#64748b;text-align:center;border-top:1px solid #e5eaf3}.tv-subs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}.tv-subs label{display:flex;align-items:center;gap:6px;margin:0;padding:8px 12px;border:1px solid #d9e1ed;border-radius:9px;background:#fff;color:#182338;font-size:13px;cursor:pointer}.tv-subs input{width:auto}.tv-form td{padding:5px 6px}.tv-form input{width:100%;min-width:80px}@media print{.tv-card{box-shadow:none;margin:0 auto}}';document.head.appendChild(st)}
+  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Target vs Achievement</h1><div class="sub">Fill your targets, check the achievements (taken from your sales entries, you can correct them) and share the report.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="tvDate"></div><div><label>Road name</label><select id="tvRoad"></select></div><div><label>Shop quantity</label><input type="number" id="tvShops" step="any" placeholder="Total shops on the road"></div></div><div id="tvSubBox"></div><div class="table-wrap" style="margin-top:10px"><table class="tv-form"><thead><tr><th></th><th>Target</th><th>Achievement</th></tr></thead><tbody id="tvRows"></tbody></table></div><div class="form-actions" style="margin-top:12px"><button id="tvImg">Share picture</button><button id="tvSave">Save</button><button id="tvTxt" class="secondary">Share as text</button><button id="tvPrint" class="secondary">Print</button><button id="tvAuto" class="secondary">Use sales figures</button></div><div id="tvMsg"></div></div></div><div id="tvCard"></div>`;
   const KEY=(d)=>'dsoTarget|'+dso.id+'|'+d;
   const M=[['visit','Shop visit','n'],['memo','Memo','n'],['vol','Sales volume','n'],['val','Sales value','t'],['coll','Collection','t']];
   const f=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
@@ -2799,18 +2895,25 @@ async function targetPage(){
   const card=()=>{
     const rn=(roads.find(x=>String(x.id)===String(D.road))||{}).name||'—';
     const rows=M.map(([k,lb])=>{const t=num(D.tar[k]),a=ach(k),p=pct(a,t);return `<div class="tv-row"><div class="tv-t"><b>${lb}</b><em style="color:${col(p)}">${p==null?'':p+'%'}</em></div><div class="tv-v"><div><small>Target</small><strong>${f(t)}</strong></div><div><small>Achievement</small><strong>${f(a)}</strong></div></div><div class="tv-bar"><i style="width:${Math.min(100,p||0)}%;background:${col(p)}"></i></div></div>`}).join('');
-    $('tvCard').innerHTML=`<div class="tv-card" id="tvCardBox"><div class="tv-hd"><small>${esc(COMPANY.name)}</small><b>Today's Target vs Achievement</b></div><div class="tv-meta"><span>DSO: ${esc(dso.full_name||'')}</span><span>Date: ${esc(fmtDate(D.date))}</span><span>Road: ${esc(rn)}</span><span>Shop quantity: ${f(num(D.shops))}</span></div>${rows}<div class="tv-ft">Sheba Distribution Sales &amp; Credit Management System</div></div>`;
+    $('tvCard').innerHTML=`<div class="tv-card" id="tvCardBox"><div class="tv-hd"><small>${esc(COMPANY.name)}</small><b>Today's Target vs Achievement</b></div><div class="tv-meta"><span>DSO: ${esc(dso.full_name||'')}</span><span>Date: ${esc(fmtDate(D.date))}</span><span>Road: ${esc(rn)}</span>${subRoadText(D)?`<span style="white-space:normal">Sub road: ${esc(subRoadText(D))}</span>`:''}<span>Shop quantity: ${f(num(D.shops))}</span></div>${rows}<div class="tv-ft">Sheba Distribution Sales &amp; Credit Management System</div></div>`;
   };
   const rowsHtml=()=>{
     $('tvRows').innerHTML=M.map(([k,lb])=>`<tr><td><b>${lb}</b></td><td><input data-k="${k}" data-w="tar" type="number" step="any" value="${D.tar[k]||''}"></td><td><input data-k="${k}" data-w="ach" type="number" step="any" value="${ach(k)||''}"><div class="muted" style="font-size:11px">${D.man[k]?'edited':'from sales'}</div></td></tr>`).join('');
   };
   const text=()=>{
     const rn=(roads.find(x=>String(x.id)===String(D.road))||{}).name||'—';
-    const o=["Today's target vs. achievement",'DSO: '+(dso.full_name||''),'Date: '+fmtDate(D.date),'','Road name: '+rn,'Shop quantity: '+f(num(D.shops))];
+    const o=["Today's target vs. achievement",'DSO: '+(dso.full_name||''),'Date: '+fmtDate(D.date),'','Road name: '+rn,...(subRoadText(D)?['Sub road: '+subRoadText(D)]:[]),'Shop quantity: '+f(num(D.shops))];
     M.forEach(([k,lb])=>{const t=num(D.tar[k]),a=ach(k),p=pct(a,t);o.push(lb+' target: '+f(t),lb+' achievement: '+f(a)+(p==null?'':' ('+p+'%)'))});
     return o.join('\n');
   };
-  const draw=()=>{rowsHtml();card()};
+  /* sub road tick boxes under the chosen road; a road that matches no list shows every list */
+  const subBox=()=>{
+    const r=roads.find(x=>String(x.id)===String(D.road));
+    if(!r){$('tvSubBox').innerHTML='';return}
+    const g=subRoadGroup(r);
+    $('tvSubBox').innerHTML='<label>Sub road (tick one or more)</label>'+(g?[g]:SUB_ROADS).map(x=>`${g?'':`<div class="muted" style="font-size:12px;margin:4px 0">${esc(x.title)}</div>`}<div class="tv-subs">${x.subs.map(v=>`<label><input type="checkbox" value="${esc(v)}" ${D.subs.includes(v)?'checked':''}> ${esc(v)}</label>`).join('')}</div>`).join('');
+  };
+  const draw=()=>{subBox();rowsHtml();card()};
   const init=async()=>{
     const date=$('tvDate').value;if(!date)return;
     $('tvMsg').innerHTML='<div class="notice">Loading…</div>';
@@ -2826,7 +2929,7 @@ async function targetPage(){
       let sv=load();
       try{const r=await db.from('dso_targets').select('data').eq('day',date).eq('dso_id',String(dso.id)).maybeSingle();if(r&&r.data&&r.data.data)sv=r.data.data}catch(e){}
       D=sv||{date,road:'',shops:'',tar:{},ach:{},man:{}};
-      D.date=date;D.tar=D.tar||{};D.ach=D.ach||{};D.man=D.man||{};
+      D.date=date;D.subs=Array.isArray(D.subs)?D.subs:[];D.tar=D.tar||{};D.ach=D.ach||{};D.man=D.man||{};
       if(!D.road&&topRoad)D.road=topRoad[0];
       $('tvRoad').innerHTML='<option value="">Select road</option>'+roads.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
       $('tvRoad').value=D.road||'';$('tvShops').value=D.shops||'';
@@ -2834,7 +2937,8 @@ async function targetPage(){
     }catch(e){msg($('tvMsg'),e.message||String(e))}
   };
   $('tvDate').value=today();$('tvDate').onchange=init;
-  $('tvRoad').onchange=()=>{if(!D)return;D.road=$('tvRoad').value;save();card()};
+  $('tvRoad').onchange=()=>{if(!D)return;D.road=$('tvRoad').value;D.subs=[];save();subBox();card()};
+  $('tvSubBox').onchange=()=>{if(!D)return;D.subs=[...$('tvSubBox').querySelectorAll('input:checked')].map(i=>i.value);save();card()};
   $('tvShops').oninput=()=>{if(!D)return;D.shops=$('tvShops').value;save();card()};
   $('tvRows').oninput=e=>{const i=e.target.closest('input[data-k]');if(!i||!D)return;const k=i.dataset.k;if(i.dataset.w==='tar')D.tar[k]=i.value;else{D.ach[k]=i.value;D.man[k]=true}save();card()};
   $('tvAuto').onclick=()=>{if(!D)return;D.man={};D.ach={};save();draw()};
