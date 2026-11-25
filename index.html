@@ -2602,8 +2602,6 @@ async function attendPage(){
       if(!STAFF.length){$('atOut').innerHTML='';$('atStaff').style.display='block';await staffPanel();return msg($('atMsg'),'The staff list is empty. Tap "Load the 21 names" below, then check the machine numbers.','success')}
       const D=new Date(date+'T00:00:00'),m1=new Date(D.getFullYear(),D.getMonth(),1),days=[];
       for(let d=new Date(m1);d<=D;d.setDate(d.getDate()+1))if(d.getDay()!==OFFDAY)days.push(ymd(d));
-      const nowD=new Date(),nowMin=nowD.getHours()*60+nowD.getMinutes(),pending=date>ymd(nowD)||(date===ymd(nowD)&&nowMin<660);/* before 11:00 AM today: not yet Absent */
-      clearTimeout(window.__atT);if(date===ymd(nowD)&&nowMin<660)window.__atT=setTimeout(()=>{if(tok===navToken)run()},(660-nowMin)*60000+1000);
       const isOff=D.getDay()===OFFDAY,next=new Date(D);next.setDate(next.getDate()+1);
       const logs=await fetchAll(()=>db.from('att_punches').select('ac_no,punch').gte('punch',ymd(m1)+'T00:00:00').lt('punch',ymd(next)+'T00:00:00').order('id'));
       const rem=await db.from('att_remarks').select('staff_id,text').eq('day',date);
@@ -2613,7 +2611,7 @@ async function attendPage(){
       logs.forEach(l=>{const t=String(l.punch),day=t.slice(0,10),mi=+t.slice(11,13)*60+(+t.slice(14,16));const k=String(l.ac_no)+'|'+day;if(!first.has(k)||mi<first.get(k))first.set(k,mi)});
       const rows=STAFF.filter(s=>s.active).map(s=>{
         const ac=String(s.ac_no||'').trim();let present=0,absent=0,pen=0,today=null;
-        days.forEach(d=>{const t=ac?first.get(ac+'|'+d):undefined;if(t==null){if(!(d===date&&pending))absent++}else{present++;pen+=penalty(t)}});
+        days.forEach(d=>{const t=ac?first.get(ac+'|'+d):undefined;if(t==null)absent++;else{present++;pen+=penalty(t)}});
         const t0=ac?first.get(ac+'|'+date):undefined;
         return {s,ac,absent,pen,today:t0==null?null:t0,tp:(t0==null||isOff)?0:penalty(t0),working:days.length};
       });
@@ -2625,9 +2623,9 @@ async function attendPage(){
       let body='',tw=0,ta=0,tp=0,tm=0;const x=[['SL','Name','Department','Office Sim Number','Total Working Day','Today Present Time','Total Absent','Penalty (Today)','Penalty (Month)','Remarks']];
       rows.forEach((r,i)=>{
         tw+=r.working;ta+=r.absent;tp+=r.tp;tm+=r.pen;
-        const cell=isOff?'<td class="off">Off</td>':r.today==null?(pending?'<td>-</td>':'<td class="abs">Absent</td>'):`<td class="${r.today>540?'late':''}">${hm(r.today)}</td>`;
+        const cell=isOff?'<td class="off">Off</td>':r.today==null?'<td class="abs">Absent</td>':`<td class="${r.today>540?'late':''}">${hm(r.today)}</td>`;
         body+=`<tr><td style="background:${col(i)}">${i+1}</td><td class="nm">${esc(r.s.name)}</td><td>${esc(r.s.dept)}</td><td>${esc(r.s.sim||'_')}</td><td><b>${r.working}</b></td>${cell}<td class="${r.absent?'red':''}"><b>${r.absent}</b></td><td>${r.tp?'<b>'+r.tp+'</b>':'0'}</td><td>${r.pen?'<b>'+r.pen+'</b>':'0'}</td><td><input class="rm" data-id="${r.s.id}" value="${esc(RM[r.s.id]||'')}"></td></tr>`;
-        x.push([i+1,r.s.name,r.s.dept,r.s.sim||'',r.working,isOff?'Off':r.today==null?(pending?'':'Absent'):hm(r.today),r.absent,r.tp,r.pen,RM[r.s.id]||'']);
+        x.push([i+1,r.s.name,r.s.dept,r.s.sim||'',r.working,isOff?'Off':r.today==null?'Absent':hm(r.today),r.absent,r.tp,r.pen,RM[r.s.id]||'']);
       });
       body+=`<tr class="tot"><td colspan="4">Total</td><td>${tw}</td><td></td><td>${ta}</td><td>${tp}</td><td>${tm}</td><td></td></tr>`;
       x.push(['','Total','','',tw,'',ta,tp,tm,'']);
