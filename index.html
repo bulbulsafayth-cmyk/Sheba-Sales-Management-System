@@ -2603,7 +2603,7 @@ async function targetPage(){
   const tok=navToken,dso=currentDso;
   if(!dso){$('page').innerHTML='<div class="notice error">This page is for DSO logins.</div>';return}
   if(!document.getElementById('tvCss')){const st=document.createElement('style');st.id='tvCss';st.textContent='.tv-card{background:#fff;color:#0f172a;border-radius:16px;overflow:hidden;max-width:520px;margin:14px auto;border:1px solid #cfd8e6;box-shadow:0 10px 30px -14px #0006}.tv-hd{background:linear-gradient(135deg,#0b3a8f,#2563eb);color:#fff;padding:14px 18px}.tv-hd small{opacity:.85;display:block;font-size:12px}.tv-hd b{font-size:19px;display:block;margin-top:2px}.tv-meta{display:flex;flex-wrap:wrap;gap:6px 18px;padding:10px 18px;background:#eef3fc;font-size:13px;font-weight:600}.tv-meta span{white-space:nowrap}.tv-row{padding:10px 18px;border-top:1px solid #e5eaf3}.tv-t{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.tv-t b{font-size:14px}.tv-t em{font-style:normal;font-weight:800;font-size:13px}.tv-v{display:flex;gap:14px;margin:4px 0 6px;font-size:13px}.tv-v div{flex:1}.tv-v small{display:block;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:.04em}.tv-v strong{font-size:17px;font-variant-numeric:tabular-nums}.tv-bar{height:8px;border-radius:99px;background:#e5eaf3;overflow:hidden}.tv-bar i{display:block;height:100%;border-radius:99px}.tv-ft{padding:8px 18px;font-size:11px;color:#64748b;text-align:center;border-top:1px solid #e5eaf3}.tv-form td{padding:5px 6px}.tv-form input{width:100%;min-width:80px}@media print{.tv-card{box-shadow:none;margin:0 auto}}';document.head.appendChild(st)}
-  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Target vs Achievement</h1><div class="sub">Fill your targets, check the achievements (taken from your sales entries, you can correct them) and share the report.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="tvDate"></div><div><label>Road name</label><select id="tvRoad"></select></div><div><label>Shop quantity</label><input type="number" id="tvShops" step="any" placeholder="Total shops on the road"></div></div><div class="table-wrap" style="margin-top:10px"><table class="tv-form"><thead><tr><th></th><th>Target</th><th>Achievement</th></tr></thead><tbody id="tvRows"></tbody></table></div><div class="form-actions" style="margin-top:12px"><button id="tvImg">Share picture</button><button id="tvTxt" class="secondary">Share as text</button><button id="tvPrint" class="secondary">Print</button><button id="tvAuto" class="secondary">Use sales figures</button></div><div id="tvMsg"></div></div></div><div id="tvCard"></div>`;
+  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Target vs Achievement</h1><div class="sub">Fill your targets, check the achievements (taken from your sales entries, you can correct them) and share the report.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="tvDate"></div><div><label>Road name</label><select id="tvRoad"></select></div><div><label>Shop quantity</label><input type="number" id="tvShops" step="any" placeholder="Total shops on the road"></div></div><div class="table-wrap" style="margin-top:10px"><table class="tv-form"><thead><tr><th></th><th>Target</th><th>Achievement</th></tr></thead><tbody id="tvRows"></tbody></table></div><div class="form-actions" style="margin-top:12px"><button id="tvImg">Share picture</button><button id="tvSave">Save</button><button id="tvTxt" class="secondary">Share as text</button><button id="tvPrint" class="secondary">Print</button><button id="tvAuto" class="secondary">Use sales figures</button></div><div id="tvMsg"></div></div></div><div id="tvCard"></div>`;
   const KEY=(d)=>'dsoTarget|'+dso.id+'|'+d;
   const M=[['visit','Shop visit','n'],['memo','Memo','n'],['vol','Sales volume','n'],['val','Sales value','t'],['coll','Collection','t']];
   const f=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
@@ -2659,6 +2659,17 @@ async function targetPage(){
   $('tvShops').oninput=()=>{if(!D)return;D.shops=$('tvShops').value;save();card()};
   $('tvRows').oninput=e=>{const i=e.target.closest('input[data-k]');if(!i||!D)return;const k=i.dataset.k;if(i.dataset.w==='tar')D.tar[k]=i.value;else{D.ach[k]=i.value;D.man[k]=true}save();card()};
   $('tvAuto').onclick=()=>{if(!D)return;D.man={};D.ach={};save();draw()};
+  $('tvSave').onclick=async()=>{
+    if(!D)return;const b=$('tvSave');clearTimeout(dbT);
+    try{localStorage.setItem(KEY(D.date),JSON.stringify(D))}catch(e){}
+    b.disabled=true;b.textContent='Saving…';
+    try{
+      const r=await db.from('dso_targets').upsert({day:D.date,dso_id:String(dso.id),data:D,updated_at:new Date().toISOString()},{onConflict:'day,dso_id'});
+      if(r.error)throw new Error(/relation|does not exist|schema cache/i.test(r.error.message)?'The Admin must first run dso-targets-setup.sql in Supabase. Your figures are kept on this phone.':r.error.message);
+      msg($('tvMsg'),'Saved. The Admin can now see your target and achievement.','success');
+    }catch(e){msg($('tvMsg'),e.message||String(e))}
+    b.disabled=false;b.textContent='Save';
+  };
   $('tvPrint').onclick=()=>{if(D)window.print()};
   $('tvTxt').onclick=()=>{if(D)shareText("Today's target vs. achievement",text())};
   let pend=null;
