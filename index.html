@@ -2610,15 +2610,20 @@ async function attendPage(){
       if(tok!==navToken)return;
       const RM={};(rem.data||[]).forEach(x=>RM[x.staff_id]=x.text);
       const first=new Map();/* ac|day -> earliest minute */
-      logs.forEach(l=>{const t=String(l.punch),day=t.slice(0,10),mi=+t.slice(11,13)*60+(+t.slice(14,16));const k=String(l.ac_no)+'|'+day;if(!first.has(k)||mi<first.get(k))first.set(k,mi)});
+      const nz=v=>String(v==null?'':v).trim().replace(/\.0+$/,'').replace(/^0+(?=\d)/,'');
+      logs.forEach(l=>{const t=String(l.punch),day=t.slice(0,10),mi=+t.slice(11,13)*60+(+t.slice(14,16));const k=nz(l.ac_no)+'|'+day;if(!first.has(k)||mi<first.get(k))first.set(k,mi)});
       const rows=STAFF.filter(s=>s.active).map(s=>{
-        const ac=String(s.ac_no||'').trim();let present=0,absent=0,pen=0,today=null;
+        const ac=nz(s.ac_no);let present=0,absent=0,pen=0,today=null;
         days.forEach(d=>{const t=ac?first.get(ac+'|'+d):undefined;if(t==null){if(!(d===date&&pending))absent++}else{present++;pen+=penalty(t)}});
         const t0=ac?first.get(ac+'|'+date):undefined;
         return {s,ac,absent,pen,today:t0==null?null:t0,tp:(t0==null||isOff)?0:penalty(t0),working:days.length};
       });
-      const unk=new Set();logs.forEach(l=>{if(!STAFF.some(s=>String(s.ac_no||'').trim()===String(l.ac_no)))unk.add(l.ac_no)});
+      const unk=new Set();logs.forEach(l=>{if(!STAFF.some(s=>nz(s.ac_no)===nz(l.ac_no)))unk.add(l.ac_no)});
       $('atMsg').innerHTML='';
+      const dt0=d=>d.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+      const noAc=STAFF.filter(s=>s.active&&!nz(s.ac_no)).map(s=>s.name);
+      if(!logs.length)msg($('atMsg'),'No attendance punches are saved for '+dt0(m1)+' yet, so everyone shows Absent. Upload the attendance file (Upload file) first.');
+      else if(noAc.length)msg($('atMsg'),logs.length+' punches loaded. These people have no machine number, so they show Absent: '+noAc.join(', ')+'. Open "Staff list" and type their number.');
       if(unk.size)msg($('atMsg'),'Machine numbers not linked to any staff: '+[...unk].slice(0,20).join(', ')+'. Open "Staff list" and type the number against the right person.');
       const nRow=rows.length,col=i=>'hsl('+Math.round(i/Math.max(1,nRow-1)*120)+',75%,70%)';
       const dt=D,title='Attendance Report_'+dt.getDate()+' '+dt.toLocaleDateString('en-GB',{month:'long'})+"'"+dt.getFullYear();
