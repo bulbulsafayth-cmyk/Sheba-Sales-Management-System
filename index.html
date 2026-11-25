@@ -2609,14 +2609,17 @@ async function attendPage(){
       const rem=await db.from('att_remarks').select('staff_id,text').eq('day',date);
       if(tok!==navToken)return;
       const RM={};(rem.data||[]).forEach(x=>RM[x.staff_id]=x.text);
-      const first=new Map();/* ac|day -> earliest minute */
+      const first=new Map(),last=new Map();/* ac|day -> earliest minute */
       const nz=v=>String(v==null?'':v).trim().replace(/\.0+$/,'').replace(/^0+(?=\d)/,'');
-      logs.forEach(l=>{const t=String(l.punch),day=t.slice(0,10),mi=+t.slice(11,13)*60+(+t.slice(14,16));const k=nz(l.ac_no)+'|'+day;if(!first.has(k)||mi<first.get(k))first.set(k,mi)});
+      logs.forEach(l=>{const t=String(l.punch),day=t.slice(0,10),mi=+t.slice(11,13)*60+(+t.slice(14,16));const k=nz(l.ac_no)+'|'+day;if(!first.has(k)||mi<first.get(k))first.set(k,mi);if(!last.has(k)||mi>last.get(k))last.set(k,mi)});
+      /* the first punch of the day is the office-in punch; if it comes at or after 5:00 PM it is an out punch, so the day counts as Absent */
+      const IN_CUTOFF=17*60,inT=k=>{const t=first.get(k);return t!=null&&t>=IN_CUTOFF?undefined:t};
       const rows=STAFF.filter(s=>s.active).map(s=>{
         const ac=nz(s.ac_no);let present=0,absent=0,pen=0,today=null;
-        days.forEach(d=>{const t=ac?first.get(ac+'|'+d):undefined;if(t==null){if(!(d===date&&pending))absent++}else{present++;pen+=penalty(t)}});
-        const t0=ac?first.get(ac+'|'+date):undefined;
-        return {s,ac,absent,pen,today:t0==null?null:t0,tp:(t0==null||isOff)?0:penalty(t0),working:days.length};
+        days.forEach(d=>{const t=ac?inT(ac+'|'+d):undefined;if(t==null){if(!(d===date&&pending))absent++}else{present++;pen+=penalty(t)}});
+        const t0=ac?inT(ac+'|'+date):undefined;
+        const L=ac?last.get(ac+'|'+date):undefined,outT=(isOff||L==null)?null:(t0==null?(L>=IN_CUTOFF?L:null):(L-t0>=60?L:null));/* out = last punch of the day, only when it is clearly a different punch (1 hour after the in punch) */
+        return {s,ac,absent,pen,outT,today:t0==null?null:t0,tp:(t0==null||isOff)?0:penalty(t0),working:days.length};
       });
       const unk=new Set();logs.forEach(l=>{if(!STAFF.some(s=>nz(s.ac_no)===nz(l.ac_no)))unk.add(l.ac_no)});
       $('atMsg').innerHTML='';
@@ -2627,18 +2630,18 @@ async function attendPage(){
       if(unk.size)msg($('atMsg'),'Machine numbers not linked to any staff: '+[...unk].slice(0,20).join(', ')+'. Open "Staff list" and type the number against the right person.');
       const nRow=rows.length,col=i=>'hsl('+Math.round(i/Math.max(1,nRow-1)*120)+',75%,70%)';
       const dt=D,title='Attendance Report_'+dt.getDate()+' '+dt.toLocaleDateString('en-GB',{month:'long'})+"'"+dt.getFullYear();
-      let body='',tw=0,ta=0,tp=0,tm=0;const x=[['SL','Name','Department','Office Sim Number','Total Working Day','Today Present Time','Total Absent','Penalty (Today)','Penalty (Month)','Remarks']];
+      let body='',tw=0,ta=0,tp=0,tm=0;const x=[['SL','Name','Department','Office Sim Number','Total Working Day','Today Present Time','Today Out Time','Total Absent','Penalty (Today)','Penalty (Month)','Remarks']];
       rows.forEach((r,i)=>{
         tw+=r.working;ta+=r.absent;tp+=r.tp;tm+=r.pen;
         const cell=isOff?'<td class="off">Off</td>':r.today==null?(pending?'<td>-</td>':'<td class="abs">Absent</td>'):`<td class="${r.today>540?'late':''}">${hm(r.today)}</td>`;
-        body+=`<tr><td style="background:${col(i)}">${i+1}</td><td class="nm">${esc(r.s.name)}</td><td>${esc(r.s.dept)}</td><td>${esc(r.s.sim||'_')}</td><td><b>${r.working}</b></td>${cell}<td class="${r.absent?'red':''}"><b>${r.absent}</b></td><td>${r.tp?'<b>'+r.tp+'</b>':'0'}</td><td>${r.pen?'<b>'+r.pen+'</b>':'0'}</td><td><input class="rm" data-id="${r.s.id}" value="${esc(RM[r.s.id]||'')}"></td></tr>`;
-        x.push([i+1,r.s.name,r.s.dept,r.s.sim||'',r.working,isOff?'Off':r.today==null?(pending?'':'Absent'):hm(r.today),r.absent,r.tp,r.pen,RM[r.s.id]||'']);
+        body+=`<tr><td style="background:${col(i)}">${i+1}</td><td class="nm">${esc(r.s.name)}</td><td>${esc(r.s.dept)}</td><td>${esc(r.s.sim||'_')}</td><td><b>${r.working}</b></td>${cell}<td>${r.outT==null?'':hm(r.outT)}</td><td class="${r.absent?'red':''}"><b>${r.absent}</b></td><td>${r.tp?'<b>'+r.tp+'</b>':'0'}</td><td>${r.pen?'<b>'+r.pen+'</b>':'0'}</td><td><input class="rm" data-id="${r.s.id}" value="${esc(RM[r.s.id]||'')}"></td></tr>`;
+        x.push([i+1,r.s.name,r.s.dept,r.s.sim||'',r.working,isOff?'Off':r.today==null?(pending?'':'Absent'):hm(r.today),r.outT==null?'':hm(r.outT),r.absent,r.tp,r.pen,RM[r.s.id]||'']);
       });
-      body+=`<tr class="tot"><td colspan="4">Total</td><td>${tw}</td><td></td><td>${ta}</td><td>${tp}</td><td>${tm}</td><td></td></tr>`;
-      x.push(['','Total','','',tw,'',ta,tp,tm,'']);
+      body+=`<tr class="tot"><td colspan="4">Total</td><td>${tw}</td><td></td><td></td><td>${ta}</td><td>${tp}</td><td>${tm}</td><td></td></tr>`;
+      x.push(['','Total','','',tw,'','',ta,tp,tm,'']);
       SHEET={x,title,date};
-      $('atOut').innerHTML=`<table class="at" id="atTbl"><thead><tr><th class="t1" colspan="10"><img src="${LOGO}" alt=""></th></tr><tr><th class="t2" colspan="10" style="background:#ffff00">${esc(title)}</th></tr><tr><th class="t3" colspan="10" style="background:#00c8a0"></th></tr>
-        <tr><th>SL</th><th>Name</th><th>Department</th><th>Office Sim Number</th><th>Total Working Day</th><th>Today Present Time</th><th>Total Absent</th><th>Penalty (Today)</th><th>Penalty (Month)</th><th>Remarks</th></tr></thead><tbody>${body}</tbody></table>`;
+      $('atOut').innerHTML=`<table class="at" id="atTbl"><thead><tr><th class="t1" colspan="11"><img src="${LOGO}" alt=""></th></tr><tr><th class="t2" colspan="11" style="background:#ffff00">${esc(title)}</th></tr><tr><th class="t3" colspan="11" style="background:#00c8a0"></th></tr>
+        <tr><th>SL</th><th>Name</th><th>Department</th><th>Office Sim Number</th><th>Total Working Day</th><th>Today Present Time</th><th>Today Out Time</th><th>Total Absent</th><th>Penalty (Today)</th><th>Penalty (Month)</th><th>Remarks</th></tr></thead><tbody>${body}</tbody></table>`;
     }catch(e){msg($('atMsg'),e.message||String(e))}
   };
   $('atOut').addEventListener('change',async e=>{
