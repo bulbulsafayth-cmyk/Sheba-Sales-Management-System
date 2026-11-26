@@ -267,7 +267,7 @@ table.crt td.cract button{display:block;width:100%;margin:0 0 3px;padding:3px 4p
 .shcalc .ctc{border-bottom:2px solid #000;margin-bottom:8px;padding:4px 0}.shcalc .ctc b{flex:1}.shcalc .ctc .cadd{margin:0;white-space:nowrap}@media(max-width:620px){body:not(.rot) .app .nav{flex-wrap:wrap;overflow:visible}body:not(.rot) .app .nav button{flex:1 1 auto}}</style></head>
 <body>
 <div id="loginView" class="login-wrap"><div class="login"><h1>Sheba Distribution Sales &amp; Credit Management System</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option><option value="hr">HR Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
-<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="attend">⏱ &nbsp; Attendance</button><button data-page="target">◉ &nbsp; Target vs Achievement</button><button data-page="plan">⚑ &nbsp; Road Plan</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
+<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small><small style="display:block">Version 26-Nov-B</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="attend">⏱ &nbsp; Attendance</button><button data-page="target">◉ &nbsp; Target vs Achievement</button><button data-page="plan">⚑ &nbsp; Road Plan</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
 <script>
 const SUPABASE_URL='https://nvnogsganemysvbqmcpo.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_tyWf1VnXMzNVBs22Qgs3wg_SBy6HegJ';
@@ -384,7 +384,7 @@ function go(p,arg){
   if(userMode==='dso'&&!DSO_PAGES.includes(p))p='sales';
   if(userMode==='hr'&&!HR_PAGES.includes(p))p='attend';
   if(userMode==='admin'&&p==='attend')p='dashboard';
-  if(userMode!=='dso'&&(p==='target'||p==='plan'))p='dashboard';
+  if(userMode!=='dso'&&['target','plan'].includes(p))p='dashboard';
   currentPage=p;navToken++;
   document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===((p==='sheet'||p==='credit')?'reports':p)));
   $('topTitle').textContent=titles[p];
@@ -2666,27 +2666,35 @@ async function tvAdminPage(){
       if(tok!==navToken)return;
       const byD=new Map();rows.forEach(x=>{(byD.get(String(x.dso_id))||byD.set(String(x.dso_id),[]).get(String(x.dso_id))).push(x)});
       const isLoh=r=>r&&/loha/i.test([r.office,r.name,r.report_group].filter(Boolean).join(' '));
-      const list=[];
+      const list=[],mixed=[];
       dsos.filter(d=>d.is_active!==false||byD.has(String(d.id))||tg[String(d.id)]).forEach(d=>{
-        const T=tg[String(d.id)]||{},tar=T.tar||{},mine=byD.get(String(d.id))||[],sl=mine.filter(x=>!isDueRow(x));
-        const auto={visit:new Set(mine.map(x=>x.retailer_id).filter(Boolean)).size,memo:sl.length,vol:sl.reduce((a,x)=>a+(qtyBy[x.id]||0),0),val:sl.reduce((a,x)=>a+Number(x.total_sales||0),0),coll:mine.reduce((a,x)=>a+Number(x.received_amount||0),0)};
-        const man=T.man||{},ach=T.ach||{},A={};['visit','memo','vol','val','coll'].forEach(k=>A[k]=man[k]?num(ach[k]):auto[k]);
-        const bid=(dsoIds(d,bm,'brand_id')[0])||(mine[0]&&mine[0].brand_id),roadId=T.road||(dsoIds(d,rm,'road_id')[0]);
-        const road=RN[roadId];
-        list.push({name:d.full_name,brand:BN[bid]||'',road:road?road.name:'',sub:subRoadText(T),loh:isLoh(road),shops:num(T.shops),t:{visit:num(tar.visit),memo:num(tar.memo),vol:num(tar.vol),val:num(tar.val),coll:num(tar.coll)},a:A,has:!!tg[String(d.id)]||mine.length>0});
+        const T=tg[String(d.id)]||{},all=byD.get(String(d.id))||[],linked=dsoIds(d,bm,'brand_id');
+        const roadId=T.road||(dsoIds(d,rm,'road_id')[0]),road=RN[roadId];
+        /* two or more brands: always a row for each. A target saved without a brand belongs to neither row; it is listed below the buttons */
+        const split=linked.length>1;
+        if(split&&!T.brands){const L=[['visit','Visit'],['memo','Memo'],['vol','Qty'],['val','Value'],['coll','Collection']],tg0=L.filter(([k])=>String((T.tar||{})[k]??'')!=='').map(([k,l])=>l+' '+T.tar[k]),m0=L.filter(([k])=>(T.man||{})[k]).map(([k,l])=>l+' '+((T.ach||{})[k]??''));
+          if(tg0.length||m0.length)mixed.push(d.full_name+' ('+[tg0.length?'Target: '+tg0.join(', '):'',m0.length?'Typed achievement: '+m0.join(', '):''].filter(Boolean).join('; ')+')')}
+        const bids=split?[...new Set([...linked,...all.map(x=>x.brand_id).filter(Boolean)])].sort((a,b)=>BO(BN[a])-BO(BN[b])||String(BN[a]).localeCompare(String(BN[b]))):[linked[0]||(all[0]&&all[0].brand_id)];
+        bids.forEach((bid,bi)=>{
+          const P=split?((T.brands||{})[bid]||{}):T,tar=P.tar||{},mine=split?all.filter(x=>x.brand_id===bid):all,sl=mine.filter(x=>!isDueRow(x));
+          const auto={visit:new Set(mine.map(x=>x.retailer_id).filter(Boolean)).size,memo:sl.length,vol:sl.reduce((a,x)=>a+(qtyBy[x.id]||0),0),val:sl.reduce((a,x)=>a+Number(x.total_sales||0),0),coll:mine.reduce((a,x)=>a+Number(x.received_amount||0),0)};
+          const man=P.man||{},ach=P.ach||{},A={};['visit','memo','vol','val','coll'].forEach(k=>A[k]=man[k]?num(ach[k]):auto[k]);
+          /* shop quantity belongs to the road, so it is counted once per DSO */
+          list.push({name:d.full_name,brand:BN[bid]||'',road:road?road.name:'',sub:subRoadText(T),loh:isLoh(road),shops:bi?0:num(T.shops),noShops:bi>0,t:{visit:num(tar.visit),memo:num(tar.memo),vol:num(tar.vol),val:num(tar.val),coll:num(tar.coll)},a:A,has:!!tg[String(d.id)]||all.length>0});
+        });
       });
       const shown=list.filter(x=>x.has);
       const sorter=(a,b)=>BO(a.brand)-BO(b.brand)||String(a.brand).localeCompare(b.brand)||String(a.name).localeCompare(b.name);
       const groups=[{title:'',rows:shown.filter(x=>!x.loh).sort(sorter)},{title:'Lohagara Office',rows:shown.filter(x=>x.loh).sort(sorter)}].filter(g=>g.rows.length);
       const K=['visit','memo','vol','val','coll'],zero=()=>({shops:0,t:{visit:0,memo:0,vol:0,val:0,coll:0},a:{visit:0,memo:0,vol:0,val:0,coll:0}});
       const add=(S,r)=>{S.shops+=r.shops;K.forEach(k=>{S.t[k]+=r.t[k];S.a[k]+=r.a[k]})};
-      const rowTds=r=>`<td>${f(r.shops)}</td>`+K.map(k=>`<td class="tg">${f(r.t[k])}</td>`).join('')+K.map(k=>`<td>${f(r.a[k])}</td>`).join('')+K.map(k=>`<td class="pc">${pc(r.a[k],r.t[k])}</td>`).join('');
+      const rowTds=r=>`<td>${r.noShops?'':f(r.shops)}</td>`+K.map(k=>`<td class="tg">${f(r.t[k])}</td>`).join('')+K.map(k=>`<td>${f(r.a[k])}</td>`).join('')+K.map(k=>`<td class="pc">${pc(r.a[k],r.t[k])}</td>`).join('');
       const G=zero();let n=0,body='';const x=[];
       x.push(['SL','Name','Brand',"Today's Road",'Sub Road','Shop Qty','Visit T','Memo T','Qty T','Value T','Collection T','Visit A','Memo A','Qty A','Value A','Collection A','Visit %','Memo %','Qty %','Value %','Collection %']);
       groups.forEach(g=>{
         if(g.title)body+=`<tr class="grp"><td colspan="21">${esc(g.title)}</td></tr>`;
         const S=zero();
-        g.rows.forEach(r=>{n++;add(S,r);add(G,r);const [bg,fg]=BC(r.brand);body+=`<tr><td style="background:${bg};color:${fg}">${n}</td><td class="nm" style="background:${bg};color:${fg}">${esc(r.name)}</td><td class="nm" style="background:${bg};color:${fg}">${esc(r.brand)}</td><td>${esc(r.road)}${r.sub?`<div style="font-size:11px;white-space:normal;max-width:220px;margin:2px auto 0">(${esc(r.sub)})</div>`:''}</td>${rowTds(r)}<td></td></tr>`;x.push([n,r.name,r.brand,r.road,r.sub,r.shops,...K.map(k=>r.t[k]),...K.map(k=>r.a[k]),...K.map(k=>pc(r.a[k],r.t[k]))])});
+        g.rows.forEach(r=>{n++;add(S,r);add(G,r);const [bg,fg]=BC(r.brand);body+=`<tr><td style="background:${bg};color:${fg}">${n}</td><td class="nm" style="background:${bg};color:${fg}">${esc(r.name)}</td><td class="nm" style="background:${bg};color:${fg}">${esc(r.brand)}</td><td>${esc(r.road)}${r.sub?`<div style="font-size:11px;white-space:normal;max-width:220px;margin:2px auto 0">(${esc(r.sub)})</div>`:''}</td>${rowTds(r)}<td></td></tr>`;x.push([n,r.name,r.brand,r.road,r.sub,r.noShops?'':r.shops,...K.map(k=>r.t[k]),...K.map(k=>r.a[k]),...K.map(k=>pc(r.a[k],r.t[k]))])});
         body+=`<tr class="sub"><td colspan="4">Sub-Total</td>${rowTds(S)}<td></td></tr>`;x.push(['','Sub-Total','','','',S.shops,...K.map(k=>S.t[k]),...K.map(k=>S.a[k]),...K.map(k=>pc(S.a[k],S.t[k]))]);
       });
       body+=`<tr class="tot"><td colspan="4">Total</td>${rowTds(G)}<td></td></tr>`;x.push(['','Total','','','',G.shops,...K.map(k=>G.t[k]),...K.map(k=>G.a[k]),...K.map(k=>pc(G.a[k],G.t[k]))]);
@@ -2695,6 +2703,7 @@ async function tvAdminPage(){
       $('tvaMsg').innerHTML='';
       if(missing)msg($('tvaMsg'),'Targets are not saved in the database yet. Run dso-targets-setup.sql in Supabase (SQL Editor). Until then only the achievements are shown.');
       else if(!shown.length)msg($('tvaMsg'),'No DSO has filled a target or made a sale on this date.');
+      if(mixed.length)$('tvaMsg').insertAdjacentHTML('beforeend',`<div class="notice error">Saved without choosing a brand, so these figures are not in the sheet: ${esc(mixed.join(' | '))}. The DSO must select each brand on the Target vs Achievement page and enter its figures.</div>`);
       $('tvaOut').innerHTML=`<table class="tva" id="tvaTbl"><thead><tr><th class="logo" colspan="5"><img src="${LOGO}" alt=""></th><th colspan="16" class="logo"></th></tr><tr><th class="ttl" colspan="21">${esc(title)}</th></tr>
         <tr><th rowspan="2">SL</th><th rowspan="2">Name</th><th rowspan="2">Brand</th><th rowspan="2">Today's Road</th><th rowspan="2">Shop Qty</th><th colspan="5">Morning Target Info</th><th colspan="5">Today Achievement Info</th><th colspan="5">Today Target VS Achievement Info (%)</th><th rowspan="2">Remarks</th></tr>
         <tr>${['Shop Visit','Memo','QTY','Value','Collection'].map(h=>`<th>${h}</th>`).join('').repeat(3)}</tr></thead><tbody>${body}</tbody></table>`;
@@ -2777,12 +2786,19 @@ async function targetPage(){
   const tok=navToken,dso=currentDso;
   if(!dso){$('page').innerHTML='<div class="notice error">This page is for DSO logins.</div>';return}
   if(!document.getElementById('tvCss')){const st=document.createElement('style');st.id='tvCss';st.textContent='.tv-card{background:#fff;color:#0f172a;border-radius:16px;overflow:hidden;max-width:520px;margin:14px auto;border:1px solid #cfd8e6;box-shadow:0 10px 30px -14px #0006}.tv-hd{background:linear-gradient(135deg,#0b3a8f,#2563eb);color:#fff;padding:14px 18px}.tv-hd small{opacity:.85;display:block;font-size:12px}.tv-hd b{font-size:19px;display:block;margin-top:2px}.tv-meta{display:flex;flex-wrap:wrap;gap:6px 18px;padding:10px 18px;background:#eef3fc;font-size:13px;font-weight:600}.tv-meta span{white-space:nowrap}.tv-row{padding:10px 18px;border-top:1px solid #e5eaf3}.tv-t{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.tv-t b{font-size:14px}.tv-t em{font-style:normal;font-weight:800;font-size:13px}.tv-v{display:flex;gap:14px;margin:4px 0 6px;font-size:13px}.tv-v div{flex:1}.tv-v small{display:block;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:.04em}.tv-v strong{font-size:17px;font-variant-numeric:tabular-nums}.tv-bar{height:8px;border-radius:99px;background:#e5eaf3;overflow:hidden}.tv-bar i{display:block;height:100%;border-radius:99px}.tv-ft{padding:8px 18px;font-size:11px;color:#64748b;text-align:center;border-top:1px solid #e5eaf3}.tv-subs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}.tv-subs label{display:flex;align-items:center;gap:6px;margin:0;padding:8px 12px;border:1px solid #d9e1ed;border-radius:9px;background:#fff;color:#182338;font-size:13px;cursor:pointer}.tv-subs input{width:auto}.tv-form td{padding:5px 6px}.tv-form input{width:100%;min-width:80px}@media print{.tv-card{box-shadow:none;margin:0 auto}}';document.head.appendChild(st)}
-  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Target vs Achievement</h1><div class="sub">Fill your targets, check the achievements (taken from your sales entries, you can correct them) and share the report.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="tvDate"></div><div><label>Road name</label><select id="tvRoad"></select></div><div><label>Shop quantity</label><input type="number" id="tvShops" step="any" placeholder="Total shops on the road"></div></div><div id="tvSubBox"></div><div class="table-wrap" style="margin-top:10px"><table class="tv-form"><thead><tr><th></th><th>Target</th><th>Achievement</th></tr></thead><tbody id="tvRows"></tbody></table></div><div class="form-actions" style="margin-top:12px"><button id="tvImg">Share picture</button><button id="tvSave">Save</button><button id="tvTxt" class="secondary">Share as text</button><button id="tvPrint" class="secondary">Print</button><button id="tvAuto" class="secondary">Use sales figures</button></div><div id="tvMsg"></div></div></div><div id="tvCard"></div>`;
+  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Target vs Achievement</h1><div class="sub">Fill your targets, check the achievements (taken from your sales entries, you can correct them) and share the report.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="tvDate"></div><div id="tvBrandBox" class="hidden"><label>Brand (this report is for)</label><select id="tvBrand"></select></div><div><label>Road name</label><select id="tvRoad"></select></div><div><label>Shop quantity</label><input type="number" id="tvShops" step="any" placeholder="Total shops on the road"></div></div><div id="tvSubBox"></div><div class="table-wrap" style="margin-top:10px"><table class="tv-form"><thead><tr><th></th><th>Target</th><th>Achievement</th></tr></thead><tbody id="tvRows"></tbody></table></div><div class="form-actions" style="margin-top:12px"><button id="tvImg">Share picture</button><button id="tvSave">Save</button><button id="tvTxt" class="secondary">Share as text</button><button id="tvPrint" class="secondary">Print</button><button id="tvAuto" class="secondary">Use sales figures</button></div><div id="tvMsg"></div></div></div><div id="tvCard"></div>`;
   const KEY=(d)=>'dsoTarget|'+dso.id+'|'+d;
   const M=[['visit','Shop visit','n'],['memo','Memo','n'],['vol','Sales volume','n'],['val','Sales value','t'],['coll','Collection','t']];
   const f=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
   const num=v=>{const n=Number(String(v==null?'':v).replace(/,/g,''));return Number.isFinite(n)?n:0};
-  let D=null,auto=null,roads=[];
+  let D=null,auto=null,roads=[],dayRows=[],dayQty={},brandList=[];
+  const myBrands=dso.brandIds||[],multi=myBrands.length>1;
+  const brandId=()=>multi?$('tvBrand').value:(myBrands[0]||'');
+  const brandName=()=>(brandList.find(x=>x.id===brandId())||{}).name||'';
+  /* a DSO with two or more brands keeps target and achievement per brand (D.brands); road and shop quantity are shared */
+  const cur=()=>{if(!multi)return D;D.brands=D.brands||{};const c=D.brands[brandId()]||(D.brands[brandId()]={});c.tar=c.tar||{};c.ach=c.ach||{};c.man=c.man||{};return c};
+  const calcAuto=()=>{const rows=multi?dayRows.filter(x=>x.brand_id===brandId()):dayRows,sales=rows.filter(x=>!isDueRow(x));
+    auto={visit:new Set(rows.map(x=>x.retailer_id).filter(Boolean)).size,memo:sales.length,vol:sales.reduce((a,x)=>a+(dayQty[x.id]||0),0),val:sales.reduce((a,x)=>a+Number(x.total_sales||0),0),coll:rows.reduce((a,x)=>a+Number(x.received_amount||0),0)}};
   const load=()=>{try{return JSON.parse(localStorage.getItem(KEY($('tvDate').value))||'null')}catch(e){return null}};
   /* the targets are also kept in the database (table dso_targets) so the Admin can see all DSOs in one report */
   let dbT=null;
@@ -2790,21 +2806,21 @@ async function targetPage(){
   const pushDb=async()=>{if(!D)return true;try{const r=await db.from('dso_targets').upsert({day:D.date,dso_id:String(dso.id),data:D,updated_at:new Date().toISOString()},{onConflict:'day,dso_id'});if(r.error)throw new Error(r.error.message);syncWarn('');return true}catch(e){syncWarn('Your target is saved on this phone only. It could not be sent to the server, so the Admin cannot see it yet ('+(e.message||e)+'). Retrying automatically…');return false}};
   const saveDb=()=>{clearTimeout(dbT);dbT=setTimeout(async()=>{if(!(await pushDb())){dbT=setTimeout(function again(){pushDb().then(ok=>{if(!ok)dbT=setTimeout(again,15000)})},15000)}},700)};
   const save=()=>{try{localStorage.setItem(KEY(D.date),JSON.stringify(D))}catch(e){}saveDb()};
-  const ach=k=>D.man[k]?num(D.ach[k]):(auto?auto[k]:num(D.ach[k]));
+  const ach=k=>{const c=cur();return c.man[k]?num(c.ach[k]):(auto?auto[k]:num(c.ach[k]))};
   const pct=(a,t)=>t>0?Math.round(a/t*100):null;
   const col=p=>p==null?'#94a3b8':p>=100?'#16a34a':p>=50?'#f59e0b':'#dc2626';
   const card=()=>{
     const rn=(roads.find(x=>String(x.id)===String(D.road))||{}).name||'—';
-    const rows=M.map(([k,lb])=>{const t=num(D.tar[k]),a=ach(k),p=pct(a,t);return `<div class="tv-row"><div class="tv-t"><b>${lb}</b><em style="color:${col(p)}">${p==null?'':p+'%'}</em></div><div class="tv-v"><div><small>Target</small><strong>${f(t)}</strong></div><div><small>Achievement</small><strong>${f(a)}</strong></div></div><div class="tv-bar"><i style="width:${Math.min(100,p||0)}%;background:${col(p)}"></i></div></div>`}).join('');
-    $('tvCard').innerHTML=`<div class="tv-card" id="tvCardBox"><div class="tv-hd"><small>${esc(COMPANY.name)}</small><b>Today's Target vs Achievement</b></div><div class="tv-meta"><span>DSO: ${esc(dso.full_name||'')}</span><span>Date: ${esc(fmtDate(D.date))}</span><span>Road: ${esc(rn)}</span>${subRoadText(D)?`<span style="white-space:normal">Sub road: ${esc(subRoadText(D))}</span>`:''}<span>Shop quantity: ${f(num(D.shops))}</span></div>${rows}<div class="tv-ft">Sheba Distribution Sales &amp; Credit Management System</div></div>`;
+    const rows=M.map(([k,lb])=>{const t=num(cur().tar[k]),a=ach(k),p=pct(a,t);return `<div class="tv-row"><div class="tv-t"><b>${lb}</b><em style="color:${col(p)}">${p==null?'':p+'%'}</em></div><div class="tv-v"><div><small>Target</small><strong>${f(t)}</strong></div><div><small>Achievement</small><strong>${f(a)}</strong></div></div><div class="tv-bar"><i style="width:${Math.min(100,p||0)}%;background:${col(p)}"></i></div></div>`}).join('');
+    $('tvCard').innerHTML=`<div class="tv-card" id="tvCardBox"><div class="tv-hd"><small>${esc(COMPANY.name)}</small><b>Today's Target vs Achievement</b></div><div class="tv-meta"><span>DSO: ${esc(dso.full_name||'')}</span>${brandName()?`<span>Brand: ${esc(brandName())}</span>`:''}<span>Date: ${esc(fmtDate(D.date))}</span><span>Road: ${esc(rn)}</span>${subRoadText(D)?`<span style="white-space:normal">Sub road: ${esc(subRoadText(D))}</span>`:''}<span>Shop quantity: ${f(num(D.shops))}</span></div>${rows}<div class="tv-ft">Sheba Distribution Sales &amp; Credit Management System</div></div>`;
   };
   const rowsHtml=()=>{
-    $('tvRows').innerHTML=M.map(([k,lb])=>`<tr><td><b>${lb}</b></td><td><input data-k="${k}" data-w="tar" type="number" step="any" value="${D.tar[k]||''}"></td><td><input data-k="${k}" data-w="ach" type="number" step="any" value="${ach(k)||''}"><div class="muted" style="font-size:11px">${D.man[k]?'edited':'from sales'}</div></td></tr>`).join('');
+    $('tvRows').innerHTML=M.map(([k,lb])=>`<tr><td><b>${lb}</b></td><td><input data-k="${k}" data-w="tar" type="number" step="any" value="${cur().tar[k]||''}"></td><td><input data-k="${k}" data-w="ach" type="number" step="any" value="${ach(k)||''}"><div class="muted" style="font-size:11px">${cur().man[k]?'edited':'from sales'}</div></td></tr>`).join('');
   };
   const text=()=>{
     const rn=(roads.find(x=>String(x.id)===String(D.road))||{}).name||'—';
-    const o=["Today's target vs. achievement",'DSO: '+(dso.full_name||''),'Date: '+fmtDate(D.date),'','Road name: '+rn,...(subRoadText(D)?['Sub road: '+subRoadText(D)]:[]),'Shop quantity: '+f(num(D.shops))];
-    M.forEach(([k,lb])=>{const t=num(D.tar[k]),a=ach(k),p=pct(a,t);o.push(lb+' target: '+f(t),lb+' achievement: '+f(a)+(p==null?'':' ('+p+'%)'))});
+    const o=["Today's target vs. achievement",'DSO: '+(dso.full_name||''),...(brandName()?['Brand: '+brandName()]:[]),'Date: '+fmtDate(D.date),'','Road name: '+rn,...(subRoadText(D)?['Sub road: '+subRoadText(D)]:[]),'Shop quantity: '+f(num(D.shops))];
+    M.forEach(([k,lb])=>{const t=num(cur().tar[k]),a=ach(k),p=pct(a,t);o.push(lb+' target: '+f(t),lb+' achievement: '+f(a)+(p==null?'':' ('+p+'%)'))});
     return o.join('\n');
   };
   /* sub road tick boxes under the chosen road; a road that matches no list shows every list */
@@ -2814,17 +2830,22 @@ async function targetPage(){
     const g=subRoadGroup(r);
     $('tvSubBox').innerHTML='<label>Sub road (tick one or more)</label>'+(g?[g]:SUB_ROADS).map(x=>`${g?'':`<div class="muted" style="font-size:12px;margin:4px 0">${esc(x.title)}</div>`}<div class="tv-subs">${x.subs.map(v=>`<label><input type="checkbox" value="${esc(v)}" ${D.subs.includes(v)?'checked':''}> ${esc(v)}</label>`).join('')}</div>`).join('');
   };
-  const draw=()=>{subBox();rowsHtml();card()};
+  const draw=()=>{calcAuto();subBox();rowsHtml();card()};
+  const noPend=()=>{pend=null;$('tvImg').textContent='Share picture'};
   const init=async()=>{
     const date=$('tvDate').value;if(!date)return;
     $('tvMsg').innerHTML='<div class="notice">Loading…</div>';
     try{
-      const [rds,rows]=await Promise.all([queryAll('roads'),fetchAll(()=>scopedReport().eq('sale_date',date).order('id'))]);
+      noPend();
+      const [rds,rows,brs]=await Promise.all([queryAll('roads'),fetchAll(()=>scopedReport().eq('sale_date',date).order('id')),queryAll('brands')]);
       if(tok!==navToken)return;
       roads=rds.sort((a,b)=>String(a.name).localeCompare(String(b.name),undefined,{numeric:true}));
-      const sales=rows.filter(x=>!isDueRow(x)),ids=sales.map(x=>x.id);let qty=0;
-      for(let i=0;i<ids.length;i+=40){(await fetchAll(()=>db.from('sales_items').select('quantity').in('sales_entry_id',ids.slice(i,i+40)).order('id'))).forEach(it=>{qty+=Number(it.quantity||0)})}
-      auto={visit:new Set(rows.map(x=>x.retailer_id).filter(Boolean)).size,memo:sales.length,vol:qty,val:sales.reduce((a,x)=>a+Number(x.total_sales||0),0),coll:rows.reduce((a,x)=>a+Number(x.received_amount||0),0)};
+      brandList=brs;
+      if(multi){const keep=$('tvBrand').value;$('tvBrand').innerHTML=brs.filter(x=>myBrands.includes(x.id)).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');if(myBrands.includes(keep))$('tvBrand').value=keep;$('tvBrandBox').classList.remove('hidden')}
+      const ids=rows.filter(x=>!isDueRow(x)).map(x=>x.id),qty={};
+      for(let i=0;i<ids.length;i+=40){(await fetchAll(()=>db.from('sales_items').select('sales_entry_id,quantity').in('sales_entry_id',ids.slice(i,i+40)).order('id'))).forEach(it=>{qty[it.sales_entry_id]=(qty[it.sales_entry_id]||0)+Number(it.quantity||0)})}
+      if(tok!==navToken||$('tvDate').value!==date)return;
+      dayRows=rows;dayQty=qty;
       const cnt={};rows.forEach(x=>{if(x.road_id)cnt[x.road_id]=(cnt[x.road_id]||0)+1});
       const topRoad=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
       let sv=load();
@@ -2841,8 +2862,9 @@ async function targetPage(){
   $('tvRoad').onchange=()=>{if(!D)return;D.road=$('tvRoad').value;D.subs=[];save();subBox();card()};
   $('tvSubBox').onchange=()=>{if(!D)return;D.subs=[...$('tvSubBox').querySelectorAll('input:checked')].map(i=>i.value);save();card()};
   $('tvShops').oninput=()=>{if(!D)return;D.shops=$('tvShops').value;save();card()};
-  $('tvRows').oninput=e=>{const i=e.target.closest('input[data-k]');if(!i||!D)return;const k=i.dataset.k;if(i.dataset.w==='tar')D.tar[k]=i.value;else{D.ach[k]=i.value;D.man[k]=true}save();card()};
-  $('tvAuto').onclick=()=>{if(!D)return;D.man={};D.ach={};save();draw()};
+  $('tvRows').oninput=e=>{const i=e.target.closest('input[data-k]');if(!i||!D)return;const k=i.dataset.k,c=cur();if(i.dataset.w==='tar')c.tar[k]=i.value;else{c.ach[k]=i.value;c.man[k]=true}save();card()};
+  $('tvBrand').onchange=()=>{if(!D)return;noPend();$('tvMsg').innerHTML='';draw()};
+  $('tvAuto').onclick=()=>{if(!D)return;const c=cur();c.man={};c.ach={};save();draw()};
   $('tvSave').onclick=async()=>{
     if(!D)return;const b=$('tvSave');clearTimeout(dbT);
     try{localStorage.setItem(KEY(D.date),JSON.stringify(D))}catch(e){}
@@ -2870,7 +2892,7 @@ async function targetPage(){
       await loadH2C();
       const cv=await html2canvas($('tvCardBox'),{scale:2,backgroundColor:'#ffffff',useCORS:true});
       const blob=await new Promise(ok=>cv.toBlob(ok,'image/png'));
-      const fl=new File([blob],'Target_vs_Achievement_'+D.date+'.png',{type:'image/png'});
+      const fl=new File([blob],'Target_vs_Achievement_'+(brandName()?brandName().replace(/[^A-Za-z0-9]+/g,'-')+'_':'')+D.date+'.png',{type:'image/png'});
       b.disabled=false;b.textContent='Share picture';
       try{await sendImg(fl)}catch(e){
         if(e&&e.name==='NotAllowedError'){pend=fl;b.textContent='Picture ready - tap to share'}
