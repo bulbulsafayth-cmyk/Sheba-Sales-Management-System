@@ -1877,7 +1877,7 @@ async function salesPage(editId){
   const opts=(arr,label)=>arr.map(x=>`<option value="${x.id}">${esc(x[label])}</option>`).join('');
   $('page').innerHTML=`<div class="salesfit"><h1 class="page-title">${editing?'Edit Sales Entry':'Sales Entry'}</h1><div class="sub">${editing?'Change this entry and save.':'Record one DSO sales sheet with as many products as needed.'}</div>
 <div class="totals sticky" id="totals"></div>
-<div class="panel sec secdet"><div class="sec-h"><span class="sec-n">1</span>Retailer, DSO &amp; Brand details</div><div class="form-grid"><div style="grid-column:1/-1"><label style="display:flex;gap:8px;align-items:center;margin:0 0 4px;font-size:13px;color:#182338;cursor:pointer"><input type="checkbox" id="sColl" style="width:auto"> Due collection only (no sale - just money received)</label></div><div><label>Date</label><input type="date" id="sDate"></div><div><label>Brand <span id="sBrandLogo" style="float:right"></span></label><select id="sBrand"></select></div><div><label>Road</label><select id="sRoad"></select></div><div><label>DSO</label><select id="sDso"></select></div><div><label>Retailer <a href="#" id="newRetLink" style="float:right;font-weight:700;color:#2563eb;text-decoration:none">＋ New retailer</a></label><select id="sRetailer"></select></div><div><label>Notes (optional)</label><input id="sNotes"></div><div id="collDue" style="grid-column:1/-1"></div><div id="newRetBox" class="hidden" style="grid-column:1/-1;background:#f8fafd;border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:4px"><div class="form-grid"><div><label style="margin-top:0">New retailer name</label><input id="nrName"></div><div><label style="margin-top:0">Phone (optional)</label><input id="nrPhone"></div><div style="grid-column:1/-1"><label style="margin-top:0">Address (optional)</label><input id="nrAddr"></div></div><p class="muted" style="margin:6px 0 0;font-size:12px">The retailer is added to the road selected above.</p><div class="form-actions"><button id="nrSave">Save retailer</button><button class="secondary" id="nrCancel">Cancel</button></div><div id="nrMsg"></div></div></div></div>
+<div class="panel sec secdet"><div class="sec-h"><span class="sec-n">1</span>Retailer, DSO &amp; Brand details</div><div class="form-grid"><div style="grid-column:1/-1"><label style="display:flex;gap:8px;align-items:center;margin:0 0 4px;font-size:13px;color:#182338;cursor:pointer"><input type="checkbox" id="sColl" style="width:auto"> Due collection only (no sale - just money received)</label></div><div><label>Date</label><input type="date" id="sDate"></div><div><label>Brand <span id="sBrandLogo" style="float:right"></span></label><select id="sBrand"></select></div><div><label>Road</label><select id="sRoad"></select></div><div><label>DSO</label><select id="sDso"></select></div><div><label>Visited Shop Today</label><input type="number" id="sVisitedShop" min="0" step="1" value="0" placeholder="Enter number of shops visited"></div><div><label>Retailer <a href="#" id="newRetLink" style="float:right;font-weight:700;color:#2563eb;text-decoration:none">＋ New retailer</a></label><select id="sRetailer"></select></div><div><label>Notes (optional)</label><input id="sNotes"></div><div id="collDue" style="grid-column:1/-1"></div><div id="newRetBox" class="hidden" style="grid-column:1/-1;background:#f8fafd;border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:4px"><div class="form-grid"><div><label style="margin-top:0">New retailer name</label><input id="nrName"></div><div><label style="margin-top:0">Phone (optional)</label><input id="nrPhone"></div><div style="grid-column:1/-1"><label style="margin-top:0">Address (optional)</label><input id="nrAddr"></div></div><p class="muted" style="margin:6px 0 0;font-size:12px">The retailer is added to the road selected above.</p><div class="form-actions"><button id="nrSave">Save retailer</button><button class="secondary" id="nrCancel">Cancel</button></div><div id="nrMsg"></div></div></div></div>
 <div class="panel sec" id="prodBox"><div class="sec-h"><span class="sec-n">2</span>Products<span class="prodtools">${userMode==='dso'&&!editing?'<button class="secondary" id="todayToggle">Today\'s entries</button>':''}<button class="secondary" id="addItem">＋ Add product</button> <a href="#" id="newModLink" style="font-weight:700;color:#2563eb;text-decoration:none;white-space:nowrap">＋ New model</a></span></div><div class="table-wrap itemscroll"><table class="items"><thead><tr><th>Product</th><th>Qty</th><th>Unit price</th><th>Line total</th><th></th></tr></thead><tbody id="itemRows"></tbody></table></div><div id="newModBox" class="hidden" style="background:#f8fafd;border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px"><div class="form-grid"><div><label style="margin-top:0">Product name</label><input id="nmName"></div><div><label style="margin-top:0">Model code (optional)</label><input id="nmModel"></div><div><label style="margin-top:0">Sale price (Tk)</label><input id="nmPrice" type="number" min="0" step="0.01"></div></div><p class="muted" style="margin:6px 0 0;font-size:12px">The model is added to the brand selected above and picked in the product list.</p><div class="form-actions"><button id="nmSave">Save model</button><button class="secondary" id="nmCancel">Cancel</button></div><div id="nmMsg"></div></div></div>
 <div class="panel sec"><div class="sec-h"><span class="sec-n">3</span>Receiving &amp; Trade promotion</div><div class="form-grid recvgrid"><div><label>Cash received</label><input type="number" min="0" step="0.01" id="sReceived" value="0"></div><div id="listBox" class="hidden"></div><div id="chqField"><label id="chqLbl">Cheque received amount <span class="muted" style="font-weight:500">(counts as collection)</span></label><input type="number" min="0" step="0.01" id="sCheque" value="0"></div><div><label>Trade promotion amount</label><input type="number" min="0" step="0.01" id="sTp" value="0"></div><div id="chequeBox" class="hidden" style="grid-column:1/-1"><div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))"><div><label>Cheque payable date</label><input type="date" id="sChqDate"></div></div></div><div class="saverow"><button id="saveSale">${editing?'Update sales entry':'Save sales entry'}</button>${editing?'<button class="secondary" id="cancelEdit">Cancel</button>':''}</div></div></div>
 <div id="saleMsg"></div></div>${userMode==='dso'&&!editing?'<div class="panel hidden" id="todayBox" style="margin-top:18px"><h3>Your entries today</h3><p class="muted">Loading…</p></div>':''}`;
@@ -2034,7 +2034,7 @@ async function salesPage(editId){
   $('sRoad').onchange=fillRetailers;
   /* initial values */
   $('sDate').value=entry?.sale_date||today();
-  if(entry){$('sBrand').value=entry.brand_id;$('sRoad').value=entry.road_id;$('sTp').value=Number(entry.trade_promotion_amount||0);$('sReceived').value=Number(entry.received_amount||0);$('sNotes').value=entry.notes||''}
+  if(entry){$('sBrand').value=entry.brand_id;$('sRoad').value=entry.road_id;$('sTp').value=Number(entry.trade_promotion_amount||0);$('sReceived').value=Number(entry.received_amount||0);$('sNotes').value=entry.notes||'';$('sVisitedShop').value=Number(entry.visited_shop_today||0)}
   let oldChq=null;
   if(editing){try{const {data:cq}=await db.from('cheques').select('*').eq('sales_entry_id',editId).order('id').limit(1);if(cq&&cq[0]){oldChq=cq[0];$('chqField').classList.remove('hidden');$('sCheque').value=Number(oldChq.amount||0);$('sReceived').value=Math.max(0,Number(entry.received_amount||0)-Number(oldChq.amount||0));$('sChqDate').value=oldChq.payable_date||'';showChq()}}catch(e){}}
   if(userMode==='dso'&&currentDso){
@@ -2109,6 +2109,7 @@ async function salesPage(editId){
   $('saveSale').onclick=async()=>{
     const btn=$('saveSale'),m=$('saleMsg');
     const head={sale_date:$('sDate').value,brand_id:$('sBrand').value,road_id:$('sRoad').value,dso_id:$('sDso').value,retailer_id:$('sRetailer').value,trade_promotion_amount:Number($('sTp').value),received_amount:(Number($('sReceived').value)||0)+(Number($('sCheque').value)||0),notes:withList($('sNotes').value.trim())};
+    const visitedShopToday=Number($('sVisitedShop').value||0);if(!Number.isInteger(visitedShopToday)||visitedShopToday<0)return msg(m,'Visited Shop Today must be a whole number of 0 or more.');
     const chqAmt=Number($('sCheque').value)||0,cashAmt=Number($('sReceived').value);
     if(!head.sale_date||!head.brand_id||!head.road_id||!head.dso_id)return msg(m,'Please select date, brand, road and DSO.');
     if(!head.retailer_id)return msg(m,'Please select a retailer, or click + New retailer to add one.');
@@ -2163,6 +2164,16 @@ async function salesPage(editId){
     btn.disabled=true;
     try{
       if(!(chqOnly&&!editing&&head.received_amount<=0))await saveEntry(editing?editId:null,head,collOnly?[]:used.map(x=>({product_id:x.product_id,quantity:x.quantity,unit_price:x.unit_price})));
+      if(!(chqOnly&&!editing&&head.received_amount<=0)){
+        let visitEntryId=editing?editId:null;
+        if(!visitEntryId){
+          const found=await db.from('sales_entries').select('id').eq('dso_id',head.dso_id).eq('retailer_id',head.retailer_id).eq('brand_id',head.brand_id).eq('sale_date',head.sale_date).order('created_at',{ascending:false}).limit(1);
+          if(found.error||!found.data||!found.data[0])throw new Error('Sales entry saved, but Visited Shop Today could not be linked. Edit this entry and save again.');
+          visitEntryId=found.data[0].id;
+        }
+        const vu=await db.from('sales_entries').update({visited_shop_today:visitedShopToday}).eq('id',visitEntryId);
+        if(vu.error)throw new Error('Sales entry saved, but Visited Shop Today was not saved. Run the SQL setup file and edit this entry again: '+vu.error.message);
+      }
       if(recPlan.length){let re=await db.from('cheque_recoveries').insert(recPlan);if(re.error&&/entry_(brand|dso)_id/i.test(re.error.message||'')){re=await db.from('cheque_recoveries').insert(recPlan.map(({entry_brand_id,entry_dso_id,...q})=>q))}if(re.error)throw new Error('The entry was saved but the cheque recovery was not: '+re.error.message+'. Record it from Credit & Cheque Report › Recovery.')}
       if((chqAmt>0&&!collOnly)||oldChq){
         let eid=editing?editId:null;
@@ -2175,7 +2186,7 @@ async function salesPage(editId){
         if(ce)throw new Error('The entry was saved but the cheque was not: '+ce.message);
       }
       if(editing){go('reports');return}
-      rows=[newRow()];$('sTp').value=0;$('sReceived').value=0;$('sCheque').value=0;$('sChqDate').value='';showChq();$('sNotes').value='';renderItems();
+      rows=[newRow()];$('sTp').value=0;$('sReceived').value=0;$('sCheque').value=0;$('sChqDate').value='';showChq();$('sNotes').value='';$('sVisitedShop').value=0;renderItems();
       chqPick='';showCollDue();
       msg(m,chqOnly?'Cheque recovery saved (cheque report only'+(head.received_amount>0?'; the cash part is saved as due collection':'')+').':collOnly?'Collection saved successfully.':'Sales entry saved successfully.','success');loadToday();
     }catch(err){msg(m,err.message||String(err))}
@@ -2458,7 +2469,7 @@ async function tvAdminPage(){
     const date=$('tvaDate').value;if(!date)return;
     $('tvaMsg').innerHTML='<div class="notice">Loading…</div>';$('tvaOut').innerHTML='';
     try{
-      const [dsos,brands,roads,bm,rm,rows]=await Promise.all([fetchAll(()=>db.from('dsos').select(DSO_COLS+',is_active').order('full_name')),queryAll('brands'),queryAll('roads'),loadDsoBrandMap(),loadDsoRoadMap(),fetchAll(()=>db.from('sales_report').select('*').eq('sale_date',date).order('id'))]);
+      const [dsos,brands,roads,bm,rm,rows,visitRows]=await Promise.all([fetchAll(()=>db.from('dsos').select(DSO_COLS+',is_active').order('full_name')),queryAll('brands'),queryAll('roads'),loadDsoBrandMap(),loadDsoRoadMap(),fetchAll(()=>db.from('sales_report').select('*').eq('sale_date',date).order('id')),fetchAll(()=>db.from('sales_entries').select('dso_id,brand_id,visited_shop_today').eq('sale_date',date))]);
       let tg={},missing=false;
       try{const r=await db.from('dso_targets').select('dso_id,data').eq('day',date);if(r.error)missing=true;else (r.data||[]).forEach(x=>{tg[String(x.dso_id)]=x.data||{}})}catch(e){missing=true}
       if(tok!==navToken)return;
@@ -2479,7 +2490,7 @@ async function tvAdminPage(){
         const bids=split?[...new Set([...linked,...all.map(x=>x.brand_id).filter(Boolean)])].sort((a,b)=>BO(BN[a])-BO(BN[b])||String(BN[a]).localeCompare(String(BN[b]))):[linked[0]||(all[0]&&all[0].brand_id)];
         bids.forEach((bid,bi)=>{
           const P=split?((T.brands||{})[bid]||{}):T,tar=P.tar||{},mine=split?all.filter(x=>x.brand_id===bid):all,sl=mine.filter(x=>!isDueRow(x));
-          const auto={visit:new Set(mine.map(x=>x.retailer_id).filter(Boolean)).size,memo:sl.length,vol:sl.reduce((a,x)=>a+(qtyBy[x.id]||0),0),val:sl.reduce((a,x)=>a+Number(x.total_sales||0),0),coll:mine.reduce((a,x)=>a+Number(x.received_amount||0),0)};
+          const auto={visit:(visitRows||[]).filter(x=>String(x.dso_id)===String(d.id)&&(!split||x.brand_id===bid)).reduce((a,x)=>a+Number(x.visited_shop_today||0),0),memo:sl.length,vol:sl.reduce((a,x)=>a+(qtyBy[x.id]||0),0),val:sl.reduce((a,x)=>a+Number(x.total_sales||0),0),coll:mine.reduce((a,x)=>a+Number(x.received_amount||0),0)};
           const man=P.man||{},ach=P.ach||{},A={};['visit','memo','vol','val','coll'].forEach(k=>A[k]=man[k]?num(ach[k]):auto[k]);
           /* shop quantity belongs to the road, so it is counted once per DSO */
           list.push({name:d.full_name,brand:BN[bid]||'',road:road?road.name:'',sub:subRoadText(T),loh:isLoh(road),shops:bi?0:num(T.shops),noShops:bi>0,t:{visit:num(tar.visit),memo:num(tar.memo),vol:num(tar.vol),val:num(tar.val),coll:num(tar.coll)},a:A,has:!!tg[String(d.id)]||all.length>0});
@@ -2593,14 +2604,14 @@ async function targetPage(){
   const M=[['visit','Shop visit','n'],['memo','Memo','n'],['vol','Sales volume','n'],['val','Sales value','t'],['coll','Collection','t']];
   const f=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
   const num=v=>{const n=Number(String(v==null?'':v).replace(/,/g,''));return Number.isFinite(n)?n:0};
-  let D=null,auto=null,roads=[],dayRows=[],dayQty={},brandList=[];
+  let D=null,auto=null,roads=[],dayRows=[],dayQty={},dayVisitedRows=[],brandList=[];
   const myBrands=dso.brandIds||[],multi=myBrands.length>1;
   const brandId=()=>multi?$('tvBrand').value:(myBrands[0]||'');
   const brandName=()=>(brandList.find(x=>x.id===brandId())||{}).name||'';
   /* a DSO with two or more brands keeps target and achievement per brand (D.brands); road and shop quantity are shared */
   const cur=()=>{if(!multi)return D;D.brands=D.brands||{};const c=D.brands[brandId()]||(D.brands[brandId()]={});c.tar=c.tar||{};c.ach=c.ach||{};c.man=c.man||{};return c};
   const calcAuto=()=>{const rows=multi?dayRows.filter(x=>x.brand_id===brandId()):dayRows,sales=rows.filter(x=>!isDueRow(x));
-    auto={visit:new Set(rows.map(x=>x.retailer_id).filter(Boolean)).size,memo:sales.length,vol:sales.reduce((a,x)=>a+(dayQty[x.id]||0),0),val:sales.reduce((a,x)=>a+Number(x.total_sales||0),0),coll:rows.reduce((a,x)=>a+Number(x.received_amount||0),0)}};
+    auto={visit:dayVisitedRows.filter(x=>!multi||x.brand_id===brandId()).reduce((a,x)=>a+Number(x.visited_shop_today||0),0),memo:sales.length,vol:sales.reduce((a,x)=>a+(dayQty[x.id]||0),0),val:sales.reduce((a,x)=>a+Number(x.total_sales||0),0),coll:rows.reduce((a,x)=>a+Number(x.received_amount||0),0)}};
   const load=()=>{try{return JSON.parse(localStorage.getItem(KEY($('tvDate').value))||'null')}catch(e){return null}};
   /* the targets are also kept in the database (table dso_targets) so the Admin can see all DSOs in one report */
   let dbT=null;
@@ -2639,7 +2650,7 @@ async function targetPage(){
     $('tvMsg').innerHTML='<div class="notice">Loading…</div>';
     try{
       noPend();
-      const [rds,rows,brs]=await Promise.all([queryAll('roads'),fetchAll(()=>scopedReport().eq('sale_date',date).order('id')),queryAll('brands')]);
+      const [rds,rows,brs,visitRows]=await Promise.all([queryAll('roads'),fetchAll(()=>scopedReport().eq('sale_date',date).order('id')),queryAll('brands'),fetchAll(()=>db.from('sales_entries').select('dso_id,brand_id,visited_shop_today').eq('sale_date',date))]);
       if(tok!==navToken)return;
       roads=rds.sort((a,b)=>String(a.name).localeCompare(String(b.name),undefined,{numeric:true}));
       brandList=brs;
@@ -2647,7 +2658,7 @@ async function targetPage(){
       const ids=rows.filter(x=>!isDueRow(x)).map(x=>x.id),qty={};
       for(let i=0;i<ids.length;i+=40){(await fetchAll(()=>db.from('sales_items').select('sales_entry_id,quantity').in('sales_entry_id',ids.slice(i,i+40)).order('id'))).forEach(it=>{qty[it.sales_entry_id]=(qty[it.sales_entry_id]||0)+Number(it.quantity||0)})}
       if(tok!==navToken||$('tvDate').value!==date)return;
-      dayRows=rows;dayQty=qty;
+      dayRows=rows;dayQty=qty;dayVisitedRows=(visitRows||[]).filter(x=>String(x.dso_id)===String(dso.id));
       const cnt={};rows.forEach(x=>{if(x.road_id)cnt[x.road_id]=(cnt[x.road_id]||0)+1});
       const topRoad=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
       let sv=load();
