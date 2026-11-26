@@ -267,7 +267,7 @@ table.crt td.cract button{display:block;width:100%;margin:0 0 3px;padding:3px 4p
 .shcalc .ctc{border-bottom:2px solid #000;margin-bottom:8px;padding:4px 0}.shcalc .ctc b{flex:1}.shcalc .ctc .cadd{margin:0;white-space:nowrap}</style></head>
 <body>
 <div id="loginView" class="login-wrap"><div class="login"><h1>Sheba Distribution Sales &amp; Credit Management System</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option><option value="hr">HR Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
-<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="attend">⏱ &nbsp; Attendance</button><button data-page="target">◉ &nbsp; Target vs Achievement</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
+<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="tally">⇄ &nbsp; Tally Export</button><button data-page="attend">⏱ &nbsp; Attendance</button><button data-page="target">◉ &nbsp; Target vs Achievement</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
 <script>
 const SUPABASE_URL='https://nvnogsganemysvbqmcpo.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_tyWf1VnXMzNVBs22Qgs3wg_SBy6HegJ';
@@ -378,8 +378,8 @@ function showApp(mode='admin'){
   if(mode==='admin')startApprovalWatch();else stopApprovalWatch();
 }
 $('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(b)go(b.dataset.page)});
-const titles={attend:'Attendance Report',tvall:'Target vs Achievement',dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location',target:'Target vs Achievement'};
-const pages={attend:()=>attendPage(),tvall:()=>tvAdminPage(),dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage(),dsoloc:()=>dsoLocPage(),target:()=>targetPage()};
+const titles={tally:'Tally Export',attend:'Attendance Report',tvall:'Target vs Achievement',dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location',target:'Target vs Achievement'};
+const pages={tally:()=>tallyPage(),attend:()=>attendPage(),tvall:()=>tvAdminPage(),dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage(),dsoloc:()=>dsoLocPage(),target:()=>targetPage()};
 function go(p,arg){
   if(userMode==='dso'&&!DSO_PAGES.includes(p))p='sales';
   if(userMode==='hr'&&!HR_PAGES.includes(p))p='attend';
@@ -2710,6 +2710,86 @@ async function tvAdminPage(){
   run();
 }
 
+
+/* ---------- Tally export (Admin): Sales entry -> Sales voucher, trade promotion -> Journal voucher, collection / due recovery -> Receipt voucher ---------- */
+const TALLY_DEFAULTS={company:'',party:'{retailer}',sales:'Sales',tp:'Trade Promotion',cash:'Cash',cheque:'Cheque in Hand',vSales:'Sales',vJournal:'Journal',vReceipt:'Receipt'};
+const tallyFill=(p,r)=>String(p||'').replace(/\{retailer\}/gi,r.retailer||'').replace(/\{brand\}/gi,r.brand||'').replace(/\s+/g,' ').trim();
+const tallyXe=s=>String(s==null?'':s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+function tallyBuild(rows,chq,cfg,names){
+  const out=[],n2=v=>Math.round((Number(v)||0)*100)/100;
+  rows.forEach(r=>{
+    const raw=tallyFill(cfg.party,r),party=(names&&names[raw])||raw;
+    const gross=n2(r.total_sales),tp=n2(r.trade_promotion_amount),rec=n2(r.received_amount),sale=Number(r.item_count)>0;
+    const base={id:r.id,date:String(r.sale_date).slice(0,10),party,raw};
+    const nar=t=>t+' | '+(r.dso_name||'')+' | '+(r.brand||'')+' | Entry #'+r.id;
+    if(sale&&gross>0)out.push({...base,type:cfg.vSales,kind:'sales',dr:party,cr:tallyFill(cfg.sales,r),amt:gross,nar:nar('Sales')});
+    if(tp>0)out.push({...base,type:cfg.vJournal,kind:'tp',dr:cfg.tp,cr:party,amt:tp,nar:nar('Trade promotion')});
+    const cq=sale?Math.min(rec,n2(chq[r.id]||0)):0,cash=n2(rec-cq);
+    if(cash>0)out.push({...base,type:cfg.vReceipt,kind:'cash',dr:cfg.cash,cr:party,amt:cash,nar:nar(sale?'Collection':'Due recovery')});
+    if(cq>0)out.push({...base,type:cfg.vReceipt,kind:'cheque',dr:cfg.cheque,cr:party,amt:cq,nar:nar('Cheque received')});
+  });
+  return out;
+}
+function tallyXml(vs,cfg){
+  const ent=(l,amt,debit)=>'<ALLLEDGERENTRIES.LIST><LEDGERNAME>'+tallyXe(l)+'</LEDGERNAME><ISDEEMEDPOSITIVE>'+(debit?'Yes':'No')+'</ISDEEMEDPOSITIVE><AMOUNT>'+(debit?'-':'')+amt.toFixed(2)+'</AMOUNT></ALLLEDGERENTRIES.LIST>';
+  const body=vs.map(v=>'<TALLYMESSAGE xmlns:UDF="TallyUDF"><VOUCHER VCHTYPE="'+tallyXe(v.type)+'" ACTION="Create" OBJVIEW="Accounting Voucher View"><DATE>'+v.date.replace(/-/g,'')+'</DATE><VOUCHERTYPENAME>'+tallyXe(v.type)+'</VOUCHERTYPENAME><NARRATION>'+tallyXe(v.nar)+'</NARRATION>'+(v.kind==='tp'?'':'<PARTYLEDGERNAME>'+tallyXe(v.party)+'</PARTYLEDGERNAME>')+'<PERSISTEDVIEW>Accounting Voucher View</PERSISTEDVIEW>'+ent(v.dr,v.amt,true)+ent(v.cr,v.amt,false)+'</VOUCHER></TALLYMESSAGE>').join('\n');
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<ENVELOPE><HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER><BODY><IMPORTDATA><REQUESTDESC><REPORTNAME>Vouchers</REPORTNAME>'+(cfg.company?'<STATICVARIABLES><SVCURRENTCOMPANY>'+tallyXe(cfg.company)+'</SVCURRENTCOMPANY></STATICVARIABLES>':'')+'</REQUESTDESC><REQUESTDATA>\n'+body+'\n</REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>';
+}
+async function tallyPage(){
+  const tok=navToken;
+  if(userMode!=='admin'){$('page').innerHTML='<div class="notice error">Only the Admin can use Tally Export.</div>';return}
+  const LS={cfg:'dso_tally_cfg',map:'dso_tally_names',done:'dso_tally_done'};
+  const rd=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}};
+  const wr=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+  const cfg={...TALLY_DEFAULTS,...rd(LS.cfg,{})};
+  let names=rd(LS.map,{}),done=new Set(rd(LS.done,[])),rows=[],chq={},vs=[];
+  const F=[['company','Tally company name (blank = the company open in Tally)'],['party','Retailer ledger name ({retailer} and {brand} can be used)'],['sales','Sales ledger ({brand} can be used)'],['tp','Trade promotion ledger'],['cash','Cash ledger'],['cheque','Cheque ledger'],['vSales','Sales voucher type'],['vJournal','Journal voucher type'],['vReceipt','Receipt voucher type']];
+  $('page').innerHTML='<h1 class="page-title">Tally Export</h1><div class="sub">Each sales entry becomes Tally vouchers: <b>Sales</b> (retailer Dr / Sales Cr), <b>Journal</b> for trade promotion (Trade Promotion Dr / retailer Cr) and <b>Receipt</b> for collection and due recovery (Cash or Cheque Dr / retailer Cr).</div>'
+   +'<div class="panel"><div class="form-grid"><div><label>From</label><input type="date" id="tFrom" value="'+today()+'"></div><div><label>To</label><input type="date" id="tTo" value="'+today()+'"></div><div style="align-self:end"><button id="tLoad">Show vouchers</button></div></div>'
+   +'<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:700">Ledger names and voucher types (set once, saved in this browser)</summary><div class="form-grid" style="margin-top:10px">'+F.map(([k,l])=>'<div><label>'+esc(l)+'</label><input data-cfg="'+k+'" value="'+esc(cfg[k])+'"></div>').join('')+'</div></details>'
+   +'<label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-weight:600"><input type="checkbox" id="tSkip" checked style="width:auto"> Skip entries already exported from this browser</label><div id="tMsg"></div></div><div id="tOut"></div>';
+  document.querySelectorAll('[data-cfg]').forEach(i=>i.onchange=()=>{cfg[i.dataset.cfg]=i.value.trim();wr(LS.cfg,cfg);if(rows.length)draw()});
+  $('tSkip').onchange=()=>{if(rows.length)draw()};
+  function draw(){
+    const skip=$('tSkip').checked,use=rows.filter(r=>!(skip&&done.has(String(r.id))));
+    vs=tallyBuild(use,chq,cfg,names);
+    const tot=k=>vs.filter(v=>v.kind===k).reduce((a,v)=>a+v.amt,0),cnt=k=>vs.filter(v=>v.kind===k).length;
+    const card=(t,k)=>'<div class="kcard"><div><div class="k">'+t+'</div><div class="v">'+money(tot(k))+'</div><div class="k">'+cnt(k)+' vouchers</div></div></div>';
+    const skipped=rows.length-use.length;
+    if(!vs.length){$('tOut').innerHTML='<div class="panel"><div class="empty">'+(rows.length?'Nothing new to export ('+skipped+' entries were already exported). Untick "Skip entries already exported" to include them again.':'No sales entries found in this period.')+'</div></div>';return}
+    const raws=[...new Set(vs.map(v=>v.raw))].sort((a,b)=>a.localeCompare(b));
+    const ledgers=[...new Set(vs.flatMap(v=>[v.dr,v.cr]))].sort((a,b)=>a.localeCompare(b));
+    $('tOut').innerHTML='<div class="cards">'+card('Sales vouchers','sales')+card('Trade promotion journals','tp')+card('Cash receipts','cash')+card('Cheque receipts','cheque')+'</div>'
+     +'<div class="panel"><div class="saverow" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button id="tDown">⬇ Download Tally XML ('+vs.length+' vouchers, '+use.length+' entries)</button><span class="muted">'+(skipped?skipped+' already-exported entries skipped. ':'')+'In Tally: Gateway of Tally → Import Data → Vouchers → choose this file.</span></div><div id="tDoneMsg"></div></div>'
+     +'<div class="panel"><h3>Retailer ledger names in Tally</h3><p class="muted" style="margin-top:-6px">If a retailer is spelled differently in Tally, type the exact Tally name here. It is remembered for next time.</p><div class="table-wrap"><table><thead><tr><th>Name from the app</th><th>Name in Tally</th></tr></thead><tbody>'+raws.map(r=>'<tr><td>'+esc(r)+'</td><td><input data-nm="'+esc(r)+'" value="'+esc(names[r]||r)+'" style="width:100%;min-width:220px"></td></tr>').join('')+'</tbody></table></div></div>'
+     +'<div class="panel"><h3>Vouchers</h3><div class="table-wrap"><table><thead><tr><th>Date</th><th>Voucher</th><th>Debit</th><th>Credit</th><th style="text-align:right">Amount</th><th>Narration</th></tr></thead><tbody>'+vs.slice(0,400).map(v=>'<tr><td>'+esc(v.date)+'</td><td>'+esc(v.type)+'</td><td>'+esc(v.dr)+'</td><td>'+esc(v.cr)+'</td><td style="text-align:right">'+money(v.amt)+'</td><td class="muted">'+esc(v.nar)+'</td></tr>').join('')+'</tbody></table></div>'+(vs.length>400?'<p class="muted">Showing the first 400 of '+vs.length+' vouchers. The file contains all of them.</p>':'')+'</div>'
+     +'<div class="panel"><details><summary style="cursor:pointer;font-weight:700">Ledgers that must exist in Tally ('+ledgers.length+')</summary><p class="muted">Tally rejects a voucher whose ledger does not exist. Check that these are all created:</p><div style="columns:2;column-gap:24px;font-size:13px">'+ledgers.map(l=>'<div>'+esc(l)+'</div>').join('')+'</div></details></div>';
+    document.querySelectorAll('[data-nm]').forEach(i=>i.onchange=()=>{const k=i.dataset.nm,v=i.value.trim();if(v&&v!==k)names[k]=v;else delete names[k];wr(LS.map,names);draw()});
+    $('tDown').onclick=()=>{
+      const xml=tallyXml(vs,cfg),blob=new Blob([xml],{type:'application/xml'}),a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);a.download='tally-vouchers-'+$('tFrom').value+'_to_'+$('tTo').value+'.xml';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+      use.forEach(r=>done.add(String(r.id)));wr(LS.done,[...done].slice(-20000));
+      msg($('tDoneMsg'),'File downloaded. These entries are now marked as exported in this browser.','success');
+    };
+  }
+  $('tLoad').onclick=async()=>{
+    const b=$('tLoad'),m=$('tMsg'),f=$('tFrom').value,t=$('tTo').value;
+    if(!f||!t||f>t)return msg(m,'Choose a valid From and To date.');
+    b.disabled=true;m.innerHTML='';$('tOut').innerHTML='<div class="panel muted">Loading…</div>';
+    try{
+      const list=await fetchAll(()=>db.from('sales_report').select('*').gte('sale_date',f).lte('sale_date',t).order('sale_date').order('id'));
+      const c={};
+      for(let i=0;i<list.length;i+=100){
+        const part=list.slice(i,i+100).map(x=>x.id);
+        const r=await db.from('cheques').select('sales_entry_id,amount').in('sales_entry_id',part);
+        if(r.error&&!/schema cache|relation|does not exist/i.test(r.error.message||''))throw r.error;
+        (r.data||[]).forEach(x=>{if(x.sales_entry_id!=null)c[x.sales_entry_id]=(c[x.sales_entry_id]||0)+Number(x.amount||0)});
+      }
+      if(tok!==navToken)return;
+      rows=list;chq=c;draw();
+    }catch(e){$('tOut').innerHTML='';msg(m,e.message||String(e))}finally{b.disabled=false}
+  };
+}
 
 /* ---------- Target vs Achievement (DSO login only) ---------- */
 async function targetPage(){
