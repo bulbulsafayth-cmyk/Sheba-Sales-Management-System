@@ -2929,7 +2929,7 @@ function buildBrandFloat(){
   /* moving phone pictures (real elements): drifting phones (no click zoom) */
   if(document.getElementById('phoneLayer'))return;
   const keys=['vivo','samsung','nokia','oppo','zte'],H=62;
-  const css=document.createElement('style');css.textContent='#phoneLayer{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}#phoneTop{position:fixed;inset:0;z-index:60;pointer-events:none;overflow:hidden}.bph{position:absolute;left:0;top:0;will-change:transform;opacity:0}.bph.on{opacity:1}.bph .in{display:flex;flex-direction:column;align-items:center}.bph img.ph{display:block;height:'+H+'px;width:auto}.bph .lg{margin-top:3px;background:#ffffffeb;border-radius:5px;padding:1px 4px;height:15px;display:flex;align-items:center}.bph .lg img{height:11px;width:auto;max-width:36px;object-fit:contain}.sbTitle{position:absolute;left:0;top:0;text-align:center;will-change:transform}.sbWord{font:800 clamp(40px,9vw,92px)/1.05 Georgia,Times New Roman,serif;letter-spacing:3px;color:#fff;-webkit-text-stroke:2px #1e3a8a;paint-order:stroke fill;text-shadow:0 0 18px #3b82f6,0 0 42px #2563eb,0 6px 14px #000a;white-space:nowrap}.sbWord span{display:inline-block;opacity:0;transform:translateY(24px) scale(.35);animation:sbLetterPop .32s cubic-bezier(.18,.9,.25,1.35) forwards}.sbWord .sp{animation:none;opacity:1;transform:none}@keyframes sbLetterPop{0%{opacity:0;transform:translateY(24px) scale(.25) rotate(-18deg)}65%{opacity:1;transform:translateY(-7px) scale(1.22) rotate(5deg)}100%{opacity:1;transform:translateY(0) scale(1) rotate(0)}}.sbSub{margin-top:4px;font:italic 600 clamp(14px,2.6vw,26px)/1.2 Georgia,serif;color:#e0f2fe;-webkit-text-stroke:.6px #1e3a8a;text-shadow:0 0 10px #3b82f6,0 2px 6px #000a;letter-spacing:2px}@keyframes sbWave{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-14px) rotate(2deg)}}.sbFlash{position:absolute;border-radius:50%;background:radial-gradient(circle,#fff 0,#fde68a 35%,#f97316aa 60%,transparent 72%);will-change:transform,opacity}.sbSpark{position:absolute;width:8px;height:8px;border-radius:50%;will-change:transform,opacity}@media print{#phoneLayer,#phoneTop{display:none!important}}';
+  const css=document.createElement('style');css.textContent='#phoneLayer{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}#phoneTop{position:fixed;inset:0;z-index:60;pointer-events:none;overflow:hidden}.bph{position:absolute;left:0;top:0;will-change:transform;opacity:0}.bph.on{opacity:1}.bph .in{display:flex;flex-direction:column;align-items:center}.bph img.ph{display:block;height:'+H+'px;width:auto}.bph .lg{margin-top:3px;background:#ffffffeb;border-radius:5px;padding:1px 4px;height:15px;display:flex;align-items:center}.bph .lg img{height:11px;width:auto;max-width:36px;object-fit:contain}.sbTitle{position:absolute;left:0;top:0;text-align:center;will-change:transform}.sbWord{font:800 clamp(40px,9vw,92px)/1.05 Georgia,Times New Roman,serif;letter-spacing:3px;color:#fff;-webkit-text-stroke:2px #1e3a8a;paint-order:stroke fill;text-shadow:0 0 18px #3b82f6,0 0 42px #2563eb,0 6px 14px #000a;white-space:nowrap}.sbWord span{display:inline-block;opacity:0;transform:translateY(24px) scale(.35);animation:sbLetterPop .58s cubic-bezier(.18,.9,.25,1.35) forwards}.sbWord .sp{animation:none;opacity:1;transform:none}@keyframes sbLetterPop{0%{opacity:0;transform:translateY(24px) scale(.25) rotate(-18deg)}65%{opacity:1;transform:translateY(-7px) scale(1.22) rotate(5deg)}100%{opacity:1;transform:translateY(0) scale(1) rotate(0)}}.sbSub{margin-top:4px;font:italic 600 clamp(14px,2.6vw,26px)/1.2 Georgia,serif;color:#e0f2fe;-webkit-text-stroke:.6px #1e3a8a;text-shadow:0 0 10px #3b82f6,0 2px 6px #000a;letter-spacing:2px}@keyframes sbWave{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-14px) rotate(2deg)}}.sbFlash{position:absolute;border-radius:50%;background:radial-gradient(circle,#fff 0,#fde68a 35%,#f97316aa 60%,transparent 72%);will-change:transform,opacity}.sbSpark{position:absolute;width:8px;height:8px;border-radius:50%;will-change:transform,opacity}@media print{#phoneLayer,#phoneTop{display:none!important}}';
   document.head.appendChild(css);
   const L=document.createElement('div');L.id='phoneLayer';document.body.appendChild(L);const T=document.createElement('div');T.id='phoneTop';document.body.appendChild(T);
   const W=()=>innerWidth,Hh=()=>innerHeight,N=Math.max(40,Math.min(80,Math.round(W()*Hh()/15000))),P=[];
@@ -2962,14 +2962,14 @@ function buildBrandFloat(){
     ti.innerHTML='<div class="sbWord">'+'Sheba Telecom'.split('').map((c,k)=>c===' '?'<span class="sp">&nbsp;</span>':'<span style="animation-delay:'+(k*0.14).toFixed(2)+'s">'+c+'</span>').join('')+'</div><div class="sbSub">The Home of Mobile Phones</div>';
     T.appendChild(ti);
     const wordCount='Sheba Telecom'.replace(/ /g,'').length;
-    const letterTime=(wordCount-1)*0.14+0.38;
+    const letterTime=(wordCount-1)*0.28+0.64;
     const centerTitle=()=>{
       const tw=ti.offsetWidth||360,th=ti.offsetHeight||100;
       ti.style.transform='translate('+Math.max(8,(W()-tw)/2)+'px,'+Math.max(8,(Hh()-th)/2)+'px)';
     };
     centerTitle();
     window.addEventListener('resize',centerTitle,{passive:true});
-    const boomAt=performance.now()+letterTime+950;
+    const boomAt=performance.now()+letterTime+1500;
     const waitForBoom=now=>{
       if(now<boomAt)return requestAnimationFrame(waitForBoom);
       centerTitle();
@@ -2977,7 +2977,7 @@ function buildBrandFloat(){
         {transform:ti.style.transform,opacity:1,filter:'brightness(1)'},
         {transform:ti.style.transform+' scale(1.16)',opacity:1,filter:'brightness(2.8)'},
         {transform:ti.style.transform+' scale(.15)',opacity:0,filter:'brightness(4)'}
-      ],{duration:360,easing:'cubic-bezier(.2,.8,.2,1)',fill:'forwards'}).onfinish=()=>{
+      ],{duration:850,easing:'cubic-bezier(.2,.8,.2,1)',fill:'forwards'}).onfinish=()=>{
         ti.remove();
         window.removeEventListener('resize',centerTitle);
         blast();
@@ -2988,7 +2988,7 @@ function buildBrandFloat(){
       const f=document.createElement('div');f.className='sbFlash';
       f.style.cssText='left:'+(bx-55)+'px;top:'+(by-55)+'px;width:110px;height:110px';
       T.appendChild(f);
-      f.animate([{transform:'scale(.1)',opacity:1},{transform:'scale(13)',opacity:0}],{duration:850,easing:'cubic-bezier(.1,.8,.2,1)'}).onfinish=()=>f.remove();
+      f.animate([{transform:'scale(.1)',opacity:1},{transform:'scale(13)',opacity:0}],{duration:1500,easing:'cubic-bezier(.1,.8,.2,1)'}).onfinish=()=>f.remove();
       const cols=['#38bdf8','#60a5fa','#facc15','#fb7185','#fff'];
       for(let i=0;i<64;i++){
         const spark=document.createElement('div');spark.className='sbSpark';
@@ -2999,11 +2999,16 @@ function buildBrandFloat(){
       }
       P.forEach((p,i)=>{
         const a=(i/P.length)*Math.PI*2+(Math.random()-.5)*.35;
-        const sp=520+Math.random()*780;
+        const sp=14+Math.random()*22;
+        const delay=i*42;
         p.x=bx;p.y=by;p.vx=Math.cos(a)*sp;p.vy=Math.sin(a)*sp;p.ex=0;p.ey=0;
-        p.r=-25+Math.random()*50;show(p);
+        p.r=-25+Math.random()*50;
         p.d.style.transform='translate('+p.x+'px,'+p.y+'px) rotate('+p.r+'deg)';
-        p.d.animate([{opacity:0,transform:'translate('+bx+'px,'+by+'px) scale(.15)'},{opacity:1,transform:'translate('+bx+'px,'+by+'px) scale(1.15)'}],{duration:420,easing:'cubic-bezier(.15,.9,.25,1.4)'});
+        p.d.animate(
+          [{opacity:0,transform:'translate('+bx+'px,'+by+'px) scale(.12)'},
+           {opacity:1,transform:'translate('+bx+'px,'+by+'px) scale(1.08)'}],
+          {duration:1050,delay,easing:'cubic-bezier(.18,.75,.25,1)',fill:'forwards'}
+        ).onfinish=()=>show(p);
       });
     };
     requestAnimationFrame(waitForBoom);
