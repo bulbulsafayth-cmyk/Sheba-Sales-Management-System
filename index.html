@@ -267,7 +267,7 @@ table.crt td.cract button{display:block;width:100%;margin:0 0 3px;padding:3px 4p
 .shcalc .ctc{border-bottom:2px solid #000;margin-bottom:8px;padding:4px 0}.shcalc .ctc b{flex:1}.shcalc .ctc .cadd{margin:0;white-space:nowrap}</style></head>
 <body>
 <div id="loginView" class="login-wrap"><div class="login"><h1>Sheba Distribution Sales &amp; Credit Management System</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option><option value="hr">HR Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
-<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="attend">⏱ &nbsp; Attendance</button><button data-page="roadplan">⌖ &nbsp; Road Plan</button><button data-page="target">◉ &nbsp; Target vs Achievement</button><button data-page="cash">▤ &nbsp; Daily Cash Status</button><button data-page="cardsale">▤ &nbsp; Card &amp; Cashless Sale</button><button data-page="opening">◐ &nbsp; Opening Balance</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
+<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="attend">⏱ &nbsp; Attendance</button><button data-page="target">◉ &nbsp; Target vs Achievement</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
 <script>
 const SUPABASE_URL='https://nvnogsganemysvbqmcpo.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_tyWf1VnXMzNVBs22Qgs3wg_SBy6HegJ';
@@ -366,7 +366,7 @@ $('dsoContinueBtn').onclick=async()=>{
 };
 $('backLoginBtn').onclick=async()=>{await db.auth.signOut();store.del('dsoId');store.del('loggedDso');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
 $('logoutBtn').onclick=async()=>{stopLocTracking();stopApprovalWatch();currentDso=null;store.del('dsoId');store.del('loggedDso');await db.auth.signOut();$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('dsoStep').classList.add('hidden');$('authFields').classList.remove('hidden');$('loginMsg').innerHTML=''};
-const DSO_PAGES=['dashboard','sales','reports','sheet','credit','target','roadplan'];
+const DSO_PAGES=['dashboard','sales','reports','sheet','credit','target'];
 const HR_PAGES=['attend'];
 function showApp(mode='admin'){
   userMode=mode;$('loginView').classList.add('hidden');$('appView').classList.remove('hidden');
@@ -378,8 +378,8 @@ function showApp(mode='admin'){
   if(mode==='admin')startApprovalWatch();else stopApprovalWatch();
 }
 $('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(b)go(b.dataset.page)});
-const titles={roadplan:'Road Plan',attend:'Attendance Report',tvall:'Target vs Achievement',dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location',cash:'Daily Cash Status',cardsale:'Card & Cashless Sale',target:'Target vs Achievement'};
-const pages={roadplan:()=>roadPlanPage(),attend:()=>attendPage(),tvall:()=>tvAdminPage(),dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage(),dsoloc:()=>dsoLocPage(),cash:()=>cashPage(),cardsale:()=>cardSalePage(),target:()=>targetPage()};
+const titles={attend:'Attendance Report',tvall:'Target vs Achievement',dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location',target:'Target vs Achievement'};
+const pages={attend:()=>attendPage(),tvall:()=>tvAdminPage(),dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage(),dsoloc:()=>dsoLocPage(),target:()=>targetPage()};
 function go(p,arg){
   if(userMode==='dso'&&!DSO_PAGES.includes(p))p='sales';
   if(userMode==='hr'&&!HR_PAGES.includes(p))p='attend';
@@ -2190,7 +2190,7 @@ async function reportsPage(){
   const tok=navToken;
   const p=$('page'),isAdmin=userMode==='admin';
   rep={chq:[],rows:[],items:{},page:1,type:null,sub:'all',generated:false,prods:rep.prods||{},printAll:false};
-  p.innerHTML=`<h1 class="page-title">Sales Reports</h1><div class="sub">Choose a report, press Generate and the report will appear.</div><div class="panel"><div class="rtypes noprint" id="repTypes"><button data-t="daily">Daily sales report</button>${isAdmin?'<button data-t="dso">DSO-wise report</button>':''}<button data-t="brand">Brand-wise report</button><button data-t="sheet">Daily Sales Sheet</button><button data-t="credit">Credit &amp; Cheque Report</button>${isAdmin?'<button data-t="cash">Daily Cash Status</button><button data-t="tvall">Target vs Achievement</button>':''}</div><div id="repFilters" class="hidden noprint"><div class="form-grid" style="margin-top:14px"><div><label>From date</label><input type="date" id="rFrom"></div><div><label>To date</label><input type="date" id="rTo"></div><div id="wBrand"><label>Brand</label><select id="rBrand"><option value="">All brands</option></select></div><div id="wModel" class="hidden"><label>Model</label><select id="rModel"><option value="">All models</option></select></div>${isAdmin?'<div id="wDso"><label>DSO</label><select id="rDso"><option value="">All DSOs</option></select></div>':''}<div><label>Retailer</label><select id="rRetailer"><option value="">All retailers</option></select></div></div><div class="form-actions"><button id="runReport">Generate report</button><button class="secondary" id="printReport">Print</button><button class="secondary" id="shareReport">Share</button><button class="secondary" id="openSheet">Daily Sales Sheet</button></div></div><div id="reportSummary"></div><div id="repOut" style="margin-top:15px"></div></div>`;
+  p.innerHTML=`<h1 class="page-title">Sales Reports</h1><div class="sub">Choose a report, press Generate and the report will appear.</div><div class="panel"><div class="rtypes noprint" id="repTypes"><button data-t="daily">Daily sales report</button>${isAdmin?'<button data-t="dso">DSO-wise report</button>':''}<button data-t="brand">Brand-wise report</button><button data-t="sheet">Daily Sales Sheet</button><button data-t="credit">Credit &amp; Cheque Report</button>${isAdmin?'<button data-t="tvall">Target vs Achievement</button>':''}</div><div id="repFilters" class="hidden noprint"><div class="form-grid" style="margin-top:14px"><div><label>From date</label><input type="date" id="rFrom"></div><div><label>To date</label><input type="date" id="rTo"></div><div id="wBrand"><label>Brand</label><select id="rBrand"><option value="">All brands</option></select></div><div id="wModel" class="hidden"><label>Model</label><select id="rModel"><option value="">All models</option></select></div>${isAdmin?'<div id="wDso"><label>DSO</label><select id="rDso"><option value="">All DSOs</option></select></div>':''}<div><label>Retailer</label><select id="rRetailer"><option value="">All retailers</option></select></div></div><div class="form-actions"><button id="runReport">Generate report</button><button class="secondary" id="printReport">Print</button><button class="secondary" id="shareReport">Share</button><button class="secondary" id="openSheet">Daily Sales Sheet</button></div></div><div id="reportSummary"></div><div id="repOut" style="margin-top:15px"></div></div>`;
   const [b,d,rtl,pl]=await Promise.all([queryAll('brands'),isAdmin?queryAll('dsos'):Promise.resolve([]),queryAll('retailers'),queryAll('products').catch(()=>[])]);
   const bm=isAdmin?await loadDsoBrandMap():{};
   if(tok!==navToken)return;
@@ -2238,7 +2238,6 @@ async function reportsPage(){
     const t=e.target.closest('button[data-t]');if(!t)return;
     if(t.dataset.t==='sheet')return go('sheet');
     if(t.dataset.t==='credit')return go('credit');
-    if(t.dataset.t==='cash')return go('cash');
     if(t.dataset.t==='tvall')return go('tvall');
     if(t.dataset.t==='attend')return go('attend');
     rep.type=t.dataset.t;rep.generated=false;rep.sub='all';rep.rows=[];rep.items={};rep.page=1;
@@ -2426,157 +2425,6 @@ async function shareText(title,text){
 const fmtN=n=>{n=Number(n||0);return n?n.toLocaleString('en-US',{maximumFractionDigits:2}):'–'};
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const fmtDate=d=>{const [y,m,dd]=String(d).split('-');return Number(dd)+' '+MON[Number(m)-1]+' '+y};
-
-/* ---------- Daily Cash Status (Admin) ---------- */
-async function cashPage(){
-  const tok=navToken;
-  if(!document.getElementById('csCss')){const st=document.createElement('style');st.id='csCss';st.textContent='@page cs{size:A4 portrait;margin:9mm}.cswrap{page:cs}.cs-sheet{background:#fff;color:#000;padding:16px;max-width:860px;margin:16px auto;border:1px solid #cfd8e6;border-radius:10px;font-size:12px}.cs-h{text-align:center;font-weight:800;font-size:20px}.cs-a{text-align:center;font-size:12px;margin:2px 0 6px}.cs-d{border:1px solid #000;padding:3px 8px;font-weight:800;margin-bottom:8px;text-align:center}.cs-cols{display:grid;grid-template-columns:1.2fr 1fr;gap:10px;align-items:start;margin-bottom:10px}.cs-cols>div{min-width:0}table.cst{border-collapse:collapse;width:100%;min-width:0!important;table-layout:fixed;margin-bottom:8px}table.cst td,table.cst th{overflow-wrap:anywhere}table.cst th,table.cst td{border:1px solid #000;padding:3px 5px;font-size:12px;background:#fff;color:#000;text-align:left;text-transform:none;letter-spacing:0}table.cst th{background:#eef1f5;font-weight:800;text-align:center}table.cst td.n{text-align:right;font-variant-numeric:tabular-nums}table.cst tr.tt td{font-weight:800;background:#f1f1f1}.cs-ttl{font-weight:800;margin:0 0 3px}.cs-edit table input,.cs-edit table select{width:100%;min-width:70px}.cs-edit td{vertical-align:middle}.cs-auto td{background:#f3f7ff}@media print{.cs-sheet{border:0;border-radius:0;margin:0;padding:0;max-width:none}.cs-cols{break-inside:avoid}}';document.head.appendChild(st)}
-  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Daily Cash Status</h1><div class="sub">Collection is taken from the Daily Sales Sheet figures (per DSO and brand). Add the other lines by hand. The sheet below is what prints (A4).</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="csDate"></div><div><label>Opening cash</label><input type="number" id="csOpen" step="any"><div class="muted" id="csOpenNote" style="margin-top:4px"></div></div></div><div class="form-actions" style="margin-top:10px"><button id="csPrev" class="secondary hidden">Use previous day's closing</button><button id="csPrint">Print</button><button id="csShareImg" class="secondary">Share picture</button><button id="csShareTxt" class="secondary">Share as text</button></div><div id="csMsg"></div></div><div id="csEdit" class="cs-edit"></div></div><div class="cswrap" id="csSheet"></div>`;
-  $('csDate').value=today();
-  const idm=a=>Object.fromEntries(a.map(x=>[x.id,x]));
-  const num=v=>{const n=Number(String(v==null?'':v).replace(/,/g,''));return Number.isFinite(n)?n:0};
-  const f=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
-  const cmpN=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});
-  const BANKS=['DBBL 5451','DBBL 1994','DBBL SPC','DBBL Sheba BS Cafe','DBBL CC Loan A/c','Dhaka Bank Telecom','Dhaka Bank Smile','One Bank Distribution','City Bank Telecom','City Bank Distribution','City Bank Oppo Dealer Finance','City Bank Vivo Dealer Finance','Brac Bank'];
-  const EXPS=['Transportation','Market Expense (DSO)','Courier Charge','Top Pay (Oppo)','Top Pay (Realme)','Hire Purchase (Vivo BS)','Hire Purchase (SPC)','Sohoj Kisti (Samsung BS)','Sohoj Kisti (Honor BS)','Benli Elec. BD Ltd.','Best Tycoon Elec. BD Ltd.','Salextra BD Ltd.','Smart Technology Ltd (Honor)','Smart Hi Tech (Honor)'];
-  const OTHER={bank:'Other bank (type name)',exp:'Other expense (type description)'};
-  let S=null;
-  const sum=(k)=>S.lines.filter(x=>x.kind===k).reduce((a,x)=>a+Number(x.amount||0),0);
-  const calc=()=>{
-    const aC=S.auto.reduce((a,x)=>a+x.amt,0),mC=sum('collection'),coll=aC+mC,wd=sum('withdraw'),dep=sum('deposit'),exp=sum('expense');
-    const bal=S.open+coll+wd;return {coll,wd,dep,exp,bal,close:bal-dep-exp,aQ:S.auto.reduce((a,x)=>a+x.qty,0),mQ:S.lines.filter(x=>x.kind==='collection').reduce((a,x)=>a+Number(x.qty||0),0)};
-  };
-  const saveDay=async()=>{
-    const c=calc();
-    try{await db.from('cash_days').upsert({day:S.day,opening_cash:S.open,opening_manual:S.manual,closing_cash:c.close,updated_at:new Date().toISOString()})}catch(e){}
-  };
-  const sheet=()=>{
-    const c=calc(),L=k=>S.lines.filter(x=>x.kind===k);
-    const col=[...S.auto.map(x=>({n:x.dso,b:x.brand,q:x.qty,a:x.amt})),...L('collection').map(x=>({n:x.name,b:x.brand,q:Number(x.qty||0),a:Number(x.amount||0)}))];
-    const rows=(arr,fn,min)=>{let h=arr.map(fn).join('');for(let i=arr.length;i<(min||0);i++)h+=fn(null,i);return h};
-    const left=`<table class="cst"><colgroup><col style="width:8%"><col style="width:32%"><col style="width:20%"><col style="width:14%"><col style="width:26%"></colgroup><thead><tr><th>SL</th><th>Depositor's Name</th><th>Brand Info</th><th>Qty</th><th>Collection</th></tr></thead><tbody>${col.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.n)}</td><td>${esc(x.b)}</td><td class="n">${x.q?f(x.q):''}</td><td class="n">${f(x.a)}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center">—</td></tr>'}<tr class="tt"><td colspan="3" style="text-align:right">Total</td><td class="n">${f(c.aQ+c.mQ)}</td><td class="n">${f(c.coll)}</td></tr></tbody></table>`;
-    const dep=L('deposit'),exp=L('expense'),wd=L('withdraw');
-    const right=`<div class="cs-ttl">Bank Deposit</div><table class="cst"><colgroup><col style="width:9%"><col style="width:41%"><col style="width:26%"><col style="width:24%"></colgroup><thead><tr><th>SL</th><th>Bank Name</th><th>Amount</th><th>Remarks</th></tr></thead><tbody>${dep.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td class="n">${f(x.amount)}</td><td>${esc(x.remarks)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center">—</td></tr>'}<tr class="tt"><td colspan="2" style="text-align:right">Total Bank Deposit</td><td class="n">${f(c.dep)}</td><td></td></tr></tbody></table><div class="cs-ttl">Expense</div><table class="cst"><colgroup><col style="width:9%"><col style="width:41%"><col style="width:26%"><col style="width:24%"></colgroup><thead><tr><th>SL</th><th>Expense Description</th><th>Amount</th><th>Remarks</th></tr></thead><tbody>${exp.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td class="n">${f(x.amount)}</td><td>${esc(x.remarks)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center">—</td></tr>'}<tr class="tt"><td colspan="2" style="text-align:right">Total Expense</td><td class="n">${f(c.exp)}</td><td></td></tr></tbody></table>`;
-    const summ=`<div class="cs-ttl" style="text-align:center">Cash Summary</div><table class="cst"><colgroup><col style="width:62%"><col style="width:38%"></colgroup><tbody><tr><td>Total Collection</td><td class="n">${f(c.coll)}</td></tr><tr><td>Total Bank Withdraw</td><td class="n">${f(c.wd)}</td></tr><tr><td>Total Opening Cash</td><td class="n">${f(S.open)}</td></tr><tr class="tt"><td>Total Balance</td><td class="n">${f(c.bal)}</td></tr><tr><td>Total Bank Deposit</td><td class="n">${f(c.dep)}</td></tr><tr><td>Total Expense</td><td class="n">${f(c.exp)}</td></tr><tr class="tt"><td>Total Closing Cash</td><td class="n">${f(c.close)}</td></tr></tbody></table>`;
-    const wdt=`<div class="cs-ttl" style="text-align:center">Bank Withdrawal Info</div><table class="cst"><colgroup><col style="width:62%"><col style="width:38%"></colgroup><thead><tr><th>Bank Name</th><th>Amount</th></tr></thead><tbody>${wd.map(x=>`<tr><td>${esc(x.name)}</td><td class="n">${f(x.amount)}</td></tr>`).join('')||'<tr><td colspan="2" style="text-align:center">—</td></tr>'}<tr class="tt"><td style="text-align:right">Total</td><td class="n">${f(c.wd)}</td></tr></tbody></table>`;
-    $('csSheet').innerHTML=`<div class="cs-sheet"><div class="cs-h">Sheba Distribution Daily Cash Status</div><div class="cs-a">Rakshit Market, 3rd floor, Main Road, Cox's Bazar.</div><div class="cs-d">Date: ${esc(fmtDate(S.day))}</div><div class="cs-cols"><div>${left}</div><div>${right}</div></div><div class="cs-cols"><div>${summ}</div><div>${wdt}</div></div></div>`;
-  };
-  const inp=(id,fld,v,type,ph)=>`<input data-id="${id}" data-f="${fld}" type="${type||'text'}" ${type==='number'?'step="any"':''} value="${esc(v==null?'':v)}" placeholder="${ph||''}">`;
-  /* drop-down of fixed names + an "Other" choice that shows a text box */
-  const pick=(x,list,otherLbl,ph)=>{
-    const inList=list.includes(x.name),isOther=S.other.has(String(x.id))||(!inList&&x.name!=='');
-    const sel=`<select data-id="${x.id}" data-sel="1"><option value="">Select…</option>${list.map(n=>`<option value="${esc(n)}" ${x.name===n?'selected':''}>${esc(n)}</option>`).join('')}<option value="__other" ${isOther?'selected':''}>${otherLbl}</option></select>`;
-    return sel+(isOther?`<div style="margin-top:6px">${inp(x.id,'name',x.name,'text',ph)}</div>`:'');
-  };
-  const sec=(kind,title,heads,cells,note)=>{
-    const L=S.lines.filter(x=>x.kind===kind);
-    return `<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 8px">${title}</h3>${note||''}<div class="table-wrap"><table><thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}<th></th></tr></thead><tbody>${kind==='collection'?S.auto.map(x=>`<tr class="cs-auto"><td>${esc(x.dso)}</td><td>${esc(x.brand)}</td><td>${f(x.qty)}</td><td>${f(x.amt)}</td><td class="muted">from sales</td></tr>`).join(''):''}${L.map(x=>`<tr>${cells(x)}<td><button class="secondary" data-del="${x.id}">Delete</button></td></tr>`).join('')}</tbody></table></div><div style="margin-top:8px"><button class="secondary" data-add="${kind}">+ Add row</button></div></div>`;
-  };
-  const edit=()=>{
-    $('csEdit').innerHTML=
-      sec('collection','Collection (DSO rows come from sales; add other depositors here)',['Depositor\'s name','Brand','Sales qty','Collection amount'],x=>`<td>${inp(x.id,'name',x.name,'text','e.g. Lohagara Office')}</td><td>${inp(x.id,'brand',x.brand)}</td><td>${inp(x.id,'qty',x.qty||'','number')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td>`,'<div class="muted" style="margin:0 0 8px">Blue rows are filled automatically from this day\'s sales entries (cash + due collection, same as the Daily Sales Sheet). Cheque recovery is not included. Lohagara office sales are left out: add the money received from Lohagara office as one row by hand.</div>')+
-      sec('deposit','Bank deposit',['Bank name','Amount','Remarks'],x=>`<td>${pick(x,BANKS,OTHER.bank,'Bank name')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td><td>${inp(x.id,'remarks',x.remarks)}</td>`)+
-      sec('expense','Expense (Top Pay, daily expense, etc.)',['Description','Amount','Remarks'],x=>`<td>${pick(x,EXPS,OTHER.exp,'Expense description')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td><td>${inp(x.id,'remarks',x.remarks)}</td>`)+
-      sec('withdraw','Bank withdrawal (money taken out of the bank into cash)',['Bank name','Amount'],x=>`<td>${pick(x,BANKS,OTHER.bank,'Bank name')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td>`);
-  };
-  const refresh=()=>{
-    pendImg=null;if($('csShareImg'))$('csShareImg').textContent='Share picture';
-    $('csOpen').value=S.open||'';
-    $('csOpenNote').textContent=S.manual?'Typed by you.':(S.hasPrev?"Taken from the previous day's closing cash.":'No earlier day found: type the opening cash.');
-    $('csPrev').classList.toggle('hidden',!(S.manual&&S.hasPrev));
-    sheet();
-  };
-  const load=async()=>{
-    const day=$('csDate').value;if(!day)return;
-    $('csMsg').innerHTML='<div class="notice">Loading…</div>';$('csEdit').innerHTML='';$('csSheet').innerHTML='';
-    try{
-      const [dsos,brands,roads]=await Promise.all([queryAll('dsos'),queryAll('brands'),queryAll('roads')]);
-      const DN=idm(dsos),BN=idm(brands);
-      /* Lohagara office is NOT calculated from sales: its money is typed in by hand as one row */
-      const LOH=new Set(roads.filter(x=>/loha/i.test([x.office,x.name,x.report_group].filter(Boolean).join(' '))).map(x=>x.id));
-      const ent=(await fetchAll(()=>db.from('sales_entries').select('id,dso_id,brand_id,road_id,received_amount').eq('sale_date',day).order('id'))).filter(e=>!LOH.has(e.road_id));
-      const ids=ent.map(e=>e.id),qty={};
-      for(let i=0;i<ids.length;i+=40){(await fetchAll(()=>db.from('sales_items').select('sales_entry_id,quantity').in('sales_entry_id',ids.slice(i,i+40)).order('id'))).forEach(it=>{qty[it.sales_entry_id]=(qty[it.sales_entry_id]||0)+Number(it.quantity||0)})}
-      const g=new Map();
-      ent.forEach(e=>{const k=e.dso_id+'|'+e.brand_id;let o=g.get(k);if(!o){o={dso:DN[e.dso_id]?.full_name||'—',brand:BN[e.brand_id]?.name||'—',qty:0,amt:0};g.set(k,o)}o.qty+=qty[e.id]||0;o.amt+=Number(e.received_amount||0)});
-      const auto=[...g.values()].filter(o=>o.qty||o.amt).sort((a,b)=>cmpN(a.dso,b.dso)||cmpN(a.brand,b.brand));
-      const lr=await db.from('cash_lines').select('*').eq('day',day).order('id');
-      if(lr.error)throw new Error(/does not exist|schema cache|relation/i.test(lr.error.message||'')?'Daily Cash Status is not set up yet. Run cash-status-setup.sql in Supabase, then reload.':lr.error.message);
-      const dr=await db.from('cash_days').select('*').eq('day',day).limit(1);
-      const pr=await db.from('cash_days').select('day,closing_cash').lt('day',day).order('day',{ascending:false}).limit(1);
-      if(tok!==navToken)return;
-      const row=(dr.data||[])[0],prev=(pr.data||[])[0];
-      const manual=!!(row&&row.opening_manual),open=manual?Number(row.opening_cash||0):(prev?Number(prev.closing_cash||0):(row?Number(row.opening_cash||0):0));
-      S={day,auto,other:new Set(),lines:lr.data||[],open,manual:manual||(!prev&&!!row&&Number(row.opening_cash)>0),hasPrev:!!prev};
-      $('csMsg').innerHTML='';
-      refresh();edit();saveDay();
-    }catch(e){S=null;msg($('csMsg'),e.message||String(e))}
-  };
-  $('csDate').onchange=load;
-  $('csPrint').onclick=()=>{if(S)window.print()};
-  /* Share: as a picture (WhatsApp / Viber / WeChat from the phone's share menu) or as plain text */
-  let pendImg=null;
-  const txt=()=>{
-    const c=calc(),L=k=>S.lines.filter(x=>x.kind===k&&(x.name||Number(x.amount)));
-    const col=[...S.auto.map(x=>[x.dso+(x.brand?' ('+x.brand+')':''),x.qty,x.amt]),...S.lines.filter(x=>x.kind==='collection'&&(x.name||Number(x.amount))).map(x=>[x.name+(x.brand?' ('+x.brand+')':''),Number(x.qty||0),Number(x.amount||0)])];
-    const o=['Sheba Distribution Daily Cash Status','Date: '+fmtDate(S.day),'','COLLECTION'];
-    col.forEach((x,i)=>o.push((i+1)+'. '+x[0]+(x[1]?' | Qty '+f(x[1]):'')+' | '+f(x[2])));
-    o.push('Total collection: '+f(c.coll));
-    if(L('deposit').length){o.push('','BANK DEPOSIT');L('deposit').forEach((x,i)=>o.push((i+1)+'. '+x.name+': '+f(x.amount)));o.push('Total bank deposit: '+f(c.dep))}
-    if(L('expense').length){o.push('','EXPENSE');L('expense').forEach((x,i)=>o.push((i+1)+'. '+x.name+': '+f(x.amount)));o.push('Total expense: '+f(c.exp))}
-    if(L('withdraw').length){o.push('','BANK WITHDRAWAL');L('withdraw').forEach(x=>o.push(x.name+': '+f(x.amount)))}
-    o.push('','CASH SUMMARY','Opening cash: '+f(S.open),'Collection: '+f(c.coll),'Bank withdraw: '+f(c.wd),'Total balance: '+f(c.bal),'Bank deposit: '+f(c.dep),'Expense: '+f(c.exp),'Closing cash: '+f(c.close));
-    return o.join('\n');
-  };
-  $('csShareTxt').onclick=()=>{if(!S)return msg($('csMsg'),'Choose a date first.');shareText('Daily Cash Status '+fmtDate(S.day),txt())};
-  const sendImg=async file=>{
-    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Daily Cash Status'});return}
-    const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),8000);
-    msg($('csMsg'),'The picture was saved on this device. Send it from Downloads or Gallery.','success');
-  };
-  $('csShareImg').onclick=async()=>{
-    if(!S)return msg($('csMsg'),'Choose a date first.');
-    const b=$('csShareImg');
-    if(pendImg){const fl=pendImg;pendImg=null;b.textContent='Share picture';try{await sendImg(fl)}catch(e){if(!e||e.name!=='AbortError')msg($('csMsg'),'Could not share: '+(e.message||e))}return}
-    b.disabled=true;b.textContent='Preparing…';$('csMsg').innerHTML='';
-    try{
-      await loadH2C();
-      const el=document.querySelector('#csSheet .cs-sheet');
-      const cv=await html2canvas(el,{scale:2,backgroundColor:'#ffffff',useCORS:true});
-      const blob=await new Promise(ok=>cv.toBlob(ok,'image/png'));
-      const fl=new File([blob],'Daily_Cash_Status_'+S.day+'.png',{type:'image/png'});
-      b.disabled=false;b.textContent='Share picture';
-      try{await sendImg(fl)}catch(e){
-        if(e&&e.name==='NotAllowedError'){pendImg=fl;b.textContent='Picture ready - tap to share'}
-        else if(e&&e.name!=='AbortError')msg($('csMsg'),'Could not share: '+(e.message||e));
-      }
-    }catch(e){b.disabled=false;b.textContent='Share picture';msg($('csMsg'),e.message||String(e))}
-  };
-  $('csOpen').onchange=()=>{if(!S)return;S.open=num($('csOpen').value);S.manual=true;refresh();saveDay()};
-  $('csPrev').onclick=async()=>{if(!S)return;S.manual=false;await db.from('cash_days').upsert({day:S.day,opening_manual:false,opening_cash:S.open,closing_cash:0});load()};
-  $('csEdit').onclick=async e=>{
-    const a=e.target.closest('button[data-add]'),d=e.target.closest('button[data-del]');
-    if(a){const r=await db.from('cash_lines').insert({day:S.day,kind:a.dataset.add}).select().limit(1);if(r.error)return msg($('csMsg'),r.error.message);S.lines.push(r.data[0]);edit();refresh();saveDay();return}
-    if(d){if(!confirm('Delete this row?'))return;const r=await db.from('cash_lines').delete().eq('id',d.dataset.del);if(r.error)return msg($('csMsg'),r.error.message);S.lines=S.lines.filter(x=>String(x.id)!==d.dataset.del);edit();refresh();saveDay()}
-  };
-  $('csEdit').onchange=async e=>{
-    const sl=e.target.closest('select[data-sel]');
-    if(sl&&S){
-      const row=S.lines.find(x=>String(x.id)===sl.dataset.id);if(!row)return;
-      const v=sl.value,id=String(row.id);
-      if(v==='__other'){S.other.add(id);if(row.name&&![...BANKS,...EXPS].includes(row.name)){}else{row.name='';const r0=await db.from('cash_lines').update({name:''}).eq('id',row.id);if(r0.error)return msg($('csMsg'),r0.error.message)}}
-      else{S.other.delete(id);row.name=v;const r1=await db.from('cash_lines').update({name:v}).eq('id',row.id);if(r1.error)return msg($('csMsg'),r1.error.message)}
-      edit();refresh();saveDay();return;
-    }
-    const i=e.target.closest('input[data-id]');if(!i||!S)return;
-    const fld=i.dataset.f,v=(fld==='amount'||fld==='qty')?num(i.value):i.value.trim();
-    const row=S.lines.find(x=>String(x.id)===i.dataset.id);if(!row)return;
-    const r=await db.from('cash_lines').update({[fld]:v}).eq('id',row.id);if(r.error)return msg($('csMsg'),r.error.message);
-    row[fld]=v;refresh();saveDay();
-  };
-  load();
-}
-
 
 /* ---------- Attendance Report (Admin): punches of the ZKTeco machine are uploaded as a file; late penalty is worked out here ---------- */
 async function attendPage(){
@@ -2862,209 +2710,6 @@ async function tvAdminPage(){
   run();
 }
 
-
-/* ---------- Road Plan (DSO sees only his own row; Admin sees and edits all) ---------- */
-const RP_DAYS=['Saturday','Sunday','Monday','Tuesday','Wednesday','Thursday'],RP_KEYS=['sat','sun','mon','tue','wed','thu'],RP_JS=[6,0,1,2,3,4];
-const RP_SEED=(()=>{const C='Cox\'s Bazar',L='Lohagara';const r=(g,n,b,d,m)=>({grp:g,name:n,brand:b,sat:d[0],sun:d[1],mon:d[2],tue:d[3],wed:d[4],thu:d[5],mobile:m||'',remarks:''});
-const P='Proper',PM='Proper\nMoheshkhali';
-return [
-r(C,'Sajjad Hosen','OPPO',[P,'Proper\nMoheshkhali (W-2,4)',P,P,P,P]),
-r(C,'Saiful Islam','ZTE, Huawei, Nokia',[P,P,'Proper\nMoheshkhali (W-1,3)',P,P,'Proper\nMoheshkhali (W-2,4)']),
-r(C,'Md. Saiful Islam','Samsung',[P,'Ramu/Eidgha',P,'Ramu/Eidgha',P,'Ramu/Eidgha\nMoheshkhali (W-1,3)']),
-r(C,'Shahajan Habib','vivo',['Proper\nMoheshkhali (W-1,3)',P,P,'Proper\nMoheshkhali (W-2,4)',P,P]),
-r(C,'Jashim Uddin Zia','vivo',['Ramu','Eidgha\nEidgor (W 2)','Chakaria\n(Badorkhali +Materbari (W-1,2,3)','Chakaria\n(Badorkhali +Materbari (W-2)','Ramu/Eidgha\nLama/Alikhadom (W-2,4)','Chakaria\n(Badorkhali +Materbari (W-4)']),
-r(C,'Mukit','OPPO',['Chakaria\nBadorkhali +Materbari (W-2)','Chakaria\nLama/Alikhadom (W-1,3)','Chakaria\nBadorkhali +Materbari (W-4)','Chakaria','Ramu/Eidgha','Chakaria\nBadorkhali +Materbari (W-3)']),
-r(C,'Hamidul Hoque','ZTE/Huawei',['Chakaria\nBadorkhali +Materbari (W-1,3,4)','Chakaria','Ramu/Eidgha','Chakaria\nLama/Alikhadom (W-1,3)','Chakaria','Ramu']),
-r(C,'Md. Imran','Nokia/Salextra',['Eidgha','Chakaria\nLama/Alikhadom (W-2,4)','Ramu/Eidgha','Chakaria','Chakaria\nBadorkhali +Materbari (W-1,2,4)','Ramu/Eidgha']),
-r(C,'Ibne Hasan Nobel','ViVO',['Hnilla/Teknaf','Kutopalong-Palongkhali','Hnilla/Teknaf','Ukhiya-Court Bazar','Hnilla/Teknaf','Court Bazar-Kutupalong']),
-r(C,'Golam Azam Nishat','ZTE/Huawei',['Ukhiya-Court Bazar','Hnilla/Teknaf','Kutopalong-Palongkhali','Ukhiya-Court Bazar','Hnilla/Teknaf','Kutopalong-Palongkhali']),
-r(C,'Sarwar Kamal','Samsung',['Kutopalong-Palongkhali','Ukhiya-Court Bazar','Hnilla/Teknaf','Kutopalong-Palongkhali','Ukhiya-Court Bazar','Hnilla/Teknaf']),
-r(C,'Mubarak Ahmad','OPPO',['Ukhiya-Court Bazar','Hnilla/Teknaf','Court Bazar-Kutupalong','Hnilla/Teknaf','Kutopalong-Palongkhali','Hnilla/Teknaf']),
-r(C,'Md. Joynul','Nokia/Salextra',['Hnilla/Teknaf','Ukhiya-Court Bazar','Kutopalong-Palongkhali','Hnilla/Teknaf','Kutopalong-Palongkhali','Ukhiya-Court Bazar']),
-r(L,'Farhad','Vivo',['Keranihat\nLohagara','Anwara\nBanskhali','Pekua\nKutubdia','Bandarban','Keranihat\nLohagara','Padowa\nLohagara'],'01842869034'),
-r(L,'Didar','Oppo',['Bandarban','Lohagara','Keranihat\nDohazari','Pekua\nLohagara','Kutubdia (W-1,3)\nBandarban/Keranihat','Keranihat\nDohazari'],'01866913958'),
-r(L,'Fahim','ZTE',['Pekua\nKutubdia','Keranihat\nDohazari','Padowa\nLohagara','Keranihat','Pekua\nLohagara','Bandarban'],'01732904953'),
-r(L,'Twfik','Nokia',['Dohazari\nKeranihat\nSatkhania','Pekua\nLohagara','Bandarban\nKeranihat','Dohazari\nKeranihat\nSatkhania','Kutubdia (W-2,4)\nAnwara/Banskhali','Pekua\nLohagara'],'01690046075')
-].map((x,i)=>(x.sort=i+1,x))})();
-async function roadPlanPage(){
-  const tok=navToken,isAdmin=userMode==='admin',dso=currentDso;
-  const nn=s=>String(s||'').toLowerCase().replace(/[^a-z]/g,'');
-  const r=await db.from('road_plans').select('*').order('sort').order('id');
-  if(tok!==navToken)return;
-  const tableMissing=!!r.error,fromDb=!r.error&&(r.data||[]).length>0;
-  const rows=fromDb?r.data:RP_SEED.map(x=>({...x}));
-  if(!document.getElementById('rpCss')){const st=document.createElement('style');st.id='rpCss';st.textContent='.rp-card{background:#fff;border:1px solid #cfd8e6;border-radius:14px;overflow:hidden;max-width:560px;margin:12px auto;box-shadow:0 2px 10px rgba(15,23,42,.08)}.rp-h{background:#14243a;color:#fff;padding:12px 14px}.rp-h b{display:block;font-size:16px}.rp-h span{font-size:12px;opacity:.8}.rp-d{display:flex;gap:10px;padding:9px 14px;border-top:1px solid #e5eaf2;align-items:flex-start}.rp-d>b{width:88px;flex:none;color:#475569;font-size:13px}.rp-d>div{white-space:pre-line;font-weight:600;color:#0f172a}.rp-d.today{background:#fff7cc}.rp-d.today>b{color:#b45309}.rp-grp{margin:16px 0 6px;font-weight:700}.rp-tb{border-collapse:collapse;min-width:1100px;width:100%;background:#fff}.rp-tb th,.rp-tb td{border:1px solid #cbd5e1;padding:4px;vertical-align:top}.rp-tb th{background:#e2e8f0;font-size:12px;text-align:center}.rp-tb textarea,.rp-tb input,.rp-tb select{width:100%;min-width:90px;font:inherit;font-size:12px;padding:4px;border:1px solid #e2e8f0;border-radius:6px}.rp-tb textarea{resize:vertical;min-height:44px}';document.head.appendChild(st)}
-  if(!isAdmin){
-    if(!dso){$('page').innerHTML='<div class="notice error">This page is for DSO logins.</div>';return}
-    let mine=rows.filter(x=>x.dso_id&&String(x.dso_id)===String(dso.id));
-    if(!mine.length){
-      const n=nn(dso.full_name);let c=rows.filter(x=>{const m=nn(x.name);return m&&n&&(m===n||m.includes(n)||n.includes(m))});
-      if(c.length>1){try{const b=await db.from('brands').select('id,name');const bn=(b.data||[]).filter(x=>(dso.brandIds||[]).includes(x.id)).map(x=>nn(x.name));
-        const f=c.filter(x=>{const xb=nn(x.brand);return bn.some(y=>y&&xb&&(xb.includes(y)||y.includes(xb)))});if(f.length)c=f}catch(e){}}
-      mine=c}
-    const td=new Date().getDay();
-    $('page').innerHTML=`<h1 class="page-title">Road Plan</h1>`+(mine.length?mine.map(x=>`<div class="rp-card"><div class="rp-h"><b>${esc(x.name)}</b><span>${esc(x.brand||'')}${x.grp?' · '+esc(x.grp):''}${x.mobile?' · '+esc(x.mobile):''}</span></div>${RP_DAYS.map((d,i)=>`<div class="rp-d ${RP_JS[i]===td?'today':''}"><b>${d}${RP_JS[i]===td?'<br><small>Today</small>':''}</b><div>${esc(x[RP_KEYS[i]]||'-')}</div></div>`).join('')}${x.remarks?`<div class="rp-d"><b>Remarks</b><div>${esc(x.remarks)}</div></div>`:''}</div>`).join(''):'<div class="notice">No road plan is set for you yet. Ask the Admin.</div>');
-    return;
-  }
-  /* Admin: one editable grid */
-  let dsos=[];try{const d=await db.from('dsos').select('id,full_name').eq('is_active',true).order('full_name');dsos=d.data||[]}catch(e){}
-  if(tok!==navToken)return;
-  const row=(x)=>`<tr data-id="${x.id||''}"><td><input class="f-sort" value="${esc(x.sort??'')}" style="min-width:40px;width:46px"></td><td><input class="f-grp" value="${esc(x.grp||'')}"></td><td><input class="f-name" value="${esc(x.name||'')}"></td><td><select class="f-dso"><option value="">auto (by name)</option>${dsos.map(d=>`<option value="${d.id}" ${String(x.dso_id||'')===String(d.id)?'selected':''}>${esc(d.full_name)}</option>`).join('')}</select></td><td><input class="f-brand" value="${esc(x.brand||'')}"></td>${RP_KEYS.map(k=>`<td><textarea class="f-${k}">${esc(x[k]||'')}</textarea></td>`).join('')}<td><input class="f-mobile" value="${esc(x.mobile||'')}"></td><td><input class="f-remarks" value="${esc(x.remarks||'')}"></td><td><button class="secondary rp-del" type="button">✕</button></td></tr>`;
-  $('page').innerHTML=`<h1 class="page-title">Road Plan</h1><div class="sub">Each DSO sees only his own row. If a name does not match automatically, pick the DSO in the "DSO" column.</div><div id="rpMsg"></div>
-  ${tableMissing?'<div class="notice error">Run road-plan-setup.sql in Supabase (SQL Editor) once, then reload. Until then DSOs see the built-in plan below and it cannot be edited.</div>':!fromDb?'<div class="notice">This is the built-in plan. Tap Save to store it in the database, then edit freely.</div>':''}
-  <div class="table-wrap"><table class="rp-tb"><thead><tr><th>#</th><th>Group</th><th>DSO name (as in plan)</th><th>DSO</th><th>Brand</th>${RP_DAYS.map(d=>`<th>${d}</th>`).join('')}<th>Mobile</th><th>Remarks</th><th></th></tr></thead><tbody id="rpBody">${rows.map(row).join('')}</tbody></table></div>
-  <div class="form-actions" style="margin-top:12px"><button class="secondary" id="rpAdd" type="button">+ Add row</button><button id="rpSave" type="button" ${tableMissing?'disabled':''}>Save</button></div>`;
-  let removed=[];
-  $('rpAdd').onclick=()=>{$('rpBody').insertAdjacentHTML('beforeend',row({sort:$('rpBody').children.length+1,grp:(rows[rows.length-1]||{}).grp||''}))};
-  $('rpBody').onclick=e=>{const b=e.target.closest('.rp-del');if(!b)return;const tr=b.closest('tr');if(tr.dataset.id)removed.push(Number(tr.dataset.id));tr.remove()};
-  $('rpSave').onclick=async()=>{
-    const b=$('rpSave');b.disabled=true;
-    try{
-      const q=(tr,c)=>tr.querySelector('.f-'+c).value.trim();
-      const recs=[...$('rpBody').children].map((tr,i)=>{const o={grp:q(tr,'grp'),name:q(tr,'name'),brand:q(tr,'brand'),mobile:q(tr,'mobile'),remarks:q(tr,'remarks'),sort:Number(q(tr,'sort'))||i+1,dso_id:q(tr,'dso')||null};RP_KEYS.forEach(k=>o[k]=tr.querySelector('.f-'+k).value.trim());if(tr.dataset.id)o.id=Number(tr.dataset.id);return o}).filter(o=>o.name);
-      if(removed.length){const d=await db.from('road_plans').delete().in('id',removed);if(d.error)throw d.error;removed=[]}
-      const old=recs.filter(o=>o.id),nw=recs.filter(o=>!o.id);
-      if(old.length){const u=await db.from('road_plans').upsert(old);if(u.error)throw u.error}
-      if(nw.length){const u=await db.from('road_plans').insert(nw);if(u.error)throw u.error}
-      msg($('rpMsg'),'Saved.','success');
-      if(tok===navToken)roadPlanPage();
-    }catch(e){msg($('rpMsg'),e.message||String(e))}finally{b.disabled=false}
-  };
-}
-
-/* ---------- Card & Cashless Sale (Admin) ---------- */
-async function cardSalePage(){
-  const tok=navToken;
-  if(!document.getElementById('cdCss')){const st=document.createElement('style');st.id='cdCss';st.textContent=`@page cd{size:A4 landscape;margin:8mm}.cdwrap{page:cd;overflow-x:auto}.cd-sheet{background:#fff;color:#000;min-width:980px;max-width:1200px;margin:16px auto;border:1px solid #000;font-size:13px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.cd-t{background:#ff0;text-align:center;font-weight:800;font-size:22px;padding:16px 6px 8px;border-bottom:1px solid #000;color:#000}table.cdt{border-collapse:collapse;width:100%;min-width:0!important;table-layout:fixed;margin:0}table.cdt th,table.cdt td{border:1px solid #000;padding:6px;text-align:center;color:#000;background:#fff;text-transform:none;letter-spacing:0;font-size:13px;overflow-wrap:anywhere}table.cdt th,table.cdt tr.tt td{background:#92d050;font-weight:800}table.cdt td.l{text-align:left}table.cdt tbody tr{height:42px}.cd-edit input{min-width:92px;width:100%}.cd-edit input[type=date]{min-width:140px}.cd-edit td.cl{font-weight:700;white-space:nowrap}@media print{.cd-sheet{margin:0;max-width:none;min-width:0;break-inside:avoid;page-break-inside:avoid}table.cdt th,table.cdt td{font-size:11px;padding:3px 4px}table.cdt tbody tr{height:30px}.cd-t{font-size:18px;padding:8px 6px 4px}}`;document.head.appendChild(st)}
-  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Card &amp; Cashless Sale</h1><div class="sub">One line per showroom. Opening transit is the previous day's closing. Closing transit = opening + sale amount - credit amount - card sale charge.</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="cdDate"></div></div><div class="form-actions" style="margin-top:10px"><button id="cdPrint">Print</button><button id="cdShareImg" class="secondary">Share picture</button><button id="cdShareTxt" class="secondary">Share as text</button><button id="cdCopy" class="secondary">Copy previous POS names</button><button id="cdAdd" class="secondary">+ Add showroom</button></div><div id="cdMsg"></div></div><div id="cdEdit" class="cd-edit"></div></div><div class="cdwrap" id="cdSheet"></div>`;
-  $('cdDate').value=today();
-  const DEFAULTS=['Sheba Brand Shop-Honor','Sheba Brand Shop - Vivo','Sheba Brand Shop - Samsung','Sheba Brand Shop - Oppo','Sheba Brand Shop - Realme','Sheba Smartphone Café'];
-  const num=v=>{const n=Number(String(v==null?'':v).replace(/,/g,''));return Number.isFinite(n)?n:0};
-  const f=n=>String(Math.round((Number(n)||0)*100)/100);
-  const cell=n=>n?f(n):'';
-  const SETUP='Card & Cashless Sale is not set up yet. Run card-sale-setup.sql in Supabase, then try again.';
-  const dbErr=e=>/card_sales|does not exist|schema cache|relation/i.test(e.message||'')?SETUP:(e.message||String(e));
-  let S=null,R=[],pendImg=null;
-  const recalc=r=>{r.open=r.manual?r.openAmt:r.auto;r.close=r.open+r.sale-r.credit-r.charge};
-  /* charge = the card money that was waiting (opening transit) minus what the bank really paid in */
-  const autoCh=r=>r.credit>0&&r.credit<r.open?Math.round((r.open-r.credit)*100)/100:0;
-  const tot=k=>R.reduce((a,r)=>a+(Number(r[k])||0),0);
-  const sheet=()=>{
-    const body=R.map((r,i)=>`<tr><td>${i+1}</td><td class="l">${esc(r.showroom)}</td><td>${cell(r.open)}</td><td>${esc(r.pos)}</td><td>${cell(r.sale)}</td><td>${r.saleDate?esc(fmtDate(r.saleDate)):''}</td><td>${cell(r.credit)}</td><td>${r.creditDate?esc(fmtDate(r.creditDate)):''}</td><td>${cell(r.charge)}</td><td>${f(r.close)}</td><td>${esc(r.remarks)}</td></tr>`).join('');
-    $('cdSheet').innerHTML=`<div class="cd-sheet"><div class="cd-t">Card Sale &amp; Bkash Sale Info ${esc(fmtDate(S.day))}</div><table class="cdt"><colgroup><col style="width:4%"><col style="width:16%"><col style="width:8%"><col style="width:13%"><col style="width:7%"><col style="width:8%"><col style="width:8%"><col style="width:8%"><col style="width:7%"><col style="width:8%"><col style="width:13%"></colgroup><thead><tr><th rowspan="2">SL No.</th><th colspan="2">Opening Info</th><th colspan="7">Today Card Sale Info</th><th rowspan="2">Remarks</th></tr><tr><th>Showroom Name</th><th>Opening Transit(Card)</th><th>POS Name/ Card Type</th><th>Sale Amount</th><th>Sale Date</th><th>Credit Amount</th><th>Credit Date</th><th>Card Sale Charge</th><th>Closing Transit</th></tr></thead><tbody>${body}<tr class="tt"><td colspan="2">Total</td><td>${f(tot('open'))}</td><td></td><td>${f(tot('sale'))}</td><td></td><td>${f(tot('credit'))}</td><td></td><td>${f(tot('charge'))}</td><td>${f(tot('close'))}</td><td></td></tr></tbody></table></div>`;
-  };
-  const inp=(i,fl,v,type,ph)=>`<input data-i="${i}" data-f="${fl}" type="${type||'text'}" ${type==='number'?'step="any"':''} value="${esc(v==null||v===0?'':v)}" placeholder="${ph||''}">`;
-  const edit=()=>{
-    $('cdEdit').innerHTML=`<div class="panel" style="margin-top:12px"><div class="table-wrap"><table><thead><tr><th>Showroom</th><th>Opening transit</th><th>POS name / card type</th><th>Sale amount</th><th>Sale date</th><th>Credit amount</th><th>Credit date</th><th>Card sale charge</th><th>Closing transit</th><th>Remarks</th><th></th></tr></thead><tbody>${R.map((r,i)=>`<tr><td>${esc(r.showroom)}</td><td>${inp(i,'open',r.open,'number')}</td><td>${inp(i,'pos',r.pos,'text','e.g. Bkash To One Bank-4500')}</td><td>${inp(i,'sale',r.sale,'number')}</td><td>${inp(i,'saleDate',r.saleDate,'date')}</td><td>${inp(i,'credit',r.credit,'number')}</td><td>${inp(i,'creditDate',r.creditDate,'date')}</td><td>${inp(i,'charge',r.charge,'number')}</td><td class="cl" id="cdC${i}">${f(r.close)}</td><td>${inp(i,'remarks',r.remarks)}</td><td>${DEFAULTS.includes(r.showroom)?'':`<button class="secondary" data-del="${i}">Remove</button>`}</td></tr>`).join('')}</tbody></table></div><div class="muted" style="margin-top:8px">Opening transit fills itself from the previous day's closing. Type a figure there to use your own number for this day only; clear the box to go back to automatic. Card sale charge fills itself as opening minus credit when the credit is smaller than the opening; type your own figure to override.</div></div>`;
-  };
-  const refresh=()=>{pendImg=null;if($('cdShareImg'))$('cdShareImg').textContent='Share picture';sheet()};
-  const saveRow=async r=>{
-    const rec={day:S.day,showroom:r.showroom,opening_manual:r.manual,opening_amount:r.manual?r.openAmt:null,pos_name:r.pos||null,sale_amount:r.sale||0,sale_date:r.saleDate||null,credit_amount:r.credit||0,credit_date:r.creditDate||null,charge:r.charge||0,remarks:r.remarks||null};
-    const res=await db.from('card_sales').upsert(rec,{onConflict:'day,showroom'});
-    if(res.error){msg($('cdMsg'),dbErr(res.error));return false}
-    return true;
-  };
-  const load=async()=>{
-    const day=$('cdDate').value;if(!day)return;
-    $('cdMsg').innerHTML='<div class="notice">Loading…</div>';$('cdEdit').innerHTML='';$('cdSheet').innerHTML='';
-    try{
-      const all=await fetchAll(()=>db.from('card_sales').select('*').lte('day',day).order('day').order('id'));
-      if(tok!==navToken)return;
-      const names=[...DEFAULTS];all.forEach(x=>{if(x.showroom&&!names.includes(x.showroom))names.push(x.showroom)});
-      R=names.map(n=>{
-        const mine=all.filter(x=>x.showroom===n);let prev=0,cur=null,prevPos='';
-        mine.forEach(x=>{
-          if(x.day<day){const o=x.opening_manual?num(x.opening_amount):prev;prev=o+num(x.sale_amount)-num(x.credit_amount)-num(x.charge);if(x.pos_name)prevPos=x.pos_name}
-          else if(x.day===day)cur=x;
-        });
-        const r={showroom:n,auto:prev,manual:!!(cur&&cur.opening_manual),openAmt:cur?num(cur.opening_amount):0,pos:cur?.pos_name||'',sale:cur?num(cur.sale_amount):0,saleDate:cur?.sale_date||'',credit:cur?num(cur.credit_amount):0,creditDate:cur?.credit_date||'',charge:cur?num(cur.charge):0,remarks:cur?.remarks||'',prevPos,lastAuto:0};
-        recalc(r);r.lastAuto=autoCh(r);return r;
-      });
-      S={day};$('cdMsg').innerHTML='';edit();refresh();
-    }catch(e){$('cdMsg').innerHTML='';msg($('cdMsg'),dbErr(e))}
-  };
-  $('cdDate').onchange=load;
-  $('cdPrint').onclick=()=>{
-    if(!S)return;
-    /* keep the sheet on ONE page even with many showrooms */
-    const el=document.querySelector('#cdSheet .cd-sheet'),n=R.length;
-    if(el&&n>16)el.style.zoom=String(Math.max(.5,16/n));
-    const back=()=>{if(el)el.style.zoom='';window.removeEventListener('afterprint',back)};
-    window.addEventListener('afterprint',back);
-    window.print();
-  };
-  const txt=()=>{
-    const o=['Card Sale & Bkash Sale Info '+fmtDate(S.day),''];
-    R.forEach((r,i)=>o.push((i+1)+'. '+r.showroom+' | Opening '+f(r.open)+(r.sale?' | Sale '+f(r.sale)+(r.pos?' ('+r.pos+')':''):'')+(r.credit?' | Credit '+f(r.credit):'')+(r.charge?' | Charge '+f(r.charge):'')+' | Closing '+f(r.close)+(r.remarks?' | '+r.remarks:'')));
-    o.push('','Total: Opening '+f(tot('open'))+' | Sale '+f(tot('sale'))+' | Credit '+f(tot('credit'))+' | Charge '+f(tot('charge'))+' | Closing '+f(tot('close')));
-    return o.join('\n');
-  };
-  $('cdShareTxt').onclick=()=>{if(!S)return msg($('cdMsg'),'Choose a date first.');shareText('Card Sale & Bkash Sale Info '+fmtDate(S.day),txt())};
-  const sendImg=async file=>{
-    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Card Sale & Bkash Sale Info'});return}
-    const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),8000);
-    msg($('cdMsg'),'The picture was saved on this device. Send it from Downloads or Gallery.','success');
-  };
-  $('cdShareImg').onclick=async()=>{
-    if(!S)return msg($('cdMsg'),'Choose a date first.');
-    const b=$('cdShareImg');
-    if(pendImg){const fl=pendImg;pendImg=null;b.textContent='Share picture';try{await sendImg(fl)}catch(e){if(!e||e.name!=='AbortError')msg($('cdMsg'),'Could not share: '+(e.message||e))}return}
-    b.disabled=true;b.textContent='Preparing…';$('cdMsg').innerHTML='';
-    try{
-      await loadH2C();
-      const el=document.querySelector('#cdSheet .cd-sheet');
-      const cv=await html2canvas(el,{scale:2,backgroundColor:'#ffffff',useCORS:true});
-      const blob=await new Promise(ok=>cv.toBlob(ok,'image/png'));
-      if(!blob||blob.size<500)throw new Error('This phone could not draw the picture. Try Print or Share as text.');
-      const fl=new File([blob],'Card_Sale_'+S.day+'.png',{type:'image/png'});
-      b.disabled=false;b.textContent='Share picture';
-      try{await sendImg(fl)}catch(e){
-        if(e&&e.name==='NotAllowedError'){pendImg=fl;b.textContent='Picture ready - tap to share'}
-        else if(e&&e.name!=='AbortError')msg($('cdMsg'),'Could not share: '+(e.message||e));
-      }
-    }catch(e){b.disabled=false;b.textContent='Share picture';msg($('cdMsg'),e.message||String(e))}
-  };
-  $('cdCopy').onclick=async()=>{
-    if(!S)return msg($('cdMsg'),'Choose a date first.');
-    const rows=R.filter(r=>!r.pos&&r.prevPos);
-    if(!rows.length)return msg($('cdMsg'),'Nothing to copy: every POS name is already filled, or there is no earlier day.','');
-    for(const r of rows){r.pos=r.prevPos;if(!(await saveRow(r)))return}
-    edit();refresh();msg($('cdMsg'),rows.length+' POS name'+(rows.length>1?'s':'')+' copied from the earlier day.','success');
-  };
-  $('cdAdd').onclick=async()=>{
-    if(!S)return msg($('cdMsg'),'Choose a date first.');
-    const n=(prompt('Showroom name:')||'').trim();if(!n)return;
-    if(R.some(r=>r.showroom.toLowerCase()===n.toLowerCase()))return msg($('cdMsg'),'This showroom is already in the list.');
-    const r={showroom:n,auto:0,manual:false,openAmt:0,pos:'',sale:0,saleDate:'',credit:0,creditDate:'',charge:0,remarks:''};recalc(r);
-    if(await saveRow(r))load();
-  };
-  $('cdEdit').onclick=async e=>{
-    const d=e.target.closest('button[data-del]');if(!d||!S)return;
-    const r=R[+d.dataset.del];if(!r)return;
-    if(!confirm('Remove "'+r.showroom+'" and all its saved days?'))return;
-    const res=await db.from('card_sales').delete().eq('showroom',r.showroom);
-    if(res.error)return msg($('cdMsg'),dbErr(res.error));
-    load();
-  };
-  $('cdEdit').onchange=async e=>{
-    const t=e.target.closest('input[data-i]');if(!t||!S)return;
-    const i=+t.dataset.i,r=R[i],fl=t.dataset.f,v=t.value;if(!r)return;
-    if(fl==='open'){if(v===''||num(v)===r.auto){r.manual=false;r.openAmt=0}else{r.manual=true;r.openAmt=num(v)}}
-    else if(fl==='sale'||fl==='credit'||fl==='charge')r[fl]=num(v);
-    else r[fl]=v.trim();
-    recalc(r);
-    if(fl==='credit'||fl==='open'){
-      const a=autoCh(r);
-      if(r.charge===0||r.charge===r.lastAuto){r.charge=a;const ci=document.querySelector('#cdEdit input[data-i="'+i+'"][data-f="charge"]');if(ci)ci.value=r.charge?f(r.charge):''}
-      r.lastAuto=a;recalc(r);
-    }
-    if(fl==='open')t.value=r.open?f(r.open):'';
-    const c=$('cdC'+i);if(c)c.textContent=f(r.close);
-    refresh();
-    await saveRow(r);
-  };
-  load();
-}
 
 /* ---------- Target vs Achievement (DSO login only) ---------- */
 async function targetPage(){
