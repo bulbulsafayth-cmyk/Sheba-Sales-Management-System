@@ -2712,7 +2712,7 @@ async function tvAdminPage(){
 
 
 /* ---------- Tally export (Admin): Sales entry -> Sales voucher, trade promotion -> Journal voucher, collection / due recovery -> Receipt voucher ---------- */
-const TALLY_DEFAULTS={company:'',party:'{retailer}',sales:'Sales',tp:'Trade Promotion',cash:'Cash',cheque:'Cheque in Hand',vSales:'Sales',vJournal:'Journal',vReceipt:'Receipt'};
+const TALLY_DEFAULTS={company:'',party:'{retailer} {brand}',sales:'Sales',tp:'Trade Promotion',cash:'Cash',cheque:'Cheque in Hand',vSales:'Sales',vJournal:'Journal',vReceipt:'Receipt'};
 const tallyFill=(p,r)=>String(p||'').replace(/\{retailer\}/gi,r.retailer||'').replace(/\{brand\}/gi,r.brand||'').replace(/\s+/g,' ').trim();
 const tallyXe=s=>String(s==null?'':s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
 function tallyBuild(rows,chq,cfg,names){
@@ -2743,7 +2743,7 @@ async function tallyPage(){
   const wr=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
   const cfg={...TALLY_DEFAULTS,...rd(LS.cfg,{})};
   let names=rd(LS.map,{}),done=new Set(rd(LS.done,[])),rows=[],chq={},vs=[];
-  const F=[['company','Tally company name (blank = the company open in Tally)'],['party','Retailer ledger name ({retailer} and {brand} can be used)'],['sales','Sales ledger ({brand} can be used)'],['tp','Trade promotion ledger'],['cash','Cash ledger'],['cheque','Cheque ledger'],['vSales','Sales voucher type'],['vJournal','Journal voucher type'],['vReceipt','Receipt voucher type']];
+  const F=[['company','Tally company name (blank = the company open in Tally)'],['party','Retailer ledger name in Tally, e.g. {retailer} {brand} = Dream World Vivo'],['sales','Sales ledger ({brand} can be used)'],['tp','Trade promotion ledger'],['cash','Cash ledger'],['cheque','Cheque ledger'],['vSales','Sales voucher type'],['vJournal','Journal voucher type'],['vReceipt','Receipt voucher type']];
   $('page').innerHTML='<h1 class="page-title">Tally Export</h1><div class="sub">Each sales entry becomes Tally vouchers: <b>Sales</b> (retailer Dr / Sales Cr), <b>Journal</b> for trade promotion (Trade Promotion Dr / retailer Cr) and <b>Receipt</b> for collection and due recovery (Cash or Cheque Dr / retailer Cr).</div>'
    +'<div class="panel"><div class="form-grid"><div><label>From</label><input type="date" id="tFrom" value="'+today()+'"></div><div><label>To</label><input type="date" id="tTo" value="'+today()+'"></div><div style="align-self:end"><button id="tLoad">Show vouchers</button></div></div>'
    +'<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:700">Ledger names and voucher types (set once, saved in this browser)</summary><div class="form-grid" style="margin-top:10px">'+F.map(([k,l])=>'<div><label>'+esc(l)+'</label><input data-cfg="'+k+'" value="'+esc(cfg[k])+'"></div>').join('')+'</div></details>'
