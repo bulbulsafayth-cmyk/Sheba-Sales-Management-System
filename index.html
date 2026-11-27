@@ -2188,7 +2188,7 @@ async function salesPage(editId){
       if(editing){go('reports');return}
       rows=[newRow()];$('sTp').value=0;$('sReceived').value=0;$('sCheque').value=0;$('sChqDate').value='';showChq();$('sNotes').value='';$('sVisitedShop').value=0;renderItems();
       chqPick='';showCollDue();
-      msg(m,chqOnly?'Cheque recovery saved (cheque report only'+(head.received_amount>0?'; the cash part is saved as due collection':'')+').':collOnly?'Collection saved successfully.':'Sales entry saved successfully.','success');loadToday();
+      msg(m,chqOnly?'Cheque recovery saved (cheque report only'+(head.received_amount>0?'; the cash part is saved as due collection':'')+').':collOnly?'Collection saved successfully.':'Sales entry saved successfully.','success');setTimeout(()=>{const n=m.querySelector('.notice.success');if(n)m.innerHTML=''},3000);loadToday();
     }catch(err){msg(m,err.message||String(err))}
     btn.disabled=false;
   };
