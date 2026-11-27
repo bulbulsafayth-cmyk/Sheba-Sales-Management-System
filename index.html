@@ -534,9 +534,14 @@ async function creditPage(){
     const m=new Map();
     rows.forEach(x=>{
       const lst=noteList[x.id]||'',k=(lst?'L|'+lst+'|':'')+x.retailer_id+'|'+x.brand_id;let g=m.get(k);
-      if(!g){g={shop:x.retailer||'—',brand:x.brand||'—',pn:0,pr:0,tn:0,tr:0,td:0,paid:0,ch:[],list:lst,rid:x.retailer_id,bid:x.brand_id,did:x.dso_id||null};m.set(k,g)}
-      g.shop=x.retailer||g.shop;g.road=roadOfRet(x.retailer_id,x.road);g.dso=x.dso_name||g.dso||'—';
+      if(!g){g={shop:x.retailer||'—',brand:x.brand||'—',pn:0,pr:0,tn:0,tr:0,td:0,paid:0,ch:[],list:lst,rid:x.retailer_id,bid:x.brand_id,did:x.dso_id||null,respBal:{}};m.set(k,g)}
+      g.shop=x.retailer||g.shop;g.road=roadOfRet(x.retailer_id,x.road);g.dso=x.dso_name||g.dso||'—';g.respBal=g.respBal||{};
       const net=isDueRow(x)?0:Number(x.net_sales||0),rec=Number(x.received_amount||0);
+      /* Keep the outstanding amount against the DSO who owns this sale. Money above this sale, or a collection-only entry, reduces that DSO's previous verbal due. */
+      const respName=x.dso_name||DSOM[x.dso_id]?.full_name||'—',respKey=respName;
+      const rowDue=isDueRow(x)?0:Math.max(0,net-Math.min(rec,net));
+      const rowRecovery=isDueRow(x)?rec:Math.max(0,rec-net);
+      g.respBal[respKey]=(g.respBal[respKey]||0)+rowDue-rowRecovery;
       if(x.sale_date<D){g.pn+=net;g.pr+=rec}else{g.tn+=net;g.tr+=rec;if(!isDueRow(x))g.td+=Math.max(0,net-rec)}
       g.paid+=rec;g.ch.push({d:x.sale_date,net});
     });
@@ -557,8 +562,8 @@ async function creditPage(){
         const rt=RT[x.retailer_id];if(!rt)return;
         const k=(x.list_name?'L|'+x.list_name+'|':'')+x.retailer_id+'|'+x.brand_id;
         let g=m.get(k);
-        if(!g){g={shop:rt.name,brand:L.brand[x.brand_id]?.name||'—',road:L.road[rt.road_id]?.name,dso:DSOM[x.dso_id]?.full_name||(userMode==='dso'&&currentDso?(currentDso.full_name||currentDso.name):null)||'—',pn:0,pr:0,tn:0,tr:0,td:0,paid:0,ch:[],list:x.list_name||'',rid:x.retailer_id,bid:x.brand_id,did:x.dso_id||null};m.set(k,g)}
-        g.pn+=Number(x.amount||0);g.ch.push({d:x.due_date||x.as_of,net:Number(x.amount||0)});
+        if(!g){g={shop:rt.name,brand:L.brand[x.brand_id]?.name||'—',road:L.road[rt.road_id]?.name,dso:DSOM[x.dso_id]?.full_name||(userMode==='dso'&&currentDso?(currentDso.full_name||currentDso.name):null)||'—',pn:0,pr:0,tn:0,tr:0,td:0,paid:0,ch:[],list:x.list_name||'',rid:x.retailer_id,bid:x.brand_id,did:x.dso_id||null,respBal:{}};m.set(k,g)}
+        g.pn+=Number(x.amount||0);g.ch.push({d:x.due_date||x.as_of,net:Number(x.amount||0)});g.respBal=g.respBal||{};const rn=DSOM[x.dso_id]?.full_name||(userMode==='dso'&&currentDso?(currentDso.full_name||currentDso.name):null)||'—';g.respBal[rn]=(g.respBal[rn]||0)+Number(x.amount||0);
       });
       m.forEach(g=>g.ch.sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0));
     }
@@ -576,8 +581,8 @@ async function creditPage(){
         }
         const k=(x.list_name?'L|'+x.list_name+'|':'')+x.retailer_id+'|'+x.brand_id;
         let g=m.get(k);
-        if(!g){g={shop:rt.name,brand:L.brand[x.brand_id]?.name||'—',road:L.road[rt.road_id]?.name,dso:DSOM[x.dso_id]?.full_name||'—',pn:0,pr:0,tn:0,tr:0,td:0,paid:0,ch:[],list:x.list_name||'',rid:x.retailer_id,bid:x.brand_id,did:x.dso_id||null};m.set(k,g)}
-        const a=Number(x.amount||0),cur=x.entry_date===D;
+        if(!g){g={shop:rt.name,brand:L.brand[x.brand_id]?.name||'—',road:L.road[rt.road_id]?.name,dso:DSOM[x.dso_id]?.full_name||'—',pn:0,pr:0,tn:0,tr:0,td:0,paid:0,ch:[],list:x.list_name||'',rid:x.retailer_id,bid:x.brand_id,did:x.dso_id||null,respBal:{}};m.set(k,g)}
+        const a=Number(x.amount||0),cur=x.entry_date===D;g.respBal=g.respBal||{};const rn=DSOM[x.dso_id]?.full_name||'—';g.respBal[rn]=(g.respBal[rn]||0)+(x.kind==='due'?a:-a);
         if(x.kind==='due'){if(cur){g.tn+=a;g.td+=a}else g.pn+=a;g.ch.push({d:x.entry_date,net:a})}
         else{if(cur)g.tr+=a;else g.pr+=a;g.paid+=a}
       });
@@ -590,7 +595,9 @@ async function creditPage(){
       if(!(prev>0||g.td>0||rec>0))return;
       let cum=0,old=null;for(const c of g.ch){cum+=c.net;if(cum>g.paid+0.5){old=c.d;break}}
       const dp=left>0&&old?daysBetween(old,D):'';
-      const ov=OVR[g.rid+'|'+g.bid+'|'+(g.list||'')],shopN=(ov&&ov.shop_name)||g.shop,dsoN=(ov&&ov.resp_name)||g.dso;out.push({road:g.road,dso:dsoN,brand:g.brand,list:g.list,rid:g.rid,bid:g.bid,did:g.did,left,age:dp===''?-1:dp,c:[shopN,g.brand,dsoN,prev,g.td,rec,left,dp]});
+      const ov=OVR[g.rid+'|'+g.bid+'|'+(g.list||'')],shopN=(ov&&ov.shop_name)||g.shop;
+      const respParts=Object.entries(g.respBal||{}).filter(([n,v])=>n&&n!=='—'&&v>0.005).map(([n,v])=>n+'-'+Math.round(v).toLocaleString('en-US'));
+      const dsoN=respParts.length?respParts.join(', '):((ov&&ov.resp_name)||g.dso);out.push({road:g.road,dso:dsoN,brand:g.brand,list:g.list,rid:g.rid,bid:g.bid,did:g.did,left,age:dp===''?-1:dp,c:[shopN,g.brand,dsoN,prev,g.td,rec,left,dp]});
     });
     /* One row per shop: brands and DSOs are listed in their cells, amounts are added up. Single-brand shops stay as they are. */
     SHOPPARTS={};
@@ -604,8 +611,10 @@ async function creditPage(){
         SHOPPARTS[k]=parts;
         const uniq=a=>[...new Set(a.filter(x=>x&&x!=='—'))].join(', ')||'—';
         const sm=i=>parts.reduce((t,r)=>t+(Number(r.c[i])||0),0);
+        const respAgg=new Map();parts.forEach(r=>String(r.c[2]||'').split(', ').forEach(t=>{const m=t.match(/^(.*?)-(\d[\d,]*)$/);if(m)respAgg.set(m[1],(respAgg.get(m[1])||0)+Number(m[2].replace(/,/g,'')));else if(t&&t!=='—')respAgg.set(t,respAgg.get(t)||0)}));
+        const respTxt=[...respAgg].filter(([n,v])=>v>0.005).map(([n,v])=>n+(v?' -'+Math.round(v).toLocaleString('en-US'):'')).join(', ')||'—';
         const age=Math.max(...parts.map(r=>r.age)),p0=parts[0];
-        list2.push({road:p0.road,dso:uniq(parts.map(r=>r.dso)),brand:uniq(parts.map(r=>r.brand)),list:p0.list,rid:p0.rid,bid:null,did:null,left:sm(6),key:k,parts:parts.length,age,c:[p0.c[0],uniq(parts.map(r=>r.brand)),uniq(parts.map(r=>r.dso)),sm(3),sm(4),sm(5),sm(6),age<0?'':age]});
+        list2.push({road:p0.road,dso:respTxt,brand:uniq(parts.map(r=>r.brand)),list:p0.list,rid:p0.rid,bid:null,did:null,left:sm(6),key:k,parts:parts.length,age,c:[p0.c[0],uniq(parts.map(r=>r.brand)),respTxt,sm(3),sm(4),sm(5),sm(6),age<0?'':age]});
       });
     }
     return {title:'Retailer Credit Data ('+dmy(D).replace(/\./g,'-')+')',cls:'cr-credit',date:null,
@@ -687,7 +696,7 @@ async function creditPage(){
       const all=rl.reduce((a,r)=>a+Number(r.amount||0),0);
       if(amt-before<=0.005)return;
       /* cheques of one shop with the same receive date and payable date (different DSOs / brands) print as ONE line */
-      items.push({bo:c.brand_override||'',so:c.shop_override||'',wo:c.who_override||'',key:rid?'S|'+rid+'|'+recd:'O|'+c.id,id:c.id,shop,who,dso,brand,road,recd,pd:c.payable_date||'',amt,open:amt-before,today,left:Math.max(0,amt-all),hasRec:rl.length>0,rem:c.remarks||''});
+      items.push({bo:c.brand_override||'',so:c.shop_override||'',wo:c.who_override||'',key:rid&&!c.opening_as_of?'S|'+rid+'|'+recd:'O|'+c.id,id:c.id,shop,who,dso,brand,road,recd,pd:c.payable_date||'',amt,open:amt-before,today,left:Math.max(0,amt-all),hasRec:rl.length>0,rem:c.remarks||''});
     });
     const grp=new Map();items.forEach(x=>{(grp.get(x.key)||grp.set(x.key,[]).get(x.key)).push(x)});
     const out=[];
@@ -698,8 +707,8 @@ async function creditPage(){
       const open=olds.reduce((a,x)=>a+x.open,0),today=sm('today'),newAmt=news.reduce((a,x)=>a+x.amt,0),due=ms.reduce((a,x)=>a+Math.max(0,x.open-x.today),0);
       /* a DSO whose cheque is fully paid drops out of the names while another DSO of the same shop still has a due */
       const live=ms.filter(x=>Math.max(0,x.open-x.today)>0.005),nm=live.length&&live.length<ms.length?live:ms;
-      const dbm=new Map();nm.forEach(x=>{const k=x.dso;dbm.set(k,{dso:x.dso,v:(dbm.get(k)?.v||0)+(isN(x)?x.amt:x.open)})});
-      const who=dbm.size>1?[...dbm.values()].map(x=>x.dso+'-'+Math.round(x.v)).join(', '):nm[0].who;
+      const dbm=new Map();live.forEach(x=>{const k=x.dso;dbm.set(k,{dso:x.dso,v:(dbm.get(k)?.v||0)+x.left})});
+      const who=dbm.size>0?[...dbm.values()].filter(x=>x.v>0.005).map(x=>x.dso+'-'+Math.round(x.v).toLocaleString('en-US')).join(', '):(nm[0]?.who||'—');
       const brandTxt=(ms.find(x=>x.bo)||{}).bo||[...new Set(ms.map(x=>x.brand).filter(x=>x&&x!=='—'))].join(', ')||'—';
       const rem=[...new Set(ms.map(x=>x.rem).filter(Boolean))].join('; ');
       const uniq=a=>[...new Set(a.filter(Boolean))];
