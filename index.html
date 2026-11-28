@@ -276,6 +276,10 @@ const $=id=>document.getElementById(id);
 const by1=a=>Object.fromEntries(a.map(x=>[x.id,x]));
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function msg(el,text,kind='error'){if(el)el.innerHTML=`<div class="notice ${kind}">${esc(text)}</div>`}
+/* WhatsApp helpers: the message is prepared by the app, a person taps Send in WhatsApp */
+const waPhone=p=>{let d=String(p||'').replace(/\D/g,'');if(!d)return '';if(d.startsWith('880'))return d;if(d.startsWith('0'))return '88'+d;if(d.length===10&&d[0]==='1')return '880'+d;return d};
+const waLink=(p,t)=>'https://wa.me/'+waPhone(p)+'?text='+encodeURIComponent(t);
+const logRetMsg=(rid,kind,message)=>{try{db.from('retailer_msg_log').insert({retailer_id:String(rid),kind,message}).then(()=>{},()=>{})}catch(e){}};
 function money(n){return 'Tk '+Number(n||0).toLocaleString('en-BD',{minimumFractionDigits:2,maximumFractionDigits:2})}
 /* FIX 9: local date (not UTC) so Bangladesh evenings don't show tomorrow/yesterday */
 const today=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)};
@@ -743,23 +747,31 @@ async function creditPage(){
       $('crView').value='road';
       kind='credit';const c=await buildCredit(D);
       kind='cheque';const q=await buildCheque(D);
-      const get=(rid,nm,rd)=>{let o=m.get(rid);if(!o){o={rid,name:nm,road:rd||'',v:0,q:0,vb:new Set(),qn:0};m.set(rid,o)}if(!o.road&&rd)o.road=rd;return o};
+      const get=(rid,nm,rd)=>{let o=m.get(rid);if(!o){o={rid,name:nm,road:rd||'',v:0,q:0,vb:new Set(),qn:0,age:0};m.set(rid,o)}if(!o.road&&rd)o.road=rd;return o};
       const RT=RET||{};
-      c.groups.forEach(g=>g.rows.forEach(r=>{if(!r.rid)return;const o=get(r.rid,(RT[r.rid]&&RT[r.rid].name)||r.c[0],r.road);o.v+=Number(r.left||0);String(r.brand||'').split(',').map(x=>x.trim()).filter(x=>x&&x!=='—').forEach(x=>o.vb.add(x))}));
-      q.groups.forEach(g=>g.rows.forEach(r=>{if(!r.rid)return;const o=get(r.rid,(RT[r.rid]&&RT[r.rid].name)||r.c[0],r.road);o.q+=Number(r.left||0);o.qn+=1}));
+      c.groups.forEach(g=>g.rows.forEach(r=>{if(!r.rid)return;const o=get(r.rid,(RT[r.rid]&&RT[r.rid].name)||r.c[0],r.road);if(r.left>0.005)o.age=Math.max(o.age,Number(r.age)||0);o.v+=Number(r.left||0);String(r.brand||'').split(',').map(x=>x.trim()).filter(x=>x&&x!=='—').forEach(x=>o.vb.add(x))}));
+      q.groups.forEach(g=>g.rows.forEach(r=>{if(!r.rid)return;const o=get(r.rid,(RT[r.rid]&&RT[r.rid].name)||r.c[0],r.road);if(r.left>0.005)o.age=Math.max(o.age,Number(r.age)||0);o.q+=Number(r.left||0);o.qn+=1}));
     }finally{kind=k0;$('crView').value=v0}
     const rows=[...m.values()].filter(o=>o.v+o.q>0.005).sort((a,b)=>(b.v+b.q)-(a.v+a.q)||cmp(a.name,b.name));
-    return {title:'Retailer Due',date:dmyFull(D),rows};
+    const last={};try{(await fetchAll(()=>db.from('retailer_msg_log').select('retailer_id,created_at').eq('kind','reminder').order('id'))).forEach(x=>{const d=new Date(x.created_at).toLocaleDateString('en-CA');if(!last[x.retailer_id]||d>last[x.retailer_id])last[x.retailer_id]=d})}catch(e){}
+    rows.forEach(o=>{o.last=last[String(o.rid)]||''});
+    return {title:'Retailer Due',date:dmyFull(D),iso:D,rows};
   };
+  const REM_FIRST=7,REM_EVERY=3; /* reminder starts when a due is older than 7 days, then repeats every 3 days */
+  const remState=o=>{if(!(o.age>REM_FIRST))return {st:'none'};const since=o.last?daysBetween(o.last,RDUE.iso):null;if(since==null||since>=REM_EVERY)return {st:'due',since};return {st:'wait',since,next:REM_EVERY-since}};
+  const remText=o=>{const f=x=>'Tk '+Math.round(x).toLocaleString('en-US');const parts=[];if(o.v>0.005)parts.push('verbal due '+f(o.v));if(o.q>0.005)parts.push('cheque due '+f(o.q));return 'Dear '+o.name+', this is a reminder from Sheba Distribution. Your '+parts.join(' and ')+' ('+f(o.v+o.q)+' in total) has been pending for '+o.age+' days. Please pay as soon as possible. Thank you.'};
   const renderRetDue=()=>{
     const v=RDUE;if(!v)return;
-    $('crOut').innerHTML=`<div class="panel"><h3 style="margin:0 0 4px">Retailer Due · ${esc(v.date)}</h3><div class="muted" style="margin-bottom:10px">Verbal due and cheque due of every retailer. Type a name to search.</div><input id="rdQ" placeholder="Search retailer or road…" style="max-width:360px;margin-bottom:10px"><div id="rdT"></div></div>`;
+    $('crOut').innerHTML=`<div class="panel"><h3 style="margin:0 0 4px">Retailer Due · ${esc(v.date)}</h3><div class="muted" style="margin-bottom:10px">Verbal due and cheque due of every retailer. Type a name to search. A WhatsApp reminder is offered when a due is older than ${REM_FIRST} days, and again every ${REM_EVERY} days.</div><div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><input id="rdQ" placeholder="Search retailer or road…" style="max-width:360px;margin-bottom:10px"><label style="display:flex;gap:6px;align-items:center;margin:0 0 10px;cursor:pointer"><input type="checkbox" id="rdOnly" style="width:auto"> Only reminders due today</label></div><div id="rdT"></div></div>`;
     const draw=()=>{
-      const qy=String($('rdQ').value||'').trim().toLowerCase(),f=v.rows.filter(o=>!qy||(o.name+' '+o.road).toLowerCase().includes(qy));
+      const qy=String($('rdQ').value||'').trim().toLowerCase(),only=$('rdOnly').checked,f=v.rows.filter(o=>(!qy||(o.name+' '+o.road).toLowerCase().includes(qy))&&(!only||remState(o).st==='due'));
       const sv=f.reduce((a,o)=>a+o.v,0),sq=f.reduce((a,o)=>a+o.q,0),n=x=>Math.round(x).toLocaleString('en-US');
-      $('rdT').innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th>SL</th><th>Retailer</th><th>Road</th><th style="text-align:right">Verbal due</th><th style="text-align:right">Cheque due</th><th style="text-align:right">Total due</th></tr></thead><tbody>${f.map((o,i)=>`<tr><td>${i+1}</td><td><b>${esc(o.name)}</b>${o.vb.size?`<div class="muted" style="font-size:11px">${esc([...o.vb].join(', '))}</div>`:''}</td><td>${esc(o.road)}</td><td style="text-align:right">${o.v>0.005?n(o.v):'-'}</td><td style="text-align:right">${o.q>0.005?n(o.q):'-'}</td><td style="text-align:right"><b>${n(o.v+o.q)}</b></td></tr>`).join('')||'<tr><td colspan="6" class="muted">No retailer found.</td></tr>'}</tbody><tfoot><tr><th colspan="3" style="text-align:right">Total (${f.length} retailers)</th><th style="text-align:right">${n(sv)}</th><th style="text-align:right">${n(sq)}</th><th style="text-align:right">${n(sv+sq)}</th></tr></tfoot></table></div>`;
+      const rem=o=>{const r=remState(o);if(r.st==='none')return '<span class="muted">-</span>';if(r.st==='wait')return `<span class="muted" style="font-size:12px">Sent ${r.since} day(s) ago<br>next in ${r.next} day(s)</span>`;return `<button data-rm="${esc(String(o.rid))}" style="background:#25d366;padding:6px 10px">WhatsApp reminder</button>${r.since!=null?`<div class="muted" style="font-size:11px">last sent ${r.since} day(s) ago</div>`:''}`};
+      $('rdT').innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th>SL</th><th>Retailer</th><th>Road</th><th style="text-align:right">Verbal due</th><th style="text-align:right">Cheque due</th><th style="text-align:right">Total due</th><th style="text-align:right">Oldest (days)</th><th>Reminder</th></tr></thead><tbody>${f.map((o,i)=>`<tr><td>${i+1}</td><td><b>${esc(o.name)}</b>${o.vb.size?`<div class="muted" style="font-size:11px">${esc([...o.vb].join(', '))}</div>`:''}${(RET&&RET[o.rid]&&RET[o.rid].phone)?'':'<div style="font-size:11px;color:#b45309">no phone</div>'}</td><td>${esc(o.road)}</td><td style="text-align:right">${o.v>0.005?n(o.v):'-'}</td><td style="text-align:right">${o.q>0.005?n(o.q):'-'}</td><td style="text-align:right"><b>${n(o.v+o.q)}</b></td><td style="text-align:right;${o.age>REM_FIRST?'color:#dc2626;font-weight:700':''}">${o.age>0?o.age:'-'}</td><td>${rem(o)}</td></tr>`).join('')||'<tr><td colspan="8" class="muted">No retailer found.</td></tr>'}</tbody><tfoot><tr><th colspan="3" style="text-align:right">Total (${f.length} retailers)</th><th style="text-align:right">${n(sv)}</th><th style="text-align:right">${n(sq)}</th><th style="text-align:right">${n(sv+sq)}</th><th colspan="2"></th></tr></tfoot></table></div>`;
     };
-    $('rdQ').oninput=draw;draw();
+    $('rdQ').oninput=draw;$('rdOnly').onchange=draw;
+    $('rdT').onclick=e=>{const b=e.target.closest('button[data-rm]');if(!b)return;const o=v.rows.find(x=>String(x.rid)===b.dataset.rm);if(!o)return;const t=remText(o);logRetMsg(o.rid,'reminder',t);o.last=v.iso;window.open(waLink(RET&&RET[o.rid]&&RET[o.rid].phone,t),'_blank');draw()};
+    draw();
   };
   /* ---- DSO overdue warning: dues (verbal + cheque) older than N days, grouped by DSO, sent into the DSO's app or by WhatsApp ---- */
   let WARN=null;
@@ -2249,6 +2261,21 @@ async function salesPage(editId){
         else ce=(await db.from('cheques').insert({...cv,sales_entry_id:eid})).error;
         if(ce)throw new Error('The entry was saved but the cheque was not: '+ce.message);
       }
+      if(!editing){try{
+        const rt0=rt.find(x=>x.id===head.retailer_id)||{},bn=(b.find(x=>x.id===head.brand_id)||{}).name||'',fm=v=>'Tk '+Math.round(v).toLocaleString('en-US');
+        const dueAdded=collOnly?0:Math.max(0,Math.round(((gross-head.trade_promotion_amount)-head.received_amount)*100)/100),recAmt=collOnly?(cashAmt||0)+chqAmt:Math.max(0,extra||0);
+        if(dueAdded>0.005||recAmt>0.005){
+          let tot=null;try{const dm=await dueMap(head.retailer_id,head.sale_date,'');tot=Object.entries(dm.by).filter(([k])=>k.startsWith(head.brand_id+'|')).reduce((a,[k,v])=>a+Math.max(0,v),0)}catch(e){}
+          const sh=rt0.name||'Sir',tail=(tot==null?'':' Your total due with Sheba Distribution'+(bn?' ('+bn+')':'')+' is '+fm(tot)+'.');
+          const mk=[];
+          if(dueAdded>0.005)mk.push({lbl:'New due message',kind:'new_due',txt:'Dear '+sh+', a new due of '+fm(dueAdded)+' has been added on '+dmy(head.sale_date)+(bn?' ('+bn+')':'')+'.'+tail+' Please pay on time. Thank you. - Sheba Distribution'});
+          if(recAmt>0.005)mk.push({lbl:'Payment received message',kind:'recovery',txt:'Dear '+sh+', we received '+fm(recAmt)+' from you on '+dmy(head.sale_date)+(bn?' ('+bn+')':'')+'.'+(tot==null?'':' Your remaining due is '+fm(tot)+'.')+' Thank you. - Sheba Distribution'});
+          let box=$('retMsgBox');if(!box){box=document.createElement('div');box.id='retMsgBox';$('saleMsg').insertAdjacentElement('afterend',box)}
+          box.innerHTML='<div class="panel" style="margin-top:12px;border:1px solid #25d366"><div style="display:flex;justify-content:space-between;gap:10px"><b>Message to '+esc(sh)+' (WhatsApp)</b><a href="#" id="retMsgX" style="text-decoration:none;font-weight:800">✕</a></div><div class="muted" style="margin:4px 0 8px">'+(rt0.phone?'Phone: '+esc(rt0.phone):'No phone saved for this shop. WhatsApp will ask you to choose the contact.')+'</div>'+mk.map((x,i)=>'<div style="margin-bottom:10px"><div style="white-space:pre-wrap;font-size:13px;background:#f6faf7;border-radius:8px;padding:8px">'+esc(x.txt)+'</div><button data-wm="'+i+'" style="margin-top:6px;background:#25d366">WhatsApp: '+x.lbl+'</button></div>').join('')+'</div>';
+          $('retMsgX').onclick=e=>{e.preventDefault();box.innerHTML=''};
+          box.onclick=e=>{const bt=e.target.closest('button[data-wm]');if(!bt)return;const x=mk[Number(bt.dataset.wm)];logRetMsg(head.retailer_id,x.kind,x.txt);window.open(waLink(rt0.phone,x.txt),'_blank')};
+        }
+      }catch(e){}}
       if(editing){go('reports');return}
       rows=[newRow()];$('sTp').value=0;$('sReceived').value=0;$('sCheque').value=0;$('sChqDate').value='';showChq();$('sNotes').value='';$('sVisitedShop').value=0;renderItems();
       chqPick='';showCollDue();
