@@ -267,7 +267,7 @@ table.crt td.cract button{display:block;width:100%;margin:0 0 3px;padding:3px 4p
 .shcalc .ctc{border-bottom:2px solid #000;margin-bottom:8px;padding:4px 0}.shcalc .ctc b{flex:1}.shcalc .ctc .cadd{margin:0;white-space:nowrap}@media(max-width:620px){body:not(.rot) .app .nav{flex-wrap:wrap;overflow:visible}body:not(.rot) .app .nav button{flex:1 1 auto}}</style></head>
 <body>
 <div id="loginView" class="login-wrap"><div class="login"><h1>Sheba Distribution Sales &amp; Credit Management System</h1><p class="muted">Sign in to continue.</p><div id="loginMsg"></div><label>Login type</label><select id="loginType"><option value="admin">Admin Login</option><option value="dso">DSO Login</option></select><div id="authFields"><label>Email</label><input id="email" type="email" placeholder="Account email"><label>Password</label><input id="password" type="password" placeholder="Password"><button id="loginBtn">Continue</button></div><div id="dsoStep" class="hidden"><label>Select your DSO name</label><select id="dsoSelect"></select><button id="dsoContinueBtn">Continue as DSO</button><button id="backLoginBtn" class="secondary">Back</button></div><p class="muted" style="font-size:11px;margin-top:16px">DSO users sign in with the DSO account, then select their DSO name (or are recognised automatically if they have their own account).</p></div></div>
-<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small><small style="display:block">Version 26-Nov-C</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="target">◉ &nbsp; Target vs Achievement</button><button data-page="plan">⚑ &nbsp; Road Plan</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
+<div id="appView" class="app hidden"><aside class="sidebar"><div class="brand">Sheba Distribution<small>SALES &amp; CREDIT MANAGEMENT SYSTEM</small><small style="display:block">Version 26-Nov-C</small></div><nav class="nav" id="nav"><button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button><button data-page="brands">◈ &nbsp; Brands</button><button data-page="roads">⌖ &nbsp; Roads</button><button data-page="dsos">♙ &nbsp; DSO Management</button><button data-page="dsoloc">◎ &nbsp; DSO Location</button><button data-page="retailers">⌂ &nbsp; Retailers</button><button data-page="products">▣ &nbsp; Products</button><button data-page="sales">＋ &nbsp; Sales Entry</button><button data-page="reports">▤ &nbsp; Reports</button><button data-page="target">◉ &nbsp; Target vs Achievement</button><button data-page="plan">⚑ &nbsp; Road Plan</button><button data-page="cash">▤ &nbsp; Daily Cash Status</button></nav></aside><main class="main"><header class="top"><strong id="topTitle">Dashboard</strong><div class="right"><button class="secondary" id="rotBtn" title="Landscape mode on/off">⟳ Landscape</button><button class="secondary hidden" id="installBtn">⬇ Install app</button><span class="pill" id="sessionLabel">Admin session</span><button class="secondary" id="logoutBtn">Sign out</button></div></header><section class="content" id="page"></section></main></div>
 <script>
 const SUPABASE_URL='https://nvnogsganemysvbqmcpo.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_tyWf1VnXMzNVBs22Qgs3wg_SBy6HegJ';
@@ -377,8 +377,8 @@ function showApp(mode='admin'){
   if(mode==='admin')startApprovalWatch();else stopApprovalWatch();
 }
 $('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(b)go(b.dataset.page)});
-const titles={tvall:'Target vs Achievement',dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',opening:'Opening Balance',dsoloc:'DSO Location',target:'Target vs Achievement',plan:'Road Plan'};
-const pages={tvall:()=>tvAdminPage(),dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),opening:()=>openingPage(),dsoloc:()=>dsoLocPage(),target:()=>targetPage(),plan:()=>roadPlanPage()};
+const titles={tvall:'Target vs Achievement',dashboard:'Dashboard',brands:'Brand Management',roads:'Road Management',dsos:'DSO Management',retailers:'Retailer Management',products:'Product Management',sales:'Sales Entry',reports:'Sales Reports',sheet:'Daily Sales Sheet',credit:'Credit & Cheque Report',dsoloc:'DSO Location',target:'Target vs Achievement',plan:'Road Plan',cash:'Daily Cash Status'};
+const pages={tvall:()=>tvAdminPage(),dashboard:()=>dashboard(),brands:()=>crudPage('brands'),roads:()=>crudPage('roads'),dsos:()=>crudPage('dsos'),retailers:()=>crudPage('retailers'),products:()=>productsPage(),sales:a=>salesPage(a),reports:()=>reportsPage(),sheet:()=>sheetPage(),credit:()=>creditPage(),dsoloc:()=>dsoLocPage(),target:()=>targetPage(),plan:()=>roadPlanPage(),cash:()=>cashPage()};
 /* Automatic overdue warning: once a day, when a DSO opens the app, his own verbal + cheque dues older than 10 days are worked out
    (with the same code as the Credit & Cheque report) and he cannot use the app until he taps Seen. Nothing is stored at the Admin. */
 let _warnBusy=false;
@@ -2368,7 +2368,7 @@ async function reportsPage(){
   const tok=navToken;
   const p=$('page'),isAdmin=userMode==='admin';
   rep={chq:[],rows:[],items:{},page:1,type:null,sub:'all',generated:false,prods:rep.prods||{},printAll:false};
-  p.innerHTML=`<h1 class="page-title">Sales Reports</h1><div class="sub">Choose a report, press Generate and the report will appear.</div><div class="panel"><div class="rtypes noprint" id="repTypes"><button data-t="daily">Daily sales report</button>${isAdmin?'<button data-t="dso">DSO-wise report</button>':''}<button data-t="brand">Brand-wise report</button><button data-t="sheet">Daily Sales Sheet</button><button data-t="credit">Credit &amp; Cheque Report</button>${isAdmin?'<button data-t="tvall">Target vs Achievement</button>':''}</div><div id="repFilters" class="hidden noprint"><div class="form-grid" style="margin-top:14px"><div><label>From date</label><input type="date" id="rFrom"></div><div><label>To date</label><input type="date" id="rTo"></div><div id="wBrand"><label>Brand</label><select id="rBrand"><option value="">All brands</option></select></div><div id="wModel" class="hidden"><label>Model</label><select id="rModel"><option value="">All models</option></select></div>${isAdmin?'<div id="wDso"><label>DSO</label><select id="rDso"><option value="">All DSOs</option></select></div>':''}<div><label>Retailer</label><select id="rRetailer"><option value="">All retailers</option></select></div></div><div class="form-actions"><button id="runReport">Generate report</button><button class="secondary" id="printReport">Print</button><button class="secondary" id="shareReport">Share</button><button class="secondary" id="openSheet">Daily Sales Sheet</button></div></div><div id="reportSummary"></div><div id="repOut" style="margin-top:15px"></div></div>`;
+  p.innerHTML=`<h1 class="page-title">Sales Reports</h1><div class="sub">Choose a report, press Generate and the report will appear.</div><div class="panel"><div class="rtypes noprint" id="repTypes"><button data-t="daily">Daily sales report</button>${isAdmin?'<button data-t="dso">DSO-wise report</button>':''}<button data-t="brand">Brand-wise report</button><button data-t="sheet">Daily Sales Sheet</button><button data-t="credit">Credit &amp; Cheque Report</button>${isAdmin?'<button data-t="tvall">Target vs Achievement</button><button data-t="cash">Daily Cash Status</button>':''}</div><div id="repFilters" class="hidden noprint"><div class="form-grid" style="margin-top:14px"><div><label>From date</label><input type="date" id="rFrom"></div><div><label>To date</label><input type="date" id="rTo"></div><div id="wBrand"><label>Brand</label><select id="rBrand"><option value="">All brands</option></select></div><div id="wModel" class="hidden"><label>Model</label><select id="rModel"><option value="">All models</option></select></div>${isAdmin?'<div id="wDso"><label>DSO</label><select id="rDso"><option value="">All DSOs</option></select></div>':''}<div><label>Retailer</label><select id="rRetailer"><option value="">All retailers</option></select></div></div><div class="form-actions"><button id="runReport">Generate report</button><button class="secondary" id="printReport">Print</button><button class="secondary" id="shareReport">Share</button><button class="secondary" id="openSheet">Daily Sales Sheet</button></div></div><div id="reportSummary"></div><div id="repOut" style="margin-top:15px"></div></div>`;
   const [b,d,rtl,pl]=await Promise.all([queryAll('brands'),isAdmin?queryAll('dsos'):Promise.resolve([]),queryAll('retailers'),queryAll('products').catch(()=>[])]);
   const bm=isAdmin?await loadDsoBrandMap():{};
   if(tok!==navToken)return;
@@ -2417,6 +2417,7 @@ async function reportsPage(){
     if(t.dataset.t==='sheet')return go('sheet');
     if(t.dataset.t==='credit')return go('credit');
     if(t.dataset.t==='tvall')return go('tvall');
+    if(t.dataset.t==='cash')return go('cash');
     rep.type=t.dataset.t;rep.generated=false;rep.sub='all';rep.rows=[];rep.items={};rep.page=1;
     document.querySelectorAll('#repTypes button').forEach(x=>x.classList.toggle('on',x===t));
     $('repFilters').classList.remove('hidden');$('reportSummary').innerHTML='';$('repOut').innerHTML='';
@@ -2602,6 +2603,157 @@ async function shareText(title,text){
 const fmtN=n=>{n=Number(n||0);return n?n.toLocaleString('en-US',{maximumFractionDigits:2}):'–'};
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const fmtDate=d=>{const [y,m,dd]=String(d).split('-');return Number(dd)+' '+MON[Number(m)-1]+' '+y};
+
+/* ---------- Daily Cash Status (Admin) ---------- */
+async function cashPage(){
+  const tok=navToken;
+  if(!document.getElementById('csCss')){const st=document.createElement('style');st.id='csCss';st.textContent='@page cs{size:A4 portrait;margin:9mm}.cswrap{page:cs}.cs-sheet{background:#fff;color:#000;padding:16px;max-width:860px;margin:16px auto;border:1px solid #cfd8e6;border-radius:10px;font-size:12px}.cs-h{text-align:center;font-weight:800;font-size:20px}.cs-a{text-align:center;font-size:12px;margin:2px 0 6px}.cs-d{border:1px solid #000;padding:3px 8px;font-weight:800;margin-bottom:8px;text-align:center}.cs-cols{display:grid;grid-template-columns:1.2fr 1fr;gap:10px;align-items:start;margin-bottom:10px}.cs-cols>div{min-width:0}table.cst{border-collapse:collapse;width:100%;min-width:0!important;table-layout:fixed;margin-bottom:8px}table.cst td,table.cst th{overflow-wrap:anywhere}table.cst th,table.cst td{border:1px solid #000;padding:3px 5px;font-size:12px;background:#fff;color:#000;text-align:left;text-transform:none;letter-spacing:0}table.cst th{background:#eef1f5;font-weight:800;text-align:center}table.cst td.n{text-align:right;font-variant-numeric:tabular-nums}table.cst tr.tt td{font-weight:800;background:#f1f1f1}.cs-ttl{font-weight:800;margin:0 0 3px}.cs-edit table input,.cs-edit table select{width:100%;min-width:70px}.cs-edit td{vertical-align:middle}.cs-auto td{background:#f3f7ff}@media print{.cs-sheet{border:0;border-radius:0;margin:0;padding:0;max-width:none}.cs-cols{break-inside:avoid}}';document.head.appendChild(st)}
+  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Daily Cash Status</h1><div class="sub">Collection is taken from the Daily Sales Sheet figures (per DSO and brand). Add the other lines by hand. The sheet below is what prints (A4).</div><div class="panel"><div class="form-grid"><div><label>Date</label><input type="date" id="csDate"></div><div><label>Opening cash</label><input type="number" id="csOpen" step="any"><div class="muted" id="csOpenNote" style="margin-top:4px"></div></div></div><div class="form-actions" style="margin-top:10px"><button id="csPrev" class="secondary hidden">Use previous day's closing</button><button id="csPrint">Print</button><button id="csShareImg" class="secondary">Share picture</button><button id="csShareTxt" class="secondary">Share as text</button></div><div id="csMsg"></div></div><div id="csEdit" class="cs-edit"></div></div><div class="cswrap" id="csSheet"></div>`;
+  $('csDate').value=today();
+  const idm=a=>Object.fromEntries(a.map(x=>[x.id,x]));
+  const num=v=>{const n=Number(String(v==null?'':v).replace(/,/g,''));return Number.isFinite(n)?n:0};
+  const f=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
+  const cmpN=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});
+  const BANKS=['DBBL 5451','DBBL 1994','DBBL SPC','DBBL Sheba BS Cafe','DBBL CC Loan A/c','Dhaka Bank Telecom','Dhaka Bank Smile','One Bank Distribution','City Bank Telecom','City Bank Distribution','City Bank Oppo Dealer Finance','City Bank Vivo Dealer Finance','Brac Bank'];
+  const EXPS=['Transportation','Market Expense (DSO)','Courier Charge','Top Pay (Oppo)','Top Pay (Realme)','Hire Purchase (Vivo BS)','Hire Purchase (SPC)','Sohoj Kisti (Samsung BS)','Sohoj Kisti (Honor BS)','Benli Elec. BD Ltd.','Best Tycoon Elec. BD Ltd.','Salextra BD Ltd.','Smart Technology Ltd (Honor)','Smart Hi Tech (Honor)'];
+  const OTHER={bank:'Other bank (type name)',exp:'Other expense (type description)'};
+  let S=null;
+  const sum=(k)=>S.lines.filter(x=>x.kind===k).reduce((a,x)=>a+Number(x.amount||0),0);
+  const calc=()=>{
+    const aC=S.auto.reduce((a,x)=>a+x.amt,0),mC=sum('collection'),coll=aC+mC,wd=sum('withdraw'),dep=sum('deposit'),exp=sum('expense');
+    const bal=S.open+coll+wd;return {coll,wd,dep,exp,bal,close:bal-dep-exp,aQ:S.auto.reduce((a,x)=>a+x.qty,0),mQ:S.lines.filter(x=>x.kind==='collection').reduce((a,x)=>a+Number(x.qty||0),0)};
+  };
+  const saveDay=async()=>{
+    const c=calc();
+    try{await db.from('cash_days').upsert({day:S.day,opening_cash:S.open,opening_manual:S.manual,closing_cash:c.close,updated_at:new Date().toISOString()})}catch(e){}
+  };
+  const sheet=()=>{
+    const c=calc(),L=k=>S.lines.filter(x=>x.kind===k);
+    const col=[...S.auto.map(x=>({n:x.dso,b:x.brand,q:x.qty,a:x.amt})),...L('collection').map(x=>({n:x.name,b:x.brand,q:Number(x.qty||0),a:Number(x.amount||0)}))];
+    const rows=(arr,fn,min)=>{let h=arr.map(fn).join('');for(let i=arr.length;i<(min||0);i++)h+=fn(null,i);return h};
+    const left=`<table class="cst"><colgroup><col style="width:8%"><col style="width:32%"><col style="width:20%"><col style="width:14%"><col style="width:26%"></colgroup><thead><tr><th>SL</th><th>Depositor's Name</th><th>Brand Info</th><th>Qty</th><th>Collection</th></tr></thead><tbody>${col.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.n)}</td><td>${esc(x.b)}</td><td class="n">${x.q?f(x.q):''}</td><td class="n">${f(x.a)}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center">—</td></tr>'}<tr class="tt"><td colspan="3" style="text-align:right">Total</td><td class="n">${f(c.aQ+c.mQ)}</td><td class="n">${f(c.coll)}</td></tr></tbody></table>`;
+    const dep=L('deposit'),exp=L('expense'),wd=L('withdraw');
+    const right=`<div class="cs-ttl">Bank Deposit</div><table class="cst"><colgroup><col style="width:9%"><col style="width:41%"><col style="width:26%"><col style="width:24%"></colgroup><thead><tr><th>SL</th><th>Bank Name</th><th>Amount</th><th>Remarks</th></tr></thead><tbody>${dep.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td class="n">${f(x.amount)}</td><td>${esc(x.remarks)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center">—</td></tr>'}<tr class="tt"><td colspan="2" style="text-align:right">Total Bank Deposit</td><td class="n">${f(c.dep)}</td><td></td></tr></tbody></table><div class="cs-ttl">Expense</div><table class="cst"><colgroup><col style="width:9%"><col style="width:41%"><col style="width:26%"><col style="width:24%"></colgroup><thead><tr><th>SL</th><th>Expense Description</th><th>Amount</th><th>Remarks</th></tr></thead><tbody>${exp.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td class="n">${f(x.amount)}</td><td>${esc(x.remarks)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center">—</td></tr>'}<tr class="tt"><td colspan="2" style="text-align:right">Total Expense</td><td class="n">${f(c.exp)}</td><td></td></tr></tbody></table>`;
+    const summ=`<div class="cs-ttl" style="text-align:center">Cash Summary</div><table class="cst"><colgroup><col style="width:62%"><col style="width:38%"></colgroup><tbody><tr><td>Total Collection</td><td class="n">${f(c.coll)}</td></tr><tr><td>Total Bank Withdraw</td><td class="n">${f(c.wd)}</td></tr><tr><td>Total Opening Cash</td><td class="n">${f(S.open)}</td></tr><tr class="tt"><td>Total Balance</td><td class="n">${f(c.bal)}</td></tr><tr><td>Total Bank Deposit</td><td class="n">${f(c.dep)}</td></tr><tr><td>Total Expense</td><td class="n">${f(c.exp)}</td></tr><tr class="tt"><td>Total Closing Cash</td><td class="n">${f(c.close)}</td></tr></tbody></table>`;
+    const wdt=`<div class="cs-ttl" style="text-align:center">Bank Withdrawal Info</div><table class="cst"><colgroup><col style="width:62%"><col style="width:38%"></colgroup><thead><tr><th>Bank Name</th><th>Amount</th></tr></thead><tbody>${wd.map(x=>`<tr><td>${esc(x.name)}</td><td class="n">${f(x.amount)}</td></tr>`).join('')||'<tr><td colspan="2" style="text-align:center">—</td></tr>'}<tr class="tt"><td style="text-align:right">Total</td><td class="n">${f(c.wd)}</td></tr></tbody></table>`;
+    $('csSheet').innerHTML=`<div class="cs-sheet"><div class="cs-h">Sheba Distribution Daily Cash Status</div><div class="cs-a">Rakshit Market, 3rd floor, Main Road, Cox's Bazar.</div><div class="cs-d">Date: ${esc(fmtDate(S.day))}</div><div class="cs-cols"><div>${left}</div><div>${right}</div></div><div class="cs-cols"><div>${summ}</div><div>${wdt}</div></div></div>`;
+  };
+  const inp=(id,fld,v,type,ph)=>`<input data-id="${id}" data-f="${fld}" type="${type||'text'}" ${type==='number'?'step="any"':''} value="${esc(v==null?'':v)}" placeholder="${ph||''}">`;
+  /* drop-down of fixed names + an "Other" choice that shows a text box */
+  const pick=(x,list,otherLbl,ph)=>{
+    const inList=list.includes(x.name),isOther=S.other.has(String(x.id))||(!inList&&x.name!=='');
+    const sel=`<select data-id="${x.id}" data-sel="1"><option value="">Select…</option>${list.map(n=>`<option value="${esc(n)}" ${x.name===n?'selected':''}>${esc(n)}</option>`).join('')}<option value="__other" ${isOther?'selected':''}>${otherLbl}</option></select>`;
+    return sel+(isOther?`<div style="margin-top:6px">${inp(x.id,'name',x.name,'text',ph)}</div>`:'');
+  };
+  const sec=(kind,title,heads,cells,note)=>{
+    const L=S.lines.filter(x=>x.kind===kind);
+    return `<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 8px">${title}</h3>${note||''}<div class="table-wrap"><table><thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}<th></th></tr></thead><tbody>${kind==='collection'?S.auto.map(x=>`<tr class="cs-auto"><td>${esc(x.dso)}</td><td>${esc(x.brand)}</td><td>${f(x.qty)}</td><td>${f(x.amt)}</td><td class="muted">from sales</td></tr>`).join(''):''}${L.map(x=>`<tr>${cells(x)}<td><button class="secondary" data-del="${x.id}">Delete</button></td></tr>`).join('')}</tbody></table></div><div style="margin-top:8px"><button class="secondary" data-add="${kind}">+ Add row</button></div></div>`;
+  };
+  const edit=()=>{
+    $('csEdit').innerHTML=
+      sec('collection','Collection (DSO rows come from sales; add other depositors here)',['Depositor\'s name','Brand','Sales qty','Collection amount'],x=>`<td>${inp(x.id,'name',x.name,'text','e.g. Lohagara Office')}</td><td>${inp(x.id,'brand',x.brand)}</td><td>${inp(x.id,'qty',x.qty||'','number')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td>`,'<div class="muted" style="margin:0 0 8px">Blue rows are filled automatically from this day\'s sales entries (cash + due collection, same as the Daily Sales Sheet). Cheque recovery is not included. Lohagara office sales are left out: add the money received from Lohagara office as one row by hand.</div>')+
+      sec('deposit','Bank deposit',['Bank name','Amount','Remarks'],x=>`<td>${pick(x,BANKS,OTHER.bank,'Bank name')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td><td>${inp(x.id,'remarks',x.remarks)}</td>`)+
+      sec('expense','Expense (Top Pay, daily expense, etc.)',['Description','Amount','Remarks'],x=>`<td>${pick(x,EXPS,OTHER.exp,'Expense description')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td><td>${inp(x.id,'remarks',x.remarks)}</td>`)+
+      sec('withdraw','Bank withdrawal (money taken out of the bank into cash)',['Bank name','Amount'],x=>`<td>${pick(x,BANKS,OTHER.bank,'Bank name')}</td><td>${inp(x.id,'amount',x.amount||'','number')}</td>`);
+  };
+  const refresh=()=>{
+    pendImg=null;if($('csShareImg'))$('csShareImg').textContent='Share picture';
+    $('csOpen').value=S.open||'';
+    $('csOpenNote').textContent=S.manual?'Typed by you.':(S.hasPrev?"Taken from the previous day's closing cash.":'No earlier day found: type the opening cash.');
+    $('csPrev').classList.toggle('hidden',!(S.manual&&S.hasPrev));
+    sheet();
+  };
+  const load=async()=>{
+    const day=$('csDate').value;if(!day)return;
+    $('csMsg').innerHTML='<div class="notice">Loading…</div>';$('csEdit').innerHTML='';$('csSheet').innerHTML='';
+    try{
+      const [dsos,brands,roads]=await Promise.all([queryAll('dsos'),queryAll('brands'),queryAll('roads')]);
+      const DN=idm(dsos),BN=idm(brands);
+      /* Lohagara office is NOT calculated from sales: its money is typed in by hand as one row */
+      const LOH=new Set(roads.filter(x=>/loha/i.test([x.office,x.name,x.report_group].filter(Boolean).join(' '))).map(x=>x.id));
+      const ent=(await fetchAll(()=>db.from('sales_entries').select('id,dso_id,brand_id,road_id,received_amount').eq('sale_date',day).order('id'))).filter(e=>!LOH.has(e.road_id));
+      const ids=ent.map(e=>e.id),qty={};
+      for(let i=0;i<ids.length;i+=40){(await fetchAll(()=>db.from('sales_items').select('sales_entry_id,quantity').in('sales_entry_id',ids.slice(i,i+40)).order('id'))).forEach(it=>{qty[it.sales_entry_id]=(qty[it.sales_entry_id]||0)+Number(it.quantity||0)})}
+      const g=new Map();
+      ent.forEach(e=>{const k=e.dso_id+'|'+e.brand_id;let o=g.get(k);if(!o){o={dso:DN[e.dso_id]?.full_name||'—',brand:BN[e.brand_id]?.name||'—',qty:0,amt:0};g.set(k,o)}o.qty+=qty[e.id]||0;o.amt+=Number(e.received_amount||0)});
+      const auto=[...g.values()].filter(o=>o.qty||o.amt).sort((a,b)=>cmpN(a.dso,b.dso)||cmpN(a.brand,b.brand));
+      const lr=await db.from('cash_lines').select('*').eq('day',day).order('id');
+      if(lr.error)throw new Error(/does not exist|schema cache|relation/i.test(lr.error.message||'')?'Daily Cash Status is not set up yet. Run cash-status-setup.sql in Supabase, then reload.':lr.error.message);
+      const dr=await db.from('cash_days').select('*').eq('day',day).limit(1);
+      const pr=await db.from('cash_days').select('day,closing_cash').lt('day',day).order('day',{ascending:false}).limit(1);
+      if(tok!==navToken)return;
+      const row=(dr.data||[])[0],prev=(pr.data||[])[0];
+      const manual=!!(row&&row.opening_manual),open=manual?Number(row.opening_cash||0):(prev?Number(prev.closing_cash||0):(row?Number(row.opening_cash||0):0));
+      S={day,auto,other:new Set(),lines:lr.data||[],open,manual:manual||(!prev&&!!row&&Number(row.opening_cash)>0),hasPrev:!!prev};
+      $('csMsg').innerHTML='';
+      refresh();edit();saveDay();
+    }catch(e){S=null;msg($('csMsg'),e.message||String(e))}
+  };
+  $('csDate').onchange=load;
+  $('csPrint').onclick=()=>{if(S)window.print()};
+  /* Share: as a picture (WhatsApp / Viber / WeChat from the phone's share menu) or as plain text */
+  let pendImg=null;
+  const txt=()=>{
+    const c=calc(),L=k=>S.lines.filter(x=>x.kind===k&&(x.name||Number(x.amount)));
+    const col=[...S.auto.map(x=>[x.dso+(x.brand?' ('+x.brand+')':''),x.qty,x.amt]),...S.lines.filter(x=>x.kind==='collection'&&(x.name||Number(x.amount))).map(x=>[x.name+(x.brand?' ('+x.brand+')':''),Number(x.qty||0),Number(x.amount||0)])];
+    const o=['Sheba Distribution Daily Cash Status','Date: '+fmtDate(S.day),'','COLLECTION'];
+    col.forEach((x,i)=>o.push((i+1)+'. '+x[0]+(x[1]?' | Qty '+f(x[1]):'')+' | '+f(x[2])));
+    o.push('Total collection: '+f(c.coll));
+    if(L('deposit').length){o.push('','BANK DEPOSIT');L('deposit').forEach((x,i)=>o.push((i+1)+'. '+x.name+': '+f(x.amount)));o.push('Total bank deposit: '+f(c.dep))}
+    if(L('expense').length){o.push('','EXPENSE');L('expense').forEach((x,i)=>o.push((i+1)+'. '+x.name+': '+f(x.amount)));o.push('Total expense: '+f(c.exp))}
+    if(L('withdraw').length){o.push('','BANK WITHDRAWAL');L('withdraw').forEach(x=>o.push(x.name+': '+f(x.amount)))}
+    o.push('','CASH SUMMARY','Opening cash: '+f(S.open),'Collection: '+f(c.coll),'Bank withdraw: '+f(c.wd),'Total balance: '+f(c.bal),'Bank deposit: '+f(c.dep),'Expense: '+f(c.exp),'Closing cash: '+f(c.close));
+    return o.join('\n');
+  };
+  $('csShareTxt').onclick=()=>{if(!S)return msg($('csMsg'),'Choose a date first.');shareText('Daily Cash Status '+fmtDate(S.day),txt())};
+  const sendImg=async file=>{
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Daily Cash Status'});return}
+    const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),8000);
+    msg($('csMsg'),'The picture was saved on this device. Send it from Downloads or Gallery.','success');
+  };
+  $('csShareImg').onclick=async()=>{
+    if(!S)return msg($('csMsg'),'Choose a date first.');
+    const b=$('csShareImg');
+    if(pendImg){const fl=pendImg;pendImg=null;b.textContent='Share picture';try{await sendImg(fl)}catch(e){if(!e||e.name!=='AbortError')msg($('csMsg'),'Could not share: '+(e.message||e))}return}
+    b.disabled=true;b.textContent='Preparing…';$('csMsg').innerHTML='';
+    try{
+      await loadH2C();
+      const el=document.querySelector('#csSheet .cs-sheet');
+      const cv=await html2canvas(el,{scale:2,backgroundColor:'#ffffff',useCORS:true});
+      const blob=await new Promise(ok=>cv.toBlob(ok,'image/png'));
+      const fl=new File([blob],'Daily_Cash_Status_'+S.day+'.png',{type:'image/png'});
+      b.disabled=false;b.textContent='Share picture';
+      try{await sendImg(fl)}catch(e){
+        if(e&&e.name==='NotAllowedError'){pendImg=fl;b.textContent='Picture ready - tap to share'}
+        else if(e&&e.name!=='AbortError')msg($('csMsg'),'Could not share: '+(e.message||e));
+      }
+    }catch(e){b.disabled=false;b.textContent='Share picture';msg($('csMsg'),e.message||String(e))}
+  };
+  $('csOpen').onchange=()=>{if(!S)return;S.open=num($('csOpen').value);S.manual=true;refresh();saveDay()};
+  $('csPrev').onclick=async()=>{if(!S)return;S.manual=false;await db.from('cash_days').upsert({day:S.day,opening_manual:false,opening_cash:S.open,closing_cash:0});load()};
+  $('csEdit').onclick=async e=>{
+    const a=e.target.closest('button[data-add]'),d=e.target.closest('button[data-del]');
+    if(a){const r=await db.from('cash_lines').insert({day:S.day,kind:a.dataset.add}).select().limit(1);if(r.error)return msg($('csMsg'),r.error.message);S.lines.push(r.data[0]);edit();refresh();saveDay();return}
+    if(d){if(!confirm('Delete this row?'))return;const r=await db.from('cash_lines').delete().eq('id',d.dataset.del);if(r.error)return msg($('csMsg'),r.error.message);S.lines=S.lines.filter(x=>String(x.id)!==d.dataset.del);edit();refresh();saveDay()}
+  };
+  $('csEdit').onchange=async e=>{
+    const sl=e.target.closest('select[data-sel]');
+    if(sl&&S){
+      const row=S.lines.find(x=>String(x.id)===sl.dataset.id);if(!row)return;
+      const v=sl.value,id=String(row.id);
+      if(v==='__other'){S.other.add(id);if(row.name&&![...BANKS,...EXPS].includes(row.name)){}else{row.name='';const r0=await db.from('cash_lines').update({name:''}).eq('id',row.id);if(r0.error)return msg($('csMsg'),r0.error.message)}}
+      else{S.other.delete(id);row.name=v;const r1=await db.from('cash_lines').update({name:v}).eq('id',row.id);if(r1.error)return msg($('csMsg'),r1.error.message)}
+      edit();refresh();saveDay();return;
+    }
+    const i=e.target.closest('input[data-id]');if(!i||!S)return;
+    const fld=i.dataset.f,v=(fld==='amount'||fld==='qty')?num(i.value):i.value.trim();
+    const row=S.lines.find(x=>String(x.id)===i.dataset.id);if(!row)return;
+    const r=await db.from('cash_lines').update({[fld]:v}).eq('id',row.id);if(r.error)return msg($('csMsg'),r.error.message);
+    row[fld]=v;refresh();saveDay();
+  };
+  load();
+}
+
 
 /* ---------- Sub roads of the Target vs Achievement entry (from the weekly road plans). Add or rename places here. ---------- */
 /* 're' decides which road (name / report group / office on the Roads page) gets which list; Lohagara is checked first */
