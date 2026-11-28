@@ -498,7 +498,7 @@ async function creditPage(){
   let kind='credit',view=null;
   const cmp=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});
   const roadName=id=>L.road[id]?.name||'—';
-  const VOPT={credit:[['road','Road-wise'],['dso','DSO-wise'],['brand','Brand-wise']],cheque:[['road','Road-wise'],['retailer','Retailer-wise']]};
+  const VOPT={credit:[['road','Road-wise'],['retailer','Retailer-wise'],['dso','DSO-wise'],['brand','Brand-wise']],cheque:[['road','Road-wise'],['retailer','Retailer-wise']]};
   const setViews=()=>{const mg=$('crMerge');if(mg)mg.parentElement.style.display=kind==='credit'?'':'none';const nb=$('crNew');if(nb)nb.textContent=kind==='credit'?'+ New Due':'+ New Cheque';const el=$('crView');if(!el)return;const cur=el.value;el.innerHTML=VOPT[kind].map(o=>`<option value="${o[0]}">${o[1]}</option>`).join('');el.value=VOPT[kind].some(o=>o[0]===cur)?cur:'road'};
   const vmode=()=>{const v=$('crView')?.value||'road';return VOPT[kind].some(o=>o[0]===v)?v:'road'};
   setViews();
@@ -595,7 +595,7 @@ async function creditPage(){
     /* One row per shop: brands and DSOs are listed in their cells, amounts are added up. Single-brand shops stay as they are. */
     SHOPPARTS={};
     let list2=out;
-    if($('crMerge')?.value!=='0'&&['road','retailer'].includes(vmode())){
+    if($('crMerge')?.value!=='0'&&vmode()==='road'){
       const mm=new Map();
       out.forEach(r=>{const k=(r.list||'')+'|'+r.rid;let o=mm.get(k);if(!o){o=[];mm.set(k,o)}o.push(r)});
       list2=[];
