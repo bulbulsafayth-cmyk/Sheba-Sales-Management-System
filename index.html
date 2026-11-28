@@ -480,7 +480,7 @@ async function creditPage(){
   const tok=navToken,isAdmin=userMode==='admin';
   const SHARE_SVG='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-4.2M8.6 13.4l6.8 4.2"/></svg>';
   const DL_SVG='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg>';
-  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Credit &amp; Cheque Report</h1><div class="sub">Daily verbal-due (credit) list and retailer cheque list. <b style="opacity:.75">Version: 20-Nov-2026 · Manual due / recovery / delete any entry · One row per shop</b></div><div class="panel"><div class="rtypes" id="crTypes"><button data-k="credit" class="on">Credit report (verbal due)</button><button data-k="cheque">Cheque report</button><button data-k="retdue">Retailer Due (search)</button>${isAdmin?'<button data-k="warn">DSO overdue warning</button>':''}</div><div class="form-grid" style="margin-top:14px"><div><label>Date</label><input type="date" id="crDate"></div><div id="rwDaysBox" style="display:none"><label>Warn when due is older than (days)</label><input type="number" id="rwDays" min="0" value="10"></div><div><label>Road</label><select id="crRoad"><option value="">All roads</option></select></div><div><label>Brand</label><select id="crBrand"><option value="">All brands</option></select></div>${isAdmin?'<div><label>DSO</label><select id="crDso"><option value="">All DSOs</option></select></div>':''}<div><label>View by</label><select id="crView"><option value="road">Road-wise</option><option value="dso">DSO-wise</option><option value="brand">Brand-wise</option></select></div><div><label>One row per shop</label><select id="crMerge"><option value="0">No (each brand separate)</option><option value="1">Yes (brands added up)</option></select></div></div><div class="form-actions"><button id="crRun">Generate</button>${isAdmin?'<button class="secondary" id="crNew">+ New Cheque</button>':''}<button class="secondary" id="crLand">Landscape view</button><button class="secondary" id="crPrint">Print / PDF</button><button class="secondary" id="crImg">${SHARE_SVG}Share</button><button class="secondary" id="crSave">${DL_SVG}Save image</button><button class="secondary" id="crXlsx">Excel</button><button class="secondary" id="crBack">← Reports</button></div><div id="crMsg"></div></div></div><div id="crForm" class="noprint"></div><div id="crOut"></div>`;
+  $('page').innerHTML=`<div class="noprint"><h1 class="page-title">Credit &amp; Cheque Report</h1><div class="sub">Daily verbal-due (credit) list and retailer cheque list. <b style="opacity:.75">Version: 20-Nov-2026 · Manual due / recovery / delete any entry · One row per shop</b></div><div class="panel"><div class="rtypes" id="crTypes"><button data-k="credit" class="on">Credit report (verbal due)</button><button data-k="cheque">Cheque report</button><button data-k="retdue">Retailer Due (search)</button>${isAdmin?'<button data-k="warn">DSO overdue warning</button><button data-k="dsum">Daily message list</button>':''}</div><div class="form-grid" style="margin-top:14px"><div><label>Date</label><input type="date" id="crDate"></div><div id="rwDaysBox" style="display:none"><label>Warn when due is older than (days)</label><input type="number" id="rwDays" min="0" value="10"></div><div><label>Road</label><select id="crRoad"><option value="">All roads</option></select></div><div><label>Brand</label><select id="crBrand"><option value="">All brands</option></select></div>${isAdmin?'<div><label>DSO</label><select id="crDso"><option value="">All DSOs</option></select></div>':''}<div><label>View by</label><select id="crView"><option value="road">Road-wise</option><option value="dso">DSO-wise</option><option value="brand">Brand-wise</option></select></div><div><label>One row per shop</label><select id="crMerge"><option value="0">No (each brand separate)</option><option value="1">Yes (brands added up)</option></select></div></div><div class="form-actions"><button id="crRun">Generate</button>${isAdmin?'<button class="secondary" id="crNew">+ New Cheque</button>':''}<button class="secondary" id="crLand">Landscape view</button><button class="secondary" id="crPrint">Print / PDF</button><button class="secondary" id="crImg">${SHARE_SVG}Share</button><button class="secondary" id="crSave">${DL_SVG}Save image</button><button class="secondary" id="crXlsx">Excel</button><button class="secondary" id="crBack">← Reports</button></div><div id="crMsg"></div></div></div><div id="crForm" class="noprint"></div><div id="crOut"></div>`;
   const [brands,dsos,roads]=await Promise.all(['brands','dsos','roads'].map(queryAll));
   if(tok!==navToken)return;
   const by1=a=>Object.fromEntries(a.map(x=>[x.id,x]));
@@ -503,8 +503,8 @@ async function creditPage(){
   let kind='credit',view=null;
   const cmp=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});
   const roadName=id=>L.road[id]?.name||'—';
-  const VOPT={credit:[['road','Road-wise'],['retailer','Retailer-wise'],['dso','DSO-wise'],['brand','Brand-wise']],cheque:[['road','Road-wise'],['retailer','Retailer-wise']],retdue:[['road','Road-wise']],warn:[['road','Road-wise']]};
-  const setViews=()=>{{const rb=$('rwDaysBox');if(rb)rb.style.display=kind==='warn'?'':'none'}['crLand','crPrint','crImg','crSave','crNew'].forEach(i=>{const b=$(i);if(b)b.style.display=(kind==='retdue'||kind==='warn')?'none':''});{const xb=$('crXlsx');if(xb)xb.style.display=kind==='warn'?'none':''}const mg=$('crMerge');if(mg)mg.parentElement.style.display=kind==='credit'?'':'none';const nb=$('crNew');if(nb)nb.textContent=kind==='credit'?'+ New Due':'+ New Cheque';const el=$('crView');if(!el)return;const cur=el.value;el.innerHTML=VOPT[kind].map(o=>`<option value="${o[0]}">${o[1]}</option>`).join('');el.value=VOPT[kind].some(o=>o[0]===cur)?cur:'road'};
+  const VOPT={credit:[['road','Road-wise'],['retailer','Retailer-wise'],['dso','DSO-wise'],['brand','Brand-wise']],cheque:[['road','Road-wise'],['retailer','Retailer-wise']],retdue:[['road','Road-wise']],warn:[['road','Road-wise']],dsum:[['road','Road-wise']]};
+  const setViews=()=>{{const rb=$('rwDaysBox');if(rb)rb.style.display=kind==='warn'?'':'none'}['crLand','crPrint','crImg','crSave','crNew'].forEach(i=>{const b=$(i);if(b)b.style.display=(kind==='retdue'||kind==='warn'||kind==='dsum')?'none':''});{const xb=$('crXlsx');if(xb)xb.style.display=(kind==='warn'||kind==='dsum')?'none':''}const mg=$('crMerge');if(mg)mg.parentElement.style.display=kind==='credit'?'':'none';const nb=$('crNew');if(nb)nb.textContent=kind==='credit'?'+ New Due':'+ New Cheque';const el=$('crView');if(!el)return;const cur=el.value;el.innerHTML=VOPT[kind].map(o=>`<option value="${o[0]}">${o[1]}</option>`).join('');el.value=VOPT[kind].some(o=>o[0]===cur)?cur:'road'};
   const vmode=()=>{const v=$('crView')?.value||'road';return VOPT[kind].some(o=>o[0]===v)?v:'road'};
   setViews();
   const filt=rows=>{
@@ -773,6 +773,43 @@ async function creditPage(){
     $('rdT').onclick=e=>{const b=e.target.closest('button[data-rm]');if(!b)return;const o=v.rows.find(x=>String(x.rid)===b.dataset.rm);if(!o)return;const t=remText(o);logRetMsg(o.rid,'reminder',t);o.last=v.iso;window.open(waLink(RET&&RET[o.rid]&&RET[o.rid].phone,t),'_blank');draw()};
     draw();
   };
+  /* ---- Daily message list (Admin): every retailer whose due went UP or whose collection came IN on one day, with a WhatsApp button for each ---- */
+  let DSUM=null;
+  const buildDaySum=async D=>{
+    const rd=await buildRetDue(D),tot={};rd.rows.forEach(o=>{tot[String(o.rid)]=o.v+o.q});
+    const RT=await needRet(),mv=new Map();
+    const get=(rid,nm,br)=>{rid=String(rid);let o=mv.get(rid);if(!o){o={rid,name:(RT[rid]&&RT[rid].name)||nm||'—',road:L.road[(RT[rid]||{}).road_id]?.name||'',nd:0,col:0,br:new Set(),dsos:new Set()};mv.set(rid,o)}if(br)o.br.add(br);return o};
+    const rows=await fetchAll(()=>scopedReport().eq('sale_date',D).order('id'));
+    rows.forEach(x=>{if(!x.retailer_id)return;const net=isDueRow(x)?0:Number(x.net_sales||0),rec=Number(x.received_amount||0);
+      if(!isDueRow(x)&&net-rec>0.005)get(x.retailer_id,x.retailer,x.brand).nd+=net-rec;
+      const coll=isDueRow(x)?rec:Math.max(0,rec-net);if(coll>0.005)get(x.retailer_id,x.retailer,x.brand).col+=coll;
+      const o=mv.get(String(x.retailer_id));if(o&&x.dso_name)o.dsos.add(x.dso_name)});
+    try{
+      const cm=await fetchAll(()=>db.from('credit_manual').select('*').eq('entry_date',D).order('id'));
+      cm.forEach(x=>{if(!x.retailer_id)return;const a=Number(x.amount||0),o=get(x.retailer_id,'',L.brand[x.brand_id]?.name);if(x.kind==='due')o.nd+=a;else o.col+=a});
+    }catch(e){}
+    try{
+      const rc=await fetchAll(()=>db.from('cheque_recoveries').select('*').eq('recovered_on',D).order('id'));
+      if(rc.length){
+        const ids=[...new Set(rc.map(x=>x.cheque_id))],ch={};
+        for(let i=0;i<ids.length;i+=100)(await fetchAll(()=>db.from('cheques').select('*').in('id',ids.slice(i,i+100)).order('id'))).forEach(c=>{ch[c.id]=c});
+        const eids=[...new Set(Object.values(ch).map(c=>c.sales_entry_id).filter(Boolean))],ent={};
+        for(let i=0;i<eids.length;i+=100)(await fetchAll(()=>scopedReport().in('id',eids.slice(i,i+100)))).forEach(e=>{ent[e.id]=e});
+        rc.forEach(r=>{const c=ch[r.cheque_id];if(!c)return;const e=c.sales_entry_id?ent[c.sales_entry_id]:null;if(c.sales_entry_id&&!e)return;const rid=e?e.retailer_id:c.retailer_id;if(!rid)return;get(rid,e&&e.retailer,e&&e.brand).col+=Number(r.amount||0)});
+      }
+    }catch(e){}
+    const sent={};try{(await fetchAll(()=>db.from('retailer_msg_log').select('retailer_id,kind,created_at').in('kind',['new_due','recovery']).order('id'))).forEach(x=>{if(new Date(x.created_at).toLocaleDateString('en-CA')===new Date().toLocaleDateString('en-CA'))sent[x.retailer_id+'|'+x.kind]=true})}catch(e){}
+    const list=[...mv.values()].map(o=>({...o,total:tot[o.rid]||0})).sort((a,b)=>cmp(a.name,b.name));
+    return {date:dmyFull(D),iso:D,list,sent};
+  };
+  const renderDaySum=()=>{
+    const v=DSUM;if(!v)return;const n=x=>Math.round(x).toLocaleString('en-US'),fm=x=>'Tk '+n(x);
+    const nd=v.list.filter(o=>o.nd>0.005),cl=v.list.filter(o=>o.col>0.005);
+    const txt=(o,kind)=>kind==='new_due'?'Dear '+o.name+', a new due of '+fm(o.nd)+' has been added on '+dmy(v.iso)+(o.br.size?' ('+[...o.br].join(', ')+')':'')+'. Your total due with Sheba Distribution is '+fm(o.total)+'. Please pay on time. Thank you. - Sheba Distribution':'Dear '+o.name+', we received '+fm(o.col)+' from you on '+dmy(v.iso)+'.'+(o.total>0.005?' Your remaining due is '+fm(o.total)+'.':' Your due is now fully cleared.')+' Thank you. - Sheba Distribution';
+    const tbl=(arr,kind,field,title)=>`<div class="panel"><h3 style="margin:0 0 6px">${title} <span class="muted" style="font-weight:600">· ${arr.length} retailer(s) · ${fm(arr.reduce((a,o)=>a+o[field],0))}</span></h3>${arr.length?`<div style="overflow-x:auto"><table><thead><tr><th>SL</th><th>Retailer</th><th>DSO</th><th style="text-align:right">${kind==='new_due'?'New due':'Collected'}</th><th style="text-align:right">Total due now</th><th>WhatsApp</th></tr></thead><tbody>${arr.map((o,i)=>`<tr><td>${i+1}</td><td><b>${esc(o.name)}</b><div class="muted" style="font-size:11px">${esc(o.road)}${o.br.size?' · '+esc([...o.br].join(', ')):''}</div>${(RET&&RET[o.rid]&&RET[o.rid].phone)?'':'<div style="font-size:11px;color:#b45309">no phone</div>'}</td><td>${esc([...o.dsos].join(', '))}</td><td style="text-align:right"><b>${n(o[field])}</b></td><td style="text-align:right">${o.total>0.005?n(o.total):'-'}</td><td><button data-ds="${esc(o.rid)}" data-k="${kind}" style="background:#25d366;padding:6px 10px">${v.sent[o.rid+'|'+kind]?'✓ Sent · again':'WhatsApp'}</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="muted">None.</div>'}</div>`;
+    $('crOut').innerHTML=`<div class="panel"><h3 style="margin:0 0 4px">Daily message list · ${esc(v.date)}</h3><div class="muted">Retailers whose due increased and retailers who paid on this date. Tap WhatsApp to send each message; ✓ shows it was sent today.</div></div>`+tbl(nd,'new_due','nd','New dues added')+tbl(cl,'recovery','col','Collections received');
+    $('crOut').onclick=e=>{const b=e.target.closest('button[data-ds]');if(!b)return;const o=v.list.find(x=>x.rid===b.dataset.ds);if(!o)return;const k=b.dataset.k,t=txt(o,k);logRetMsg(o.rid,k,t);v.sent[o.rid+'|'+k]=true;b.textContent='✓ Sent · again';window.open(waLink(RET&&RET[o.rid]&&RET[o.rid].phone,t),'_blank')};
+  };
   /* ---- DSO overdue warning: dues (verbal + cheque) older than N days, grouped by DSO, sent into the DSO's app or by WhatsApp ---- */
   let WARN=null;
   const buildWarn=async D=>{
@@ -812,6 +849,7 @@ async function creditPage(){
     if(!D)return msg(m,'Please choose a date.');
     $('crOut').innerHTML='<div class="notice">Loading…</div>';
     try{
+      if(kind==='dsum'){const r=await buildDaySum(D);if(tok!==navToken)return;DSUM=r;view=null;renderDaySum();return}
       if(kind==='warn'){const r=await buildWarn(D);if(tok!==navToken)return;WARN=r;view=null;renderWarn();return}
       if(kind==='retdue'){const r=await buildRetDue(D);if(tok!==navToken)return;RDUE=r;view=null;renderRetDue();return}
       const v=kind==='credit'?await buildCredit(D):await buildCheque(D);
